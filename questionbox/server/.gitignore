@@ -20,6 +20,9 @@ next-env.d.ts
 # testing
 /coverage
 
+# typescript build info
+*.tsbuildinfo
+
 # misc
 *.log
 .DS_Store
