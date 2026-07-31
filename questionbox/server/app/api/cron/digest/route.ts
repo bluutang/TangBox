@@ -9,7 +9,8 @@ export const dynamic = "force-dynamic";
  * Vercel automatically sends `Authorization: Bearer <CRON_SECRET>` when the
  * CRON_SECRET env var is set; we require it (fail closed) so nobody else can
  * trigger digests. Summarizes the previous day by default; pass ?date=YYYY-MM-DD
- * to target a specific day.
+ * to target a specific day, and ?force=1 to send even when there were no
+ * questions (handy for a manual test send).
  */
 export async function GET(request: Request): Promise<Response> {
   const secret = process.env.CRON_SECRET;
@@ -21,8 +22,9 @@ export async function GET(request: Request): Promise<Response> {
   const url = new URL(request.url);
   const dateParam = url.searchParams.get("date");
   const date = dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam) ? dateParam : yesterdayStr();
+  const force = url.searchParams.get("force") === "1";
 
-  const result = await runDigest(date);
+  const result = await runDigest(date, force);
   console.log(`[cron] digest ${date}: total=${result.total} sent=${result.send.sent} ${result.send.skipped ?? result.send.error ?? ""}`);
   return Response.json({ ok: true, ...result });
 }
