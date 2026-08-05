@@ -1,0 +1,43 @@
+# Ready-to-use config for the box (copy to config.yaml).
+# 5 channels (Bear in the Big Blue House and Mister Rogers removed), FLIRC remote
+# mappings, no OSD glow, HDMI audio, Arthur trimmed to seasons 1-5.
+
+channels:
+  - number: 2
+    name: "Dragon Tales"
+    path: /media/nostalgiabox/dragon-tales
+  - number: 3
+    name: "Arthur"
+    path: /media/nostalgiabox/arthur
+    exclude_seasons: ["6-25"]
+    exclude: ["*special*"]
+  - number: 4
+    name: "The Magic School Bus"
+    path: /media/nostalgiabox/magic-school-bus
+  - number: 6
+    name: "Winnie the Pooh"
+    path: /media/nostalgiabox/winnie-the-pooh
+  - number: 7
+    name: "The Berenstain Bears"
+    path: /media/nostalgiabox/berenstain-bears
+
+tune_in: random
+start_channel: 2
+start_offset: [6, 10]
+transition: none
+bridge_seconds: 0.8
+
+initial_volume: 70
+volume_step: 5
+audio_device: "alsa/hdmi:CARD=vc4hdmi1,DEV=0"
+power_off_on_min_volume: true
+
+ui:
+  glow: false
+
+input:
+  keyboard: true
+  cec: true
+  key_overrides:
+    KEY_ENTER: mute
+    KEY_BACK: power_off
