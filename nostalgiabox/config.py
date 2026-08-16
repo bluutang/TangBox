@@ -96,6 +96,10 @@ class Config:
     start_channel: Optional[int] = None
 
     # Presentation / "feel" of the TV.
+    fullscreen: bool = True                # true on the Pi/TV. Set false to run in
+                                          #   a window (useful on a dev Mac, where a
+                                          #   fullscreen window would cover the
+                                          #   terminal that reads the keys)
     force_4_3: bool = False                # if true, letterbox everything to 4:3;
                                           #   default keeps each show's own aspect
     # Start each episode a random number of seconds in (between min and max), so
@@ -310,6 +314,7 @@ def config_from_dict(data: Dict[str, Any], *, base_dir: Optional[Path] = None) -
         video_extensions=extensions,
         tune_in=tune_in,
         start_channel=start_channel,
+        fullscreen=bool(data.get("fullscreen", True)),
         force_4_3=bool(data.get("force_4_3", False)),
         start_offset_min=_offset_range(data)[0],
         start_offset_max=_offset_range(data)[1],

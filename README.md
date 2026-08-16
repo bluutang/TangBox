@@ -1,121 +1,168 @@
-# NostalgiaBox
+# TangBox
 
-**Turn a Raspberry Pi into a retro TV for your kids.**
+**A Raspberry Pi that turns folders of old kids' shows into real TV channels.**
 
-NostalgiaBox plays folders of old children's shows off an SD card as if they were
-real TV **channels**. Flip to a channel and a show is already playing (starting a
-few seconds in, like you just tuned in); when an episode ends, the next one rolls
-automatically on an endless shuffle. It boots straight to the TV on power-up, is
-driven by a simple remote, sends audio over HDMI, and has an authentic
-early-2000s vibe — a green on-screen channel banner and volume bar, and a curved
-"CRT" picture. No menus, no apps, no touchscreens. Just a remote and channels.
+Flip to channel 4 and a show is already playing, a few seconds in, like you just
+walked into the room and turned the TV on. When the episode ends the next one
+rolls automatically, forever, on shuffle. There's a green channel banner, a
+volume bar, a curved CRT picture and a burst of static when you change channels.
 
-This guide has two parts:
+No menus. No apps. No touchscreen. A remote and channels, the way TV worked in
+1999.
 
-1. [**The hardware you'll need**](#1-hardware)
-2. [**Step-by-step setup**](#2-step-by-step-setup) — the SD card, the terminal, and the programming
+TangBox is a fork of [landonbtw/NostalgiaBox](https://github.com/landonbtw/NostalgiaBox),
+adapted for the **Raspberry Pi 5**. See [Staying in sync](#staying-in-sync-with-the-original)
+for how to pull the original author's fixes.
 
 ---
 
 ## 1. Hardware
 
-Everything you need to build one:
+The original project was written for a Pi 4. This fork runs on a **Pi 5**, and
+three of the parts are genuinely different. Buying the Pi 4 versions will cause
+real problems, so this table is the one to shop from.
 
-| Part | Link | What it's for |
-|------|------|---------------|
-| **Raspberry Pi 4 Model B** | https://amzn.to/4w6HcSC | The "brain" of the box (2GB RAM or more is plenty) |
-| **Flirc USB Remote Adapter** | https://amzn.to/4h7hZ5O | Plugs into the Pi and lets **any** remote control it |
-| **Simple TV Remote** | https://amzn.to/4wId7bZ | The big-button remote your kids will actually use |
-| **Micro-HDMI → Full HDMI cable** | https://amzn.to/4pn1TXS | Connects the Pi to the TV (the Pi 4 uses micro-HDMI) |
-| **Raspberry Pi 4 case** | https://amzn.to/4fg4RJ5 | Housing so it looks tidy next to the TV |
+| Part | Notes | Rough cost |
+|------|-------|-----------|
+| **Raspberry Pi 5** | The brain. 4GB is plenty. | *(already owned)* |
+| **Official 27W USB-C power supply** | ⚠️ **Not the Pi 4 supply.** The Pi 5 wants 5V/5A. An underpowered Pi browns out under load, and brownouts corrupt SD cards. | ~$12 |
+| **Pi 5 case with a fan** | ⚠️ **A Pi 4 case will not fit.** The Pi 5 also runs hot enough that Raspberry Pi themselves recommend active cooling. The official case has a fan built in; the Argon NEO 5 is a good alternative. | ~$15–25 |
+| **Micro SD card, 128GB, A2-rated** | Holds the OS *and* your episodes. An SD-quality 22-minute episode is roughly 200–400MB, so 128GB is about 350–600 episodes. A2 rating matters for responsiveness. | ~$18 |
+| **Micro-HDMI → HDMI cable** | Same as the Pi 4. The Pi 5 also uses micro-HDMI. Use the port **nearest the power connector** (HDMI0). | ~$8 |
+| **Flirc USB adapter** | Lets any IR remote drive the box. Optional if you use your TV's remote instead (see below). | ~$25 |
+| **Simple big-button remote** | The one the kids will actually use. | ~$15 |
 
-**You'll also need (you may already have these):**
+You'll also need a TV with HDMI, a computer to set up the SD card, and your own
+video files.
 
-- A **micro SD card**, 32 GB or larger. Bigger = more shows. (This holds the
-  operating system *and* your video files.)
-- A **USB-C power supply** for the Pi 4 (the official 3A one is recommended).
-- A **TV with an HDMI port**.
-- A **computer** (Mac or Windows) to set up the SD card and program the remote.
-- Your **show video files** (e.g. `.mp4`/`.mkv` episodes you own).
+### About the remote: you may not need to buy one
+
+TangBox supports **HDMI-CEC**, which means your TV's own remote can drive it
+straight through the HDMI cable. That costs nothing and is already built in
+(`input: cec: true`).
+
+The trade-off is that CEC support varies a lot between TV brands, and a
+dedicated big-button remote is genuinely better for small kids, since there are
+fewer wrong buttons to press. Try CEC first; the Flirc is the fallback.
+
+### One thing that sounds alarming and isn't
+
+The Pi 5 **removed the hardware H.264 video decoder** that the Pi 4 had. H.264 is
+the format most video files use, so this sounds like a dealbreaker.
+
+It isn't. The Pi 5's processor is fast enough to decode 1080p H.264 in software
+using roughly 20% of the CPU, and old kids' shows are almost always
+standard-definition, which is far easier still. TangBox already asks the player
+to fall back gracefully. No configuration needed.
 
 ---
 
-## 2. Step-by-step setup
+## 2. Try it on your Mac first
 
-Take it one part at a time. You do the first two parts on your **computer**, then
-the rest by connecting to the Pi.
-
-### Part A — Prepare the SD card
-
-1. On your computer, install the **Raspberry Pi Imager** from
-   [raspberrypi.com/software](https://www.raspberrypi.com/software/).
-2. Put the micro SD card into your computer.
-3. Open Raspberry Pi Imager and choose:
-   - **Device:** Raspberry Pi 4
-   - **Operating System:** *Raspberry Pi OS Lite (64-bit)* (under "Raspberry Pi
-     OS (other)"). "Lite" has no desktop — perfect, since the box boots straight
-     to the TV.
-   - **Storage:** your SD card
-4. Click **Next → Edit Settings** (the gear/⚙ customization step) and set:
-   - **Hostname:** `nostalgiabox`
-   - **Enable SSH** → "Use password authentication"
-   - **Username & password** (remember these!)
-   - **Wi-Fi** name and password (needed once, for the initial download)
-5. Write it, then eject the card.
-
-### Part B — Assemble and power on
-
-1. Put the Pi in its case.
-2. Plug the **Flirc** adapter into a USB port on the Pi.
-3. Connect the **micro-HDMI → HDMI** cable from the Pi to your TV.
-4. Insert the SD card.
-5. Plug in power. Wait ~1 minute for it to boot.
-
-### Part C — Open the terminal and connect to the Pi
-
-You'll control the Pi from your computer over the network (SSH).
-
-- **Mac:** open the **Terminal** app.
-- **Windows:** open **PowerShell**.
-
-Then connect (use the username you set; hostname is `nostalgiabox`):
+You don't need any hardware to see what you're building. This runs the whole
+thing in a window on your computer, driven by your keyboard.
 
 ```bash
-ssh pi@nostalgiabox.local
+brew install mpv ffmpeg
+cd tang-box
+python3 -m venv .venv
+.venv/bin/pip install -e ".[dev]" python-mpv     # note: NOT ".[pi]" on a Mac
+.venv/bin/tangbox --generate-assets              # makes the static/colour-bars clips
+.venv/bin/tangbox --check                        # lists your channels
+.venv/bin/tangbox                                # starts the TV
 ```
 
-- The first time, type `yes` to accept.
-- Enter your password (the screen stays blank while you type — that's normal).
+`evdev` is deliberately left out on a Mac. It reads Linux input devices and
+won't build on macOS, which is why the command above installs `.[dev]` plus
+`python-mpv` rather than the `.[pi]` bundle the Pi uses.
 
-You're "inside" the Pi when the prompt changes to something like
-`pi@nostalgiabox:~ $`.
+**Keys, while the terminal window has focus:**
 
-> If `nostalgiabox.local` doesn't resolve, find the Pi's IP address from your
-> router and use `ssh pi@THAT.IP.ADDRESS` instead.
+| Key | Does |
+|---|---|
+| ↑ / ↓ | Change channel |
+| ← / → | Volume down / up (`-` and `+` also work) |
+| `2`, `3`, `4`… | Jump straight to that channel number |
+| `m` | Mute |
+| `i` | Info |
+| `l` | Last channel |
+| `q` or `Esc` | Quit |
 
-### Part D — Install NostalgiaBox
+Two settings in the local `config.yaml` exist purely for Mac testing:
 
-Install git (if needed), download the project, and run the installer:
+- `fullscreen: false` — keeps the video in a window so it doesn't cover the
+  terminal, which is what reads your keypresses.
+- `power_off_on_min_volume: false` — on the Pi, pressing volume-down again at
+  zero powers the box off. On a Mac it would try to shut down your computer.
+
+Both flip back to the normal values on the Pi.
+
+---
+
+## 3. Setting up the Pi
+
+### Part A — Write the SD card
+
+1. Install the **Raspberry Pi Imager** from
+   [raspberrypi.com/software](https://www.raspberrypi.com/software/).
+2. Insert the micro SD card.
+3. In the Imager choose:
+   - **Device:** Raspberry Pi 5
+   - **Operating System:** *Raspberry Pi OS Lite (64-bit)*, under
+     "Raspberry Pi OS (other)". "Lite" has no desktop, which is what you want,
+     since the box boots straight to the TV.
+   - **Storage:** your SD card
+4. Click **Next → Edit Settings** and set:
+   - **Hostname:** `tangbox`
+   - **Enable SSH**, using password authentication
+   - **Username and password** (write these down)
+   - **Wi-Fi** name and password
+5. Write it, then eject.
+
+### Part B — Assemble
+
+1. Pi into the case, with the fan connected.
+2. Flirc adapter into a USB port (skip if you're trying CEC first).
+3. Micro-HDMI cable from the Pi's **HDMI0** port (nearest the power connector)
+   to the TV.
+4. SD card in.
+5. Power in. Give it about a minute.
+
+### Part C — Connect from your computer
+
+Open Terminal on a Mac, or PowerShell on Windows:
+
+```bash
+ssh YOUR_USERNAME@tangbox.local
+```
+
+Type `yes` the first time, then your password. The screen stays blank while you
+type the password. You're in when the prompt reads something like
+`brian@tangbox:~ $`.
+
+If `tangbox.local` doesn't resolve, find the Pi's IP address in your router's
+device list and use that instead.
+
+### Part D — Install TangBox
 
 ```bash
 sudo apt update
 sudo apt install -y git
-git clone https://github.com/landonbtw/NostalgiaBox.git
-cd NostalgiaBox
+git clone https://github.com/bluutang/TangBox.git
+cd TangBox
 ./scripts/install.sh
 ```
 
-The installer sets up everything: the media player (mpv), video tools (ffmpeg),
-the retro font, and all dependencies. It takes a few minutes. Say `y` if it asks
-to continue. It's done when you see **"==> Done!"**.
+This installs the media player (mpv), video tools (ffmpeg), the retro font and
+everything else. It takes several minutes. It's finished when you see
+`==> Done!`.
 
 ### Part E — Load your shows
 
-Put each show in its **own folder**, one folder per channel. For example, on a
-USB drive or copied onto the Pi:
+One folder per channel:
 
 ```
-/media/nostalgiabox/
+/media/tangbox/
 ├── Dragon Tales/
 │   ├── S01E01.mp4
 │   └── S01E02.mp4
@@ -123,229 +170,133 @@ USB drive or copied onto the Pi:
 └── The Magic School Bus/
 ```
 
-The easiest way to get files onto the Pi is a **USB drive**: create the show
-folders on it from your computer, copy your episodes in, plug it into the Pi, and
-copy them over (ask for the exact copy commands if you need them). Any common
-video format works (`.mp4`, `.mkv`, `.avi`, `.m4v`, …), and season sub-folders
-are fine.
+Copy them onto the Pi over the network, or put them on a USB drive and plug it
+in. Season sub-folders inside a show folder are fine.
 
 ### Part F — Set up your channels
-
-The installer already created a `config.yaml` for you from the template. Open it
-and point the channels at your show folders:
 
 ```bash
 nano config.yaml
 ```
 
-A minimal example (see [`config.example.yaml`](config.example.yaml) for every
-option):
+The simplest approach is to let it discover everything:
 
 ```yaml
-channels:
-  - number: 2
-    name: "Dragon Tales"
-    path: /media/nostalgiabox/dragon-tales
-  - number: 3
-    name: "Arthur"
-    path: /media/nostalgiabox/arthur
-
-tune_in: random          # a random episode starts when you flip to a channel
-start_offset: [6, 10]    # begin each show 6-10 seconds in (skips the intro)
+media_root: /media/tangbox
+first_channel_number: 2
 ```
 
-Save in nano with **Ctrl+O**, Enter, then exit with **Ctrl+X**. Check it:
+Every sub-folder becomes a channel, numbered from 2 upward. If you'd rather pin
+specific numbers to specific shows, `config.example.yaml` shows how.
+
+Check your work:
 
 ```bash
-nostalgiabox --check
+tangbox --check
 ```
 
-This lists your channels and how many episodes it found in each. (You can also
-leave out specific seasons/specials per channel — see `exclude_seasons` and
-`exclude` in the example config.)
+It prints every channel and how many episodes it found. A channel showing
+`NO EPISODES FOUND` means the path is wrong or the file extensions aren't
+recognised.
 
-### Part G — Program the remote (Flirc)
+### Part G — Audio over HDMI
 
-The **Flirc** adapter learns your Simple TV Remote and turns its buttons into
-keys NostalgiaBox understands. Do this **on your computer**:
+The Pi may default to the wrong output. List what's available:
+
+```bash
+tangbox --list-audio
+```
+
+Pick the HDMI entry and put it in `config.yaml`. On a Pi 5 it usually looks
+like:
+
+```yaml
+audio_device: "alsa/hdmi:CARD=vc4hdmi0,DEV=0"
+```
+
+Use `vc4hdmi1` if you plugged into the second HDMI port.
+
+### Part H — Program the remote
+
+Skip this if you're using your TV's remote over CEC.
 
 1. Unplug the Flirc from the Pi and plug it into your computer.
-2. Install the **Flirc** app from [flirc.tv/downloads](https://flirc.tv/pages/downloads).
-3. In the app, choose the **Full Keyboard** controller.
-4. Click a key on the on-screen keyboard, then press the button on your Simple TV
-   Remote you want to use for it. Map these:
+2. Install the Flirc app from [flirc.tv](https://flirc.tv/).
+3. Choose **Full Keyboard** and map your remote's buttons:
 
-   | Click this on-screen key | Press this remote button | Does |
-   |--------------------------|--------------------------|------|
-   | **Up arrow (↑)**   | Channel-Up button   | Channel up |
-   | **Down arrow (↓)** | Channel-Down button | Channel down |
-   | **Right arrow (→)**| Volume-Up button    | Volume up |
-   | **Left arrow (←)** | Volume-Down button  | Volume down |
-   | **m**              | Mute button         | Mute |
-   | **p**              | Power button        | Standby (blank the screen) |
+| Remote button | Map to |
+|---|---|
+| Channel up | **Up arrow** |
+| Channel down | **Down arrow** |
+| Volume up | **Right arrow** |
+| Volume down | **Left arrow** |
+| Mute | `m` |
+| Power | `p` |
 
-5. Unplug the Flirc from your computer and plug it back into the Pi.
+Up/down for channel and left/right for volume is the layout the code actually
+uses, and it matches how the TV-remote (CEC) path behaves too.
 
-That's it — no config changes needed; these keys work out of the box. (Advanced:
-you can remap any key via `key_overrides` in the config — see the example.)
+4. Move the Flirc back to the Pi.
 
-### Part H — Get audio out the TV (HDMI)
+If a button does something unexpected, `sudo evtest` on the Pi shows you the key
+name it's actually sending, and `input: key_overrides:` in `config.yaml` lets
+you remap it.
 
-The Pi sometimes sends audio to its headphone jack by default. To force it out
-HDMI, find your HDMI audio device:
-
-```bash
-nostalgiabox --list-audio
-```
-
-Look for the **HDMI** entry (e.g. `alsa/hdmi:CARD=vc4hdmi0,DEV=0`). The Pi 4 has
-two HDMI ports: the one nearest the USB-C power is `vc4hdmi0`, the other is
-`vc4hdmi1`. Put the matching name in `config.yaml`:
-
-```yaml
-audio_device: "alsa/hdmi:CARD=vc4hdmi0,DEV=0"   # use vc4hdmi1 if on the 2nd port
-```
-
-### Part I — Make it boot to TV on power-up
-
-Test it first:
-
-```bash
-nostalgiabox
-```
-
-Your shows should appear on the TV and respond to the remote. Press `q` on a
-keyboard (or `Ctrl+C` in SSH) to stop. Happy with it? Turn on auto-start:
+### Part I — Boot straight to TV
 
 ```bash
 ./scripts/install.sh --service
 ```
 
-Now the box boots straight to TV whenever it gets power — no login, no menus.
-
-### Part J — Make it kid-proof (recommended)
-
-Kids will unplug it. Two things keep the SD card from getting corrupted:
-
-- **Turn it off with the remote:** turn the volume all the way down to 0, then
-  press volume-down **once more** — the Pi shuts down cleanly ("GOODBYE"), and
-  it's safe to unplug once the green light stops blinking.
-- **Read-only mode (belt-and-suspenders):** run `sudo raspi-config` →
-  **Performance Options → Overlay File System → Enable** (and write-protect the
-  boot partition). This makes the SD read-only, so pulling the plug can *never*
-  corrupt it. (To update later, disable the overlay, update, then re-enable it.)
-
-**Done!** Plug it in and enjoy your nostalgia box.
-
----
-
-## Using it day to day
-
-| Do this | On the remote |
-|---------|---------------|
-| Change channels | Channel up / down |
-| Adjust volume | Volume up / down |
-| Mute | Mute |
-| Standby (blank screen) | Power |
-| **Turn off** (safe to unplug) | Volume-down again when already at 0 |
-
-Turn it on by plugging in power; it boots back to a channel automatically.
-
----
-
-## Updating later
-
-If a newer version is released:
+From now on, power on the Pi and it goes straight to the TV. Useful commands:
 
 ```bash
-cd ~/NostalgiaBox
-git pull
-sudo systemctl restart nostalgiabox
+systemctl status tangbox       # is it running?
+journalctl -u tangbox -f       # live logs
+sudo systemctl stop tangbox    # stop it
 ```
 
-(If you enabled the read-only overlay in Part J, turn it off first via
-`raspi-config`, update, then turn it back on.)
+### Part J — Protect the SD card
 
----
-
-## Configuration reference (highlights)
-
-All settings live in `config.yaml`:
-
-```yaml
-tune_in: random          # random | resume | broadcast
-start_channel: 2         # channel to power on to
-start_offset: [6, 10]    # start each episode a random 6-10s in (or a fixed number)
-transition: none         # channel-change effect: none | glitch | static
-bridge_seconds: 0.8      # keep the current show playing while the next loads
-channel_bug_seconds: 4   # how long the channel banner lingers
-initial_volume: 70       # 0-100
-audio_device: "..."      # force HDMI audio (see Part H)
-
-ui:                      # the green on-screen display
-  color: "#4DFF5A"
-  glow: true
-crt:                     # the CRT picture effect (curve, rounding, scanlines)
-  enabled: true
-  curvature: 0.12
-```
-
-Leaving out episodes per channel:
-
-```yaml
-  - number: 3
-    name: "Arthur"
-    path: /media/nostalgiabox/arthur
-    exclude_seasons: ["6-25"]   # only air seasons 1-5
-    exclude: ["*special*"]      # skip the specials
-```
-
-Validate any changes with `nostalgiabox --check`.
-
----
-
-## Troubleshooting
-
-- **`--check` shows 0 episodes for a channel** → the `path` is wrong, or the
-  files use an extension not in `video_extensions`.
-- **No video on the TV** → make sure the HDMI cable is in the right Pi port and
-  the TV is on that input. Check logs with `journalctl -u nostalgiabox -f`.
-- **No sound** → see Part H; try switching `vc4hdmi0` ↔ `vc4hdmi1`, or the
-  `alsa/plughw:CARD=...` variant.
-- **Remote does nothing** → confirm the Flirc is plugged into the Pi and was
-  programmed (Part G). Restart the box after plugging it in.
-- **It won't boot / config errors after a power cut** → the SD got corrupted from
-  an unclean shutdown. Enable the read-only overlay (Part J) to prevent it.
-
----
-
-## For the curious (how it works)
-
-The project is plain Python. The "brains" (channel scanning, the shuffle, the
-state machine) have no hardware dependencies and are fully unit-tested; the
-hardware-facing parts (the mpv video player and the remote input) are isolated
-behind small interfaces. You can even drive the whole thing on a laptop with a
-mock player:
+Kids will pull the plug. Without protection, that can corrupt the SD card.
 
 ```bash
-pip install -e ".[dev]"
-pytest
-python -m nostalgiabox --dry-run --config config.yaml   # keyboard-controlled, no video
+sudo raspi-config
 ```
 
-```
-nostalgiabox/
-├── config.py      YAML -> validated config
-├── playlist.py    the shuffle bag (each episode once, then reshuffle)
-├── channel.py     folder scanning, tune-in modes, channel navigation
-├── player.py      mpv player (+ a mock for tests)
-├── overlay.py     the green on-screen display
-├── crt.py         the CRT shader
-├── input/         remote input (Flirc/keyboard, HDMI-CEC, keymap)
-├── static_gen.py  ffmpeg-generated static/glitch/colour-bar clips
-└── app.py         the TV state machine
+Go to **Performance Options → Overlay File System** and enable it. The system
+then runs from memory and never writes to the card, so yanking the power is
+harmless.
+
+Turn it **off** again before making any changes (config edits, new shows,
+updates), then back on when you're done. Changes made while it's on are
+discarded at reboot.
+
+---
+
+## Staying in sync with the original
+
+This is a fork, so you can pull the original author's bug fixes:
+
+```bash
+git fetch upstream
+git merge upstream/main
 ```
 
-## License
+Two things make this mostly painless:
 
-MIT. Enjoy your nostalgia box!
+- The internal Python package is deliberately still named `nostalgiabox`, even
+  though the command you type is `tangbox`. Renaming it would make every
+  upstream fix land on a file path that no longer exists here.
+- The rebranding is confined to `scripts/`, `pyproject.toml`, this README and a
+  handful of display strings.
+
+The README is the one file likely to conflict, since this version is rewritten
+for the Pi 5. When it does, keep this one.
+
+---
+
+## Credits
+
+Original project: [NostalgiaBox](https://github.com/landonbtw/NostalgiaBox) by
+landonbtw. MIT licensed, same as this fork.

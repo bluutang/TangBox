@@ -1,4 +1,4 @@
-"""Command-line entry point: ``nostalgiabox`` / ``python -m nostalgiabox``."""
+"""Command-line entry point: ``tangbox`` / ``python -m nostalgiabox``."""
 
 from __future__ import annotations
 
@@ -17,8 +17,8 @@ log = logging.getLogger("nostalgiabox")
 # Places we look for a config file when one isn't given explicitly.
 _DEFAULT_CONFIG_LOCATIONS = (
     Path("config.yaml"),
-    Path.home() / ".config" / "nostalgiabox" / "config.yaml",
-    Path("/etc/nostalgiabox/config.yaml"),
+    Path.home() / ".config" / "tangbox" / "config.yaml",
+    Path("/etc/tangbox/config.yaml"),
 )
 
 
@@ -46,7 +46,7 @@ def _cmd_check(config: Config) -> int:
         return 2
 
     lineup = build_lineup(config)
-    print(f"NostalgiaBox v{__version__} - configuration OK")
+    print(f"TangBox v{__version__} - configuration OK")
     print(f"tune-in mode: {config.tune_in}")
     if overrides:
         print(f"key overrides: {len(overrides)} configured")
@@ -87,7 +87,7 @@ def _list_audio_devices() -> int:
 
 def main(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser(
-        prog="nostalgiabox",
+        prog="tangbox",
         description="A retro TV media player for a Raspberry Pi nostalgia box.",
     )
     parser.add_argument("-c", "--config", help="path to the YAML config file")

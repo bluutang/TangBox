@@ -19,3 +19,6 @@ nostalgiabox/assets/*.mp4
 # OS cruft
 .DS_Store
 Thumbs.db
+
+# Local demo episodes generated for Mac preview (12MB of ffmpeg test patterns).
+demo-media/

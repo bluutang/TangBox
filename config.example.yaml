@@ -1,10 +1,10 @@
 # =============================================================================
-# NostalgiaBox configuration
+# TangBox configuration
 # =============================================================================
-# Copy this file to `config.yaml` (or /etc/nostalgiabox/config.yaml) and edit it
+# Copy this file to `config.yaml` (or /etc/tangbox/config.yaml) and edit it
 # to match the show folders on your SD card. Validate it any time with:
 #
-#     nostalgiabox --check
+#     tangbox --check
 #
 # There are two ways to define channels. Pick ONE.
 
@@ -14,12 +14,12 @@
 # Point `media_root` at a folder; every sub-folder becomes a channel, named
 # after the folder and numbered sequentially. Just drop show folders in and go:
 #
-#   /media/nostalgiabox/
+#   /media/tangbox/
 #     ├── Dragon Tales/          -> channel 2 "Dragon Tales"
 #     ├── Arthur/                -> channel 3 "Arthur"
 #     └── Winnie the Pooh/       -> channel 4 "Winnie The Pooh"
 #
-# media_root: /media/nostalgiabox
+# media_root: /media/tangbox
 # first_channel_number: 2      # what the first discovered channel is numbered
 
 # -----------------------------------------------------------------------------
@@ -28,29 +28,29 @@
 channels:
   - number: 2
     name: "Dragon Tales"
-    path: /media/nostalgiabox/dragon-tales
+    path: /media/tangbox/dragon-tales
   - number: 3
     name: "Arthur"
-    path: /media/nostalgiabox/arthur
+    path: /media/tangbox/arthur
     # Leave out episodes you don't want on this channel:
     exclude_seasons: ["6-25"]      # drop seasons 6 through 25 (detected from
                                    #   names like S06E01, "Season 6", 6x01)
     exclude: ["*special*"]         # drop any file/folder whose path matches
   - number: 4
     name: "The Magic School Bus"
-    path: /media/nostalgiabox/magic-school-bus
+    path: /media/tangbox/magic-school-bus
   - number: 5
     name: "Bear in the Big Blue House"
-    path: /media/nostalgiabox/bear-in-the-big-blue-house
+    path: /media/tangbox/bear-in-the-big-blue-house
   - number: 6
     name: "Winnie the Pooh"
-    path: /media/nostalgiabox/winnie-the-pooh
+    path: /media/tangbox/winnie-the-pooh
   - number: 7
     name: "The Berenstain Bears"
-    path: /media/nostalgiabox/berenstain-bears
+    path: /media/tangbox/berenstain-bears
   - number: 8
     name: "Mister Rogers' Neighborhood"
-    path: /media/nostalgiabox/mister-rogers
+    path: /media/tangbox/mister-rogers
 
 # -----------------------------------------------------------------------------
 # How a channel behaves when you tune into it.
@@ -69,6 +69,10 @@ start_channel: 2          # which channel the box powers on to
 # Shows keep their own aspect ratio (4:3 is pillar-boxed, 16:9 fills the screen)
 # and get the CRT curve/rounding. Set force_4_3:true to instead letterbox every
 # show into a single 4:3 frame.
+# Fullscreen on the TV (the default). Set false to run in a window - handy when
+# testing on a laptop, where a fullscreen window hides the terminal.
+fullscreen: true
+
 force_4_3: false
 
 # Start each episode a random number of seconds in, between these two values, so
@@ -110,7 +114,7 @@ crt:
 initial_volume: 70        # 0-100
 volume_step: 5            # how much each volume press changes it
 # Force audio to a specific output. On a Pi the default can be the 3.5mm jack;
-# for a TV you want HDMI. Run `nostalgiabox --list-audio` to see the names.
+# for a TV you want HDMI. Run `tangbox --list-audio` to see the names.
 # audio_device: "alsa/hdmi:CARD=vc4hdmi0,DEV=0"   # HDMI0 (use vc4hdmi1 for HDMI1)
 
 # Pressing volume-down once more when already at 0 cleanly powers off the Pi so

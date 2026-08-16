@@ -117,6 +117,7 @@ class TVApp:
                 player = MpvPlayer(
                     glsl_shaders=str(shader_path) if shader_path else None,
                     fonts_dir=assets / "fonts",
+                    fullscreen=config.fullscreen,
                     force_4_3=config.force_4_3,
                     audio_device=config.audio_device,
                 )
@@ -143,7 +144,7 @@ class TVApp:
         """Run the blocking main loop until a QUIT action is received."""
         self.start()
         self._running = True
-        log.info("NostalgiaBox is on the air. %d channels.", len(self.lineup))
+        log.info("TangBox is on the air. %d channels.", len(self.lineup))
         try:
             while self._running:
                 self.step(block=True)
