@@ -27,13 +27,39 @@ real problems, so this table is the one to shop from.
 | **Raspberry Pi 5** | The brain. 4GB is plenty. | *(already owned)* |
 | **Official 27W USB-C power supply** | ⚠️ **Not the Pi 4 supply.** The Pi 5 wants 5V/5A. An underpowered Pi browns out under load, and brownouts corrupt SD cards. | ~$12 |
 | **Pi 5 case with a fan** | ⚠️ **A Pi 4 case will not fit.** The Pi 5 also runs hot enough that Raspberry Pi themselves recommend active cooling. The official case has a fan built in; the Argon NEO 5 is a good alternative. | ~$15–25 |
-| **Micro SD card, 128GB, A2-rated** | Holds the OS *and* your episodes. An SD-quality 22-minute episode is roughly 200–400MB, so 128GB is about 350–600 episodes. A2 rating matters for responsiveness. | ~$18 |
+| **Micro SD card, 32GB, A1 or A2** | Holds the operating system and TangBox — **not** the shows (those live on the USB drive below). Actual usage is ~3GB; 32GB is for headroom and because sub-32GB cards are mostly off-brand now. **The A1/A2 rating is the spec that matters** — see below. | ~$9 |
+| **USB 3.0 flash drive** | Holds the episodes. Size to your library: ~12MB per minute of SD-quality video, so 128GB ≈ 154 hours. Cheaper per GB than an SD card. Into a **blue** USB 3.0 port. | ~$15 (128GB) |
 | **Micro-HDMI → HDMI cable** | Same as the Pi 4. The Pi 5 also uses micro-HDMI. Use the port **nearest the power connector** (HDMI0). | ~$8 |
 | **Flirc USB adapter** | Lets any IR remote drive the box. Optional if you use your TV's remote instead (see below). | ~$25 |
 | **Simple big-button remote** | The one the kids will actually use. | ~$15 |
 
 You'll also need a TV with HDMI, a computer to set up the SD card, and your own
 video files.
+
+### Choosing the SD card: ignore the big number on the front
+
+Cards advertise **sequential** speed — V30, "170 MB/s", UHS-II. That's the figure
+that matters for a camera writing one continuous stream. An operating system does
+the opposite: thousands of tiny scattered reads.
+
+The rating for that is the **Application Performance Class**, the small `A1` or
+`A2` badge:
+
+| Class | Random read | Random write |
+|---|---|---|
+| A1 | 1,500 IOPS | 500 IOPS |
+| A2 | 4,000 IOPS | 2,000 IOPS |
+
+A "fast" V30 card with no A rating can feel sluggish booting a Pi while a humbler
+A1 card feels quick. Since the shows live on USB, running the OS is this card's
+only job — which is exactly the workload the A rating measures.
+
+**Don't pay for UHS-II or UHS-III.** The Pi 5's reader tops out at UHS-I SDR104,
+about 104 MB/s. A faster card just runs at that ceiling.
+
+A1 is genuinely fine. A2 is a modest gain on a Pi 5 and worth it only if the price
+gap is a dollar or two. Buy from a seller you trust — counterfeit cards are common
+on marketplace listings.
 
 ### About the remote: you may not need to buy one
 
@@ -141,10 +167,11 @@ left: **Device → OS → Storage → Customisation → Writing → Done**. You 
 
 1. Pi into the case, with the fan connected.
 2. Flirc adapter into a USB port (skip if you're trying CEC first).
-3. Micro-HDMI cable from the Pi's **HDMI0** port (nearest the power connector)
+3. USB drive with the shows into one of the **blue** USB 3.0 ports.
+4. Micro-HDMI cable from the Pi's **HDMI0** port (nearest the power connector)
    to the TV.
-4. SD card in.
-5. Power in. Give it about a minute.
+5. SD card in.
+6. Power in. Give it about a minute.
 
 ### Part C — Connect from your computer
 
@@ -175,21 +202,68 @@ This installs the media player (mpv), video tools (ffmpeg), the retro font and
 everything else. It takes several minutes. It's finished when you see
 `==> Done!`.
 
-### Part E — Load your shows
+### Part E — Load your shows on the USB drive
 
-One folder per channel:
+One folder per channel. Build this on your Mac, in `~/Movies/TangBox/`, then copy
+it to the USB drive:
 
 ```
-/media/tangbox/
-├── Dragon Tales/
-│   ├── S01E01.mp4
-│   └── S01E02.mp4
-├── Arthur/
-└── The Magic School Bus/
+Dragon Tales/
+├── S01E01.mp4
+└── S01E02.mp4
+Arthur/
+The Magic School Bus/
 ```
 
-Copy them onto the Pi over the network, or put them on a USB drive and plug it
-in. Season sub-folders inside a show folder are fine.
+Season sub-folders inside a show folder are fine. Recognised types: `.mp4`,
+`.mkv`, `.avi`, `.m4v`.
+
+**Format the drive as exFAT.** It's the one common format both macOS and Linux
+read and write properly, which is the whole point — you'll be adding episodes
+from your Mac for years. (ext4 is the Linux-native choice, but macOS can't write
+to it without extra software.)
+
+Then teach the Pi to mount it. **This step is required**: we installed Raspberry
+Pi OS *Lite*, which has no desktop, and it's the desktop that normally auto-mounts
+drives. On Lite, plugging a drive in does nothing by itself.
+
+```bash
+# exFAT support (not installed by default)
+sudo apt install -y exfat-fuse exfatprogs
+
+# Find the drive's UUID - look for your drive by size
+sudo blkid
+
+# Make the mount point
+sudo mkdir -p /media/tangbox
+```
+
+Then add one line to `/etc/fstab` (`sudo nano /etc/fstab`), using the UUID you
+just found:
+
+```
+UUID=XXXX-XXXX  /media/tangbox  exfat  ro,nofail,uid=1000,gid=1000  0  0
+```
+
+Mount it now without rebooting, and check:
+
+```bash
+sudo mount -a
+ls /media/tangbox
+```
+
+Three details in that line worth understanding:
+
+- **`UUID=`** rather than `/dev/sda1`, because device names shuffle between boots.
+- **`ro`** mounts it **read-only**. TangBox only ever reads episodes, so this
+  costs nothing and means a yanked power cable can't corrupt the drive — the same
+  protection Part J gives the SD card, which wouldn't otherwise cover it. You
+  still unplug the drive and write to it freely on your Mac.
+- **`nofail`** so the Pi still boots normally if the drive isn't plugged in.
+
+**Adding shows later** is then the easy part, and the reason for this setup:
+unplug the drive, drag episodes on from your Mac in Finder, plug it back in. No
+SSH, no turning Part J's protection off, no reboot.
 
 ### Part F — Set up your channels
 
