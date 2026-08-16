@@ -175,19 +175,25 @@ in. Season sub-folders inside a show folder are fine.
 
 ### Part F — Set up your channels
 
+Your channel lineup is already written, in `config.pi.yaml`, and came down with
+the `git clone`. Make it the live config:
+
+```bash
+cp config.pi.yaml config.yaml
+```
+
+Channel numbers in it are **pinned by hand**, at 2, 4, 6 and 8. That's
+deliberate. The alternative is `media_root`, which discovers folders
+alphabetically and looks tidy right up until you add a show, at which point
+every channel silently renumbers and the show your kids know as channel 4
+becomes something else. Leaving the odd numbers free means a new show slots in
+without disturbing anything.
+
+Edit it whenever the lineup changes:
+
 ```bash
 nano config.yaml
 ```
-
-The simplest approach is to let it discover everything:
-
-```yaml
-media_root: /media/tangbox
-first_channel_number: 2
-```
-
-Every sub-folder becomes a channel, numbered from 2 upward. If you'd rather pin
-specific numbers to specific shows, `config.example.yaml` shows how.
 
 Check your work:
 

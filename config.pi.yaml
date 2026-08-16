@@ -1,0 +1,109 @@
+# =============================================================================
+# TangBox - THE REAL CONFIG, for the Raspberry Pi
+# =============================================================================
+# This file is committed to git, so `git clone` on the Pi brings your channel
+# lineup with it. On the Pi, make it the live config:
+#
+#     cp config.pi.yaml config.yaml
+#     tangbox --check
+#
+# (config.yaml itself is gitignored, so each machine keeps its own live copy.
+# The Mac has a different one, pointed at demo clips.)
+
+# -----------------------------------------------------------------------------
+# CHANNELS
+# -----------------------------------------------------------------------------
+# Numbers are pinned by hand ON PURPOSE. The alternative (media_root) discovers
+# folders alphabetically and renumbers EVERY channel whenever you add a show -
+# so channel 4 quietly becomes a different programme and the kids' muscle memory
+# breaks. Tested and confirmed: adding "Blue's Clues" shifted Dragon Tales 3->4.
+#
+# Even numbers only, so 3/5/7/9 stay free for shows added later. Everything
+# stays a single digit, which tunes instantly; double digits make the box wait
+# a moment to see whether a second digit is coming.
+#
+# To add a show: make the folder, then add a block here with a free number.
+# To rename one: change BOTH the folder name and `name` below.
+channels:
+  - number: 2
+    name: "Dragon Tales"
+    path: /media/tangbox/Dragon Tales
+
+  - number: 4
+    name: "Arthur"
+    path: /media/tangbox/Arthur
+    # Trim the run to the era you actually want. Seasons are detected from
+    # names like S06E01, "Season 6" or 6x01. Uncomment to use:
+    # exclude_seasons: ["6-25"]
+    # exclude: ["*special*"]
+
+  - number: 6
+    name: "The Magic School Bus"
+    path: /media/tangbox/The Magic School Bus
+
+  - number: 8
+    name: "Mister Rogers' Neighborhood"
+    path: /media/tangbox/Mister Rogers' Neighborhood
+
+# --- How a channel behaves when you tune in -----------------------------------
+#   random    - a fresh random episode starts, a few seconds in  [chosen]
+#   resume    - picks up where you left that channel last time
+#   broadcast - the channel advances in real time even while you're not
+#               watching, so you tune in partway through whatever "would" be
+#               airing. The most authentic option. Try it once the box is in
+#               the living room; it's a one-word change.
+tune_in: random
+
+start_channel: 2         # what it powers on to
+
+# --- The "feel" of the TV -----------------------------------------------------
+fullscreen: true         # true on the TV (this is the default)
+force_4_3: false         # let 4:3 shows pillarbox and 16:9 fill the screen
+start_offset: [6, 10]    # start a few seconds in, skipping black leader/intro
+
+transition: static       # analog snow on channel change
+transition_duration: 0.4
+bridge_seconds: 0.8
+channel_bug_seconds: 4   # how long the green channel banner lingers
+osd_duration: 2
+
+# --- On-screen display --------------------------------------------------------
+ui:
+  font: "VT323"
+  color: "#4DFF5A"       # phosphor green
+  dim_color: "#123B18"
+  glow: true
+
+# --- CRT picture effect -------------------------------------------------------
+crt:
+  enabled: true
+  curvature: 0.12
+  corner_radius: 0.065
+  vignette: 0.25
+  scanlines: true
+  scanline_intensity: 0.12
+
+# --- Audio --------------------------------------------------------------------
+initial_volume: 60
+volume_step: 5
+
+# The Pi can default to the wrong output. On the Pi run `tangbox --list-audio`,
+# then uncomment this with the HDMI entry it prints. Use vc4hdmi1 if you plugged
+# into the second HDMI port (this project uses HDMI0, nearest the power plug).
+# audio_device: "alsa/hdmi:CARD=vc4hdmi0,DEV=0"
+
+# Volume-down again at zero cleanly powers the Pi off, so it's safe to unplug.
+# Correct on the Pi; the Mac config sets this false so it can't shut down a Mac.
+power_off_on_min_volume: true
+
+# --- Playback -----------------------------------------------------------------
+scan_recursive: true     # look inside season sub-folders too
+
+# --- Remote control -----------------------------------------------------------
+# Both are on so you can try the TV's own remote (cec) before opening the Flirc.
+# The Flirc appears as an ordinary USB keyboard, which is the `keyboard` backend.
+# Whichever is unavailable is skipped quietly.
+input:
+  keyboard: true
+  cec: true
+  stdin: false

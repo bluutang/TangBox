@@ -22,3 +22,6 @@ Thumbs.db
 
 # Local demo episodes generated for Mac preview (12MB of ffmpeg test patterns).
 demo-media/
+
+# Staging check config - absolute paths that only exist on this Mac.
+config.staging.yaml
