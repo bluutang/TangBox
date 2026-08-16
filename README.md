@@ -103,21 +103,39 @@ Both flip back to the normal values on the Pi.
 
 ### Part A — Write the SD card
 
-1. Install the **Raspberry Pi Imager** from
-   [raspberrypi.com/software](https://www.raspberrypi.com/software/).
-2. Insert the micro SD card.
-3. In the Imager choose:
-   - **Device:** Raspberry Pi 5
-   - **Operating System:** *Raspberry Pi OS Lite (64-bit)*, under
-     "Raspberry Pi OS (other)". "Lite" has no desktop, which is what you want,
-     since the box boots straight to the TV.
-   - **Storage:** your SD card
-4. Click **Next → Edit Settings** and set:
-   - **Hostname:** `tangbox`
-   - **Enable SSH**, using password authentication
-   - **Username and password** (write these down)
-   - **Wi-Fi** name and password
-5. Write it, then eject.
+Install the **Raspberry Pi Imager** from
+[raspberrypi.com/software](https://www.raspberrypi.com/software/), then insert
+the micro SD card.
+
+Imager (verified against **v2.0.11**) is a wizard with six steps listed down the
+left: **Device → OS → Storage → Customisation → Writing → Done**. You click
+**NEXT** to move through them.
+
+1. **Device** — pick **Raspberry Pi 5**. Its line reads "Raspberry Pi 5, 500 /
+   500+, and Compute Module 5".
+2. **OS** — pick **Raspberry Pi OS Lite (64-bit)**, filed under
+   "Raspberry Pi OS (other)". "Lite" has no desktop, which is what you want:
+   this box boots straight to the TV and never shows a desktop.
+3. **Storage** — pick your SD card. Check the size shown matches the card, since
+   this step erases whatever it points at.
+4. **Customisation** — the important one. Set:
+
+   | Setting | Value |
+   |---|---|
+   | Hostname | `tangbox` |
+   | Enable SSH | on, with password authentication |
+   | Username | your choice, e.g. `brian` — you type this to log in |
+   | Password | your choice — **write it down**, there is no recovery |
+   | Wi-Fi SSID and password | your home network |
+   | Wi-Fi country | your country, or Wi-Fi may refuse to start |
+
+   This step is the entire bootstrap. The Pi has no keyboard or monitor of its
+   own, so what you type here is the only way it can join your network, and the
+   only way you can reach it afterwards. A card written without it produces a Pi
+   that boots and is then genuinely unreachable, and the only fix is to write the
+   card again from scratch.
+
+5. **Writing** — let it run, then eject the card.
 
 ### Part B — Assemble
 
