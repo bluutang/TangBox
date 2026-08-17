@@ -418,3 +418,32 @@ for the Pi 5. When it does, keep this one.
 
 Original project: [NostalgiaBox](https://github.com/landonbtw/NostalgiaBox) by
 landonbtw. MIT licensed, same as this fork.
+
+---
+
+## Checking the running order without a screen
+
+There is **no video preview on a Mac**. libmpv driven from Python cannot create a
+window on macOS: its Mac renderer needs a Cocoa event loop on the main thread,
+which the `mpv` command sets up for itself and a plain Python process does not.
+Every video output returns "no vo". This does not affect the Pi, where libmpv
+draws straight to the framebuffer with no window system involved.
+
+So on a computer you read the running order instead of watching it:
+
+```bash
+scripts/simulate.py                          # 20 items from config.yaml
+scripts/simulate.py --config config.pi.yaml  # check the Pi's lineup
+scripts/simulate.py --channel-up-at 6        # flip channels part-way through
+```
+
+```
+  SHOW  S01E03                       [CH 2 Arthur]
+  AD    ad-juice-20s
+  AD    ad-sneakers-30s
+  SHOW  S01E02                       [CH 2 Arthur]
+```
+
+Every decision there is made by the same code that runs the television; only the
+drawing is missing. It exits non-zero when no channel has any episodes, so it
+doubles as a "did I point this at the right folders?" check.
