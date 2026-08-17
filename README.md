@@ -141,16 +141,32 @@ left: **Device → OS → Storage → Customisation → Writing → Done**. You 
    this box boots straight to the TV and never shows a desktop.
 3. **Storage** — pick your SD card. Check the size shown matches the card, since
    this step erases whatever it points at.
-4. **Customisation** — the important one. Set:
+4. **Customisation** — the important one, and itself six sub-steps listed under
+   "Customisation" in the sidebar. **Never click "Skip customisation"**, whatever
+   the label suggests: it discards everything and produces a Pi you cannot reach.
 
-   | Setting | Value |
+   | Sub-step | What to set |
    |---|---|
-   | Hostname | `tangbox` |
-   | Enable SSH | on, with password authentication |
-   | Username | your choice, e.g. `brian` — you type this to log in |
-   | Password | your choice — **write it down**, there is no recovery |
-   | Wi-Fi SSID and password | your home network |
-   | Wi-Fi country | your country, or Wi-Fi may refuse to start |
+   | **Hostname** | `tangbox` |
+   | **Localisation** | Capital city, time zone, keyboard layout — see below |
+   | **User** | Username (e.g. `brian`) and a password. **Write the password down; there is no recovery.** This same password is what SSH and `sudo` use later. |
+   | **Wi-Fi** | Network name and password. Leave "Hidden SSID" unticked unless your network really is hidden. |
+   | **Remote access** | **Enable SSH**, with "Use password authentication". No password is asked for here — it uses the one from the User step. |
+   | **Raspberry Pi Connect** | Skip. It's a cloud service needing a Raspberry Pi account, and you reach the Pi over your own network. |
+
+   **On Localisation:** the "Capital city" list contains only capital cities, so
+   there is no Los Angeles or New York — pick **Washington, D.C. (United
+   States)** to get the `us` keyboard layout, then **set the Time zone field
+   yourself** (e.g. `America/Los_Angeles`). Washington otherwise leaves you on
+   Eastern time. The two fields are independent and overriding the zone is
+   expected.
+
+   Getting the zone right matters more than it looks: the Pi has **no
+   battery-backed clock** and reads the time off the network at every boot, so
+   this setting is how it interprets it.
+
+   There is **no "Wi-Fi country" field** in Imager 2.0.11. Older versions had
+   one; the country now comes from your Localisation choice.
 
    This step is the entire bootstrap. The Pi has no keyboard or monitor of its
    own, so what you type here is the only way it can join your network, and the
@@ -158,7 +174,8 @@ left: **Device → OS → Storage → Customisation → Writing → Done**. You 
    that boots and is then genuinely unreachable, and the only fix is to write the
    card again from scratch.
 
-5. **Writing** — let it run, then eject the card.
+5. **Writing** — let it run, then eject the card. Imager reports the write speed;
+   anything under ~20 MB/s means an old or slow card.
 
 ### Part B — Assemble
 
