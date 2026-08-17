@@ -25,3 +25,6 @@ demo-media/
 
 # Staging check config - absolute paths that only exist on this Mac.
 config.staging.yaml
+
+# Demo commercial clips for Mac preview (ffmpeg test patterns).
+demo-commercials/

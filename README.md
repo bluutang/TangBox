@@ -218,6 +218,26 @@ The Magic School Bus/
 Season sub-folders inside a show folder are fine. Recognised types: `.mp4`,
 `.mkv`, `.avi`, `.m4v`.
 
+**Commercials are optional.** Drop advert clips into a `_commercials/` folder
+alongside the shows and the station will go to break between episodes. The
+leading underscore matters: it's what stops the folder being treated as a
+channel. No folder means no breaks, and everything behaves as if the feature
+didn't exist.
+
+```
+_commercials/
+├── cereal-1997.mp4
+└── toy-robot-1999.mp4
+```
+
+Breaks are built by **length**, not by count — adverts run anywhere from 15 to 60
+seconds, so a fixed count would give a 45-second break one time and three minutes
+the next. `break_seconds` in the config sets the target (75 by default), which
+works out at two or three clips. Every advert airs once before any repeats.
+
+The Internet Archive has large collections of vintage TV commercials, often as
+complete ad breaks already assembled.
+
 **Format the drive as exFAT.** It's the one common format both macOS and Linux
 read and write properly, which is the whole point — you'll be adding episodes
 from your Mac for years. (ext4 is the Linux-native choice, but macOS can't write

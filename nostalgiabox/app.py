@@ -19,12 +19,13 @@ import queue
 import subprocess
 import time
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Callable, List, Optional
 
 from .actions import Action, InputEvent
 from .channel import Channel, ChannelLineup, PlayRequest, build_lineup
 from .config import Config
 from .input.manager import InputManager, create_backends
+from .interstitial import CommercialPool
 from .overlay import OverlayManager
 from .player import END_EOF, END_ERROR, MockPlayer, Player
 from .static_gen import (
@@ -77,6 +78,19 @@ class TVApp:
         # at the moment of the cut-over, not when the button is pressed.
         self._switch_deadline: Optional[float] = None
         self._pending_banner: Optional[tuple[int, str]] = None
+
+        # Commercial breaks between episodes. `_pending_episode` is set for
+        # exactly as long as a break is running - it is the episode waiting on
+        # the other side of it - so it doubles as "are we in a break?".
+        self.commercials = CommercialPool(
+            config.commercials.path,
+            break_seconds=config.commercials.break_seconds,
+            extensions=config.video_extensions,
+            enabled=config.commercials.enabled,
+            recursive=config.scan_recursive,
+        )
+        self._break_queue: List[Path] = []
+        self._pending_episode: Optional[PlayRequest] = None
 
         # Playback-finished events from the player (may arrive on any thread).
         self._ended: "queue.Queue[str]" = queue.Queue()
@@ -263,6 +277,9 @@ class TVApp:
         """Tune into the currently selected channel."""
         channel = self.lineup.current
         self.overlay.clear_standby()
+        # Changing channel abandons any break in progress - you don't come back
+        # to the middle of the adverts you walked away from.
+        self._clear_break()
 
         request = channel.tune_in()
         self._pending_banner = None
@@ -416,15 +433,52 @@ class TVApp:
                 advanced = True
 
     def _advance_current(self) -> None:
+        """Something finished. Decide what plays next.
+
+        Three cases, in order: we are part-way through a commercial break; a
+        break has just ended and the episode it was holding is due; or a real
+        episode ended, in which case we go to break before the next one.
+        """
+        if self._break_queue:
+            self._play_request(PlayRequest(path=self._break_queue.pop(0)))
+            return
+
+        if self._pending_episode is not None:
+            request, self._pending_episode = self._pending_episode, None
+            self._play_request(request)
+            return
+
         request = self.lineup.current.advance()
         if request is None:
             self._show_no_signal(self.lineup.current)
-        else:
+            return
+
+        clips = self.commercials.build_break()
+        if not clips:
             self._play_request(request)
+            return
+
+        # Hold the episode back and roll the first advert. `_pending_episode`
+        # staying set is what marks us as "in a break" until it plays.
+        self._pending_episode = request
+        self._break_queue = list(clips[1:])
+        self._play_request(PlayRequest(path=clips[0]))
+
+    def _clear_break(self) -> None:
+        """Abandon any commercial break in progress (e.g. on a channel change)."""
+        self._break_queue = []
+        self._pending_episode = None
+
+    @property
+    def in_break(self) -> bool:
+        """True while a commercial break is running."""
+        return self._pending_episode is not None
 
     # -- helpers ------------------------------------------------------------
     def _remember_position(self) -> None:
-        if self.config.tune_in != "resume" or self._playing_path is None:
+        # An advert is not an episode: remembering its path would make "resume"
+        # come back to the middle of a cereal commercial.
+        if self.config.tune_in != "resume" or self._playing_path is None or self.in_break:
             return
         pos = self.player.get_time_pos()
         if pos is not None:

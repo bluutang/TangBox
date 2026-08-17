@@ -96,6 +96,25 @@ volume_step: 5
 # Correct on the Pi; the Mac config sets this false so it can't shut down a Mac.
 power_off_on_min_volume: true
 
+# --- Commercial breaks --------------------------------------------------------
+# When an episode ends, the station goes to break before the next one starts.
+# Drop advert clips into the folder below - the leading underscore keeps it from
+# being mistaken for a channel.
+#
+# Breaks are built by LENGTH, not by count: adverts of the era run anywhere from
+# 15 to 60 seconds, so "play three ads" would give a 45-second break one time and
+# a three-minute one the next. Filling a target duration instead lands naturally
+# on two or three clips.
+#
+# Every advert plays once before any repeats, and never twice in a row.
+# An empty or missing folder means no breaks at all - the box behaves exactly as
+# it did before this existed. Set enabled:false to switch it off without moving
+# the files.
+commercials:
+  path: /media/tangbox/_commercials
+  break_seconds: 75
+  enabled: true
+
 # --- Playback -----------------------------------------------------------------
 scan_recursive: true     # look inside season sub-folders too
 
