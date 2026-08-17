@@ -91,6 +91,11 @@ class ChannelConfig:
     # a set of season numbers detected from the path (e.g. S06E01, "Season 6").
     exclude: tuple[str, ...] = ()
     exclude_seasons: frozenset[int] = frozenset()
+    # How this channel behaves when tuned into. None means "use the global
+    # tune_in". Set it per channel when one channel should differ - a station
+    # running to a schedule (broadcast) alongside a film channel that picks up
+    # where you left off (resume).
+    tune_in: Optional[str] = None
 
     def __post_init__(self) -> None:
         if self.number < 0:
@@ -230,9 +235,22 @@ def _parse_channels(raw: Any, base: Optional[Path], default_shuffle: bool) -> Li
                 shuffle=bool(entry.get("shuffle", default_shuffle)),
                 exclude=_parse_str_list(entry.get("exclude"), "exclude"),
                 exclude_seasons=_parse_seasons(entry.get("exclude_seasons")),
+                tune_in=_parse_channel_tune_in(entry.get("tune_in"), i),
             )
         )
     return channels
+
+
+def _parse_channel_tune_in(raw: Any, index: int) -> Optional[str]:
+    """Validate a per-channel tune_in override. None means 'use the global one'."""
+    if raw is None:
+        return None
+    mode = str(raw).lower()
+    if mode not in TUNE_IN_MODES:
+        raise ConfigError(
+            f"channel #{index}: 'tune_in' must be one of {TUNE_IN_MODES}, got '{mode}'"
+        )
+    return mode
 
 
 def _parse_str_list(raw: Any, name: str) -> tuple[str, ...]:

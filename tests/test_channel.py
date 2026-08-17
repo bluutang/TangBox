@@ -211,3 +211,52 @@ def test_lineup_sorted_by_number(tmp_path):
     )
     lineup = build_lineup(cfg)
     assert lineup.numbers == [3, 9]
+
+
+# -- per-channel tune_in ------------------------------------------------------
+
+
+def test_channel_inherits_the_global_tune_in(tmp_path):
+    from nostalgiabox.channel import build_lineup
+    from nostalgiabox.config import config_from_dict
+    from tests.helpers import make_show
+
+    make_show(tmp_path, "dragon", 3)
+    cfg = config_from_dict({
+        "tune_in": "broadcast",
+        "channels": [{"number": 2, "path": str(tmp_path / "dragon")}],
+    })
+    assert build_lineup(cfg).current.tune_in_mode == "broadcast"
+
+
+def test_a_channel_can_override_the_global_tune_in(tmp_path):
+    from nostalgiabox.channel import build_lineup
+    from nostalgiabox.config import config_from_dict
+    from tests.helpers import make_show
+
+    make_show(tmp_path, "dragon", 3)
+    make_show(tmp_path, "films", 3)
+    cfg = config_from_dict({
+        "tune_in": "broadcast",
+        "channels": [
+            {"number": 2, "path": str(tmp_path / "dragon")},
+            {"number": 10, "name": "Movies", "path": str(tmp_path / "films"),
+             "tune_in": "resume"},
+        ],
+    })
+    lineup = build_lineup(cfg)
+    modes = {ch.number: ch.tune_in_mode for ch in lineup}
+    assert modes == {2: "broadcast", 10: "resume"}
+
+
+def test_bad_per_channel_tune_in_is_rejected(tmp_path):
+    import pytest as _pytest
+    from nostalgiabox.config import ConfigError, config_from_dict
+    from tests.helpers import make_show
+
+    make_show(tmp_path, "dragon", 2)
+    with _pytest.raises(ConfigError, match="tune_in"):
+        config_from_dict({
+            "channels": [{"number": 2, "path": str(tmp_path / "dragon"),
+                          "tune_in": "sideways"}],
+        })

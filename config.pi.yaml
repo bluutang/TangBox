@@ -52,6 +52,19 @@ channels:
 #               watching, so you tune in partway through whatever "would" be
 #               airing. The most authentic option. Try it once the box is in
 #               the living room; it's a one-word change.
+#
+# This is the DEFAULT. Any channel can override it with its own `tune_in:` -
+# useful when a film channel should resume while the TV channels run to a
+# schedule:
+#
+#   - number: 10
+#     name: "Movies"
+#     path: /media/tangbox-movies/Family
+#     tune_in: resume
+#
+# NOTE on resume: the position is remembered in memory only, so it survives
+# channel hopping but NOT switching the box off. A film started tonight begins
+# again tomorrow.
 tune_in: random
 
 start_channel: 2         # what it powers on to

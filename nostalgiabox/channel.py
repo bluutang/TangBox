@@ -339,7 +339,10 @@ def build_lineup(config: Config, *, rng: Optional[random.Random] = None) -> Chan
             Channel(
                 ch_cfg,
                 episodes,
-                tune_in=config.tune_in,
+                # A channel may override how it behaves when tuned into: a
+                # station running to a schedule next to a film channel that
+                # resumes. Falls back to the global setting.
+                tune_in=ch_cfg.tune_in or config.tune_in,
                 start_offset_min=config.start_offset_min,
                 start_offset_max=config.start_offset_max,
                 rng=ch_rng,
