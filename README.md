@@ -83,26 +83,28 @@ to fall back gracefully. No configuration needed.
 
 ---
 
-## 2. Try it on your Mac first
+## 2. Working on it from a computer
 
-You don't need any hardware to see what you're building. This runs the whole
-thing in a window on your computer, driven by your keyboard.
+You can develop and check everything on a Mac or PC without any hardware — but
+**you cannot watch it there.** See
+[Checking the running order without a screen](#checking-the-running-order-without-a-screen)
+for why, and what to do instead. Video works on the Pi and only on the Pi.
 
 ```bash
 brew install mpv ffmpeg
 cd tang-box
 python3 -m venv .venv
 .venv/bin/pip install -e ".[dev]" python-mpv     # note: NOT ".[pi]" on a Mac
-.venv/bin/tangbox --generate-assets              # makes the static/colour-bars clips
+.venv/bin/pytest                                 # the full test suite
 .venv/bin/tangbox --check                        # lists your channels
-.venv/bin/tangbox                                # starts the TV
+scripts/simulate.py                              # prints the running order
 ```
 
 `evdev` is deliberately left out on a Mac. It reads Linux input devices and
 won't build on macOS, which is why the command above installs `.[dev]` plus
 `python-mpv` rather than the `.[pi]` bundle the Pi uses.
 
-**Keys, while the terminal window has focus:**
+**Keys on the real box** (and via the `stdin` input backend on a Linux terminal):
 
 | Key | Does |
 |---|---|
@@ -114,14 +116,9 @@ won't build on macOS, which is why the command above installs `.[dev]` plus
 | `l` | Last channel |
 | `q` or `Esc` | Quit |
 
-Two settings in the local `config.yaml` exist purely for Mac testing:
-
-- `fullscreen: false` — keeps the video in a window so it doesn't cover the
-  terminal, which is what reads your keypresses.
-- `power_off_on_min_volume: false` — on the Pi, pressing volume-down again at
-  zero powers the box off. On a Mac it would try to shut down your computer.
-
-Both flip back to the normal values on the Pi.
+If you keep a local `config.yaml` for development, one setting matters:
+`power_off_on_min_volume: false`. On the Pi, pressing volume-down again at zero
+powers the box off; on a Mac it would try to shut down your computer.
 
 ---
 
