@@ -36,7 +36,7 @@ Three phases. Only phase 1 is specified in full here.
 | Phase | Contains | When |
 |---|---|---|
 | **1** | The guide itself, plus a random-channel button | First |
-| **2** | `poster.jpg` artwork on the tiles | After the Pi runs |
+| **2** | `tile.jpg` artwork on the tiles | After the Pi runs |
 | **3** | CRT intensity cycle, bedtime sign-off | Later, on a working box |
 
 Phase 2 is deliberately after the box exists, because it depends on something
@@ -210,16 +210,55 @@ meaningfully to that before any of it is wired into `app.py`.
 
 ## Phase 2 — artwork
 
-Each show folder may contain a **`poster.jpg`**. Where one exists the tile shows
+Each show folder may contain a **`tile.jpg`**. Where one exists the tile shows
 it; where it does not, the tile falls back to the text design from phase 1.
 
 The text tiles are therefore not thrown away. They are the fallback for a show
 added last night that has no artwork yet, and for any image that fails to load.
 
+### Why this matters more than it looks
+
+**The users are 2 and 4 years old. Neither can read.** A 4-year-old may
+recognise the digit `4`; a 2-year-old will not reliably read anything. So the
+text tiles are close to useless to the people the box exists for.
+
+Artwork is not polish here. It is what makes the guide navigable by its actual
+users. Phase 2 stays after phase 1 only because the image path cannot be verified
+without a Pi, not because it is less important.
+
+The same reasoning promotes the `•` random-channel button. For a 2-year-old it
+may be the only control they ever need: one button, no reading, no aiming.
+
+### Tile appearance requirements
+
+**Consistent size.** Every tile is identical regardless of what its source image
+looks like. Artwork is normalised when prepared: scaled to fill the tile and
+centre-cropped to the tile's aspect ratio. A grid of mismatched shapes reads as
+broken, and inconsistent sizing makes the focused tile harder to pick out.
+
+Collect **landscape** artwork, roughly **640×360**. Tiles are 16:9-ish, so a 2:3
+portrait movie poster either crops through the middle or floats in bars. Banner
+art or a good still, not a poster. The largest a tile ever renders is about
+825×465 real pixels (2×2 grid on a 1080p screen).
+
+**Rounded corners.** Applied when the image is prepared, by writing transparent
+alpha into the corner pixels of the BGRA data. mpv's image overlay respects
+alpha, so no runtime masking is needed and it costs nothing per frame.
+
+**Focus is unmistakable.** Three things change at once on the focused tile, so it
+reads from a sofa at ten feet:
+
+1. A bright phosphor-green border, thicker than the resting state
+2. A soft outer glow, matching the existing OSD's bloom
+3. **Unfocused tiles dim.** The focused one stays at full brightness
+
+The third is the one that does the work for a small child. A single bright thing
+among dim ones needs no explanation; a subtly different border does.
+
 **Why supplied artwork rather than generated frames.** Grabbing a frame from an
 episode is a lottery: black fades, mid-blink faces, the wrong episode's title
 card. It also needs an ffmpeg pass per channel and a cache keyed to files on a
-drive that changes whenever the USB stick is unplugged. A `poster.jpg` either
+drive that changes whenever the USB stick is unplugged. A `tile.jpg` either
 exists or it does not, it is chosen rather than sampled, and adding one is the
 same motion as adding the show.
 
