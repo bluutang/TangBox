@@ -90,11 +90,14 @@ ui:
 # --- CRT picture effect -------------------------------------------------------
 crt:
   enabled: true
-  curvature: 0.12
-  corner_radius: 0.065
-  vignette: 0.25
+  curvature: 0.04          # "Glass & Grain": a bend you feel, not one you see
+  corner_radius: 0.06
+  vignette: 0.17
   scanlines: true
-  scanline_intensity: 0.12
+  scanline_intensity: 0.03 # a quarter of the old 0.12 - on a 1080p TV the
+                           # scanlines scale up with the 480-line source, so
+                           # they land about twice as strong as they look on a
+                           # computer. Raise gently if at all.
 
 # --- Audio --------------------------------------------------------------------
 initial_volume: 60
