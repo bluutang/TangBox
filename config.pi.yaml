@@ -103,10 +103,18 @@ crt:
 initial_volume: 60
 volume_step: 5
 
-# The Pi can default to the wrong output. On the Pi run `tangbox --list-audio`,
-# then uncomment this with the HDMI entry it prints. Use vc4hdmi1 if you plugged
-# into the second HDMI port (this project uses HDMI0, nearest the power plug).
-# audio_device: "alsa/hdmi:CARD=vc4hdmi0,DEV=0"
+# Pinned deliberately, not autodetected. Read off this Pi with
+# `tangbox --list-audio` on 2026-08-19, so it is the real device string rather
+# than a guess. Use vc4hdmi1 if you ever move to the second HDMI port (this
+# project uses HDMI0, nearest the power plug).
+#
+# Why pin it: as a boot-time service the box has no login session, so
+# /run/user/1000 does not exist and the audio server fails with
+# "Failed to create secure directory (/run/user/1000/pulse)". Naming the ALSA
+# device sends mpv straight at the HDMI output and skips that entirely.
+#
+# NOT YET CONFIRMED BY EAR - the TV is in another room. Ten-second check.
+audio_device: "alsa/hdmi:CARD=vc4hdmi0,DEV=0"
 
 # Volume-down again at zero cleanly powers the Pi off, so it's safe to unplug.
 # Correct on the Pi; the Mac config sets this false so it can't shut down a Mac.
