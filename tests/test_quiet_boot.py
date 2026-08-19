@@ -171,3 +171,48 @@ def test_semicolons_in_parameters_survive(tmp_path: Path):
     (d / "config.txt").write_text(REAL_CONFIG)
     run(d)
     assert "ds=nocloud;i=rpi-imager-1787023251516" in (d / "cmdline.txt").read_text()
+
+
+# -- moving the console off the visible screen -------------------------------
+#
+# quiet/loglevel/show_status reduce how much gets WRITTEN. Anything still
+# written lands on tty1, which is the screen. Pointing the console at tty3 - a
+# virtual terminal nobody displays - means stray output goes somewhere
+# invisible instead, and TangBox owns tty1 uncontested.
+#
+# This is the first thing the script MODIFIES rather than appends, so it gets
+# its own tests.
+
+
+def test_the_console_moves_off_the_visible_terminal(boot: Path):
+    run(boot)
+    text = (boot / "cmdline.txt").read_text()
+    assert "console=tty3" in text
+    assert "console=tty1" not in text
+
+
+def test_the_serial_console_is_left_alone(boot: Path):
+    """console=serial0 is how you debug a Pi that will not boot. Don't touch it."""
+    run(boot)
+    assert "console=serial0,115200" in (boot / "cmdline.txt").read_text()
+
+
+def test_no_console_is_invented_when_there_was_none(tmp_path: Path):
+    d = tmp_path / "firmware"
+    d.mkdir()
+    (d / "cmdline.txt").write_text("root=PARTUUID=abc-02 rootwait\n")
+    (d / "config.txt").write_text(REAL_CONFIG)
+    run(d)
+    assert "console=tty" not in (d / "cmdline.txt").read_text()
+
+
+def test_undo_puts_the_console_back(boot: Path):
+    run(boot)
+    run(boot, "--undo")
+    assert (boot / "cmdline.txt").read_text() == REAL_CMDLINE
+
+
+def test_running_twice_does_not_stack_consoles(boot: Path):
+    run(boot)
+    run(boot)
+    assert (boot / "cmdline.txt").read_text().count("console=tty3") == 1

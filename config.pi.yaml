@@ -124,7 +124,9 @@ start_channel: 2         # what it powers on to
 # bloom - bold shapes survive that, thin lines and small text do not.
 sign_on:
   enabled: true
-  bars_seconds: 2        # colour bars before the ident. 0 goes straight to it
+  bars_seconds: 0        # 0 = straight to the ident, no colour bars. Set to 2
+                         # for the full broadcast-day open (bars + 1 kHz tone)
+                         # if you ever want the longer version back.
   logo: logo.mp4
 
 # --- The "feel" of the TV -----------------------------------------------------

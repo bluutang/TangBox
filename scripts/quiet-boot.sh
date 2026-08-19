@@ -121,6 +121,20 @@ line="$(tr '\n' ' ' < "${CMDLINE}" | tr -s ' ')"
 line="${line#"${line%%[![:space:]]*}"}"   # trim leading space
 line="${line%"${line##*[![:space:]]}"}"   # trim trailing space
 
+# Move the console OFF the visible screen. The flags above reduce how much gets
+# written; this decides WHERE anything still written goes. tty3 is a virtual
+# terminal nobody ever displays, so stray output (early kernel lines before
+# loglevel bites, fsck, cloud-init) lands out of sight and TangBox owns tty1
+# uncontested.
+#
+# Only ever rewrites an existing console=tty1 - never invents one, and never
+# touches console=serial0, which is how you debug a Pi that will not boot.
+console_moved=""
+if [[ " ${line} " == *" console=tty1 "* ]]; then
+  line="${line//console=tty1/console=tty3}"
+  console_moved="yes"
+fi
+
 added=()
 for flag in "${QUIET_FLAGS[@]}"; do
   if [[ " ${line} " != *" ${flag} "* ]]; then
@@ -138,9 +152,10 @@ case "${line}" in
 esac
 [[ -n "${line}" ]] || die "refusing to write an empty cmdline.txt"
 
-if [[ ${#added[@]} -gt 0 ]]; then
+if [[ ${#added[@]} -gt 0 || -n "${console_moved}" ]]; then
   printf '%s\n' "${line}" | ${SUDO} tee "${CMDLINE}" > /dev/null
-  echo "==> cmdline.txt: added ${added[*]}"
+  [[ ${#added[@]} -gt 0 ]] && echo "==> cmdline.txt: added ${added[*]}"
+  [[ -n "${console_moved}" ]] && echo "==> cmdline.txt: console moved tty1 -> tty3"
 else
   echo "==> cmdline.txt: already quiet, nothing to do"
 fi
