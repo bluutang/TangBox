@@ -119,6 +119,18 @@ ui:
   color: "#4DFF5A"       # phosphor green
   dim_color: "#123B18"
   glow: true
+  glow_blur: 2           # was 4. Brian called the channel banner hazy on the TV
+                         # (2026-08-19), and 4 was chosen on a computer. The
+                         # overlay is drawn on a 1280x720 canvas and stretched,
+                         # so the blur lands 1.5x wider on a 1080p screen than
+                         # it looks anywhere else - the same trap that took
+                         # scanline_intensity from 0.12 to 0.03.
+                         #
+                         # JUDGE THIS ON THE TELEVISION, not a laptop. Try 1 if
+                         # still soft, 0 for crisp text that keeps the green
+                         # edge, or back to 4 for the original bloom.
+                         # `glow: false` is different - it drops the green edge
+                         # entirely for a plain black outline.
 
 # --- CRT picture effect -------------------------------------------------------
 crt:

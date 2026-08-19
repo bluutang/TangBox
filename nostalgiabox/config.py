@@ -51,6 +51,12 @@ class UiConfig:
     color: str = "#4DFF5A"          # bright CRT phosphor green
     dim_color: str = "#123B18"      # unlit volume segment / dot colour
     glow: bool = True               # soft glow around text for that CRT bloom
+    glow_blur: float = 4.0          # how soft. See the note below before raising
+    # glow_blur is in VIRTUAL CANVAS pixels (1280x720), not screen pixels, so on
+    # a 1080p TV it lands 1.5x stronger than it looks on a computer - the same
+    # trap that took scanline_intensity from 0.12 down to 0.03. 4.0 is the
+    # original value, kept as the default so nobody's box restyles itself.
+    # Brian called it hazy on a real TV; try 2 or lower, but judge it on the TV.
 
 
 @dataclass(frozen=True)
@@ -404,6 +410,9 @@ def _parse_ui(raw: Any) -> UiConfig:
         color=_valid_color(raw.get("color", defaults.color), "ui.color"),
         dim_color=_valid_color(raw.get("dim_color", defaults.dim_color), "ui.dim_color"),
         glow=bool(raw.get("glow", defaults.glow)),
+        glow_blur=_clamp_float(
+            raw.get("glow_blur", defaults.glow_blur), 0.0, 20.0, "ui.glow_blur"
+        ),
     )
 
 

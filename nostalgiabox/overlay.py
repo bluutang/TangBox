@@ -140,8 +140,13 @@ def _style(ui: UiConfig, *, size: int, alpha: int = 0) -> str:
     tags = rf"\fn{ui.font}\b1\fs{size}\c{color}\1a&H{alpha:02X}&"
     if ui.glow:
         # A blurred green border reads as phosphor bloom; a faint dark edge keeps
-        # it legible over bright video.
-        tags += rf"\bord2\blur4\3c{color}\4c{_BLACK}\shad0"
+        # it legible over bright video. The blur is a dial (ui.glow_blur) because
+        # the right value can only be judged on a television - these tags are
+        # drawn on the 1280x720 canvas and stretched, so the blur arrives 1.5x
+        # wider on a 1080p screen than it looks anywhere else.
+        tags += rf"\bord2\3c{color}\4c{_BLACK}\shad0"
+        if ui.glow_blur > 0:
+            tags += rf"\blur{ui.glow_blur:g}"
     else:
         tags += rf"\bord2\3c{_BLACK}\shad0"
     return tags

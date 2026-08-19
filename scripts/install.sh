@@ -46,10 +46,17 @@ python -m nostalgiabox.static_gen || echo "   (asset generation skipped/failed -
 echo "==> Installing the retro OSD font (VT323)"
 # TangBox also copies this into mpv's font dir at runtime, but installing it
 # system-wide makes it available everywhere (and to fontconfig).
+#
+# The folder is `nostalgiabox/`, NOT `tangbox/`: the rebrand deliberately kept
+# the Python package name so upstream fixes still merge. This glob said
+# `tangbox/` from the rebrand until 2026-08-19, and `compgen -G` simply found
+# nothing - so the entire block was skipped in SILENCE, no error, and the
+# installer still printed "==> Done!". tests/test_install_script.py now fails
+# if any path in this script stops resolving.
 mkdir -p "${HOME}/.local/share/fonts" "${HOME}/.config/mpv/fonts"
-if compgen -G "${REPO_DIR}/tangbox/assets/fonts/*.ttf" > /dev/null; then
-  cp "${REPO_DIR}"/tangbox/assets/fonts/*.ttf "${HOME}/.local/share/fonts/" || true
-  cp "${REPO_DIR}"/tangbox/assets/fonts/*.ttf "${HOME}/.config/mpv/fonts/" || true
+if compgen -G "${REPO_DIR}/nostalgiabox/assets/fonts/*.ttf" > /dev/null; then
+  cp "${REPO_DIR}"/nostalgiabox/assets/fonts/*.ttf "${HOME}/.local/share/fonts/" || true
+  cp "${REPO_DIR}"/nostalgiabox/assets/fonts/*.ttf "${HOME}/.config/mpv/fonts/" || true
   command -v fc-cache > /dev/null && fc-cache -f "${HOME}/.local/share/fonts" || true
 fi
 
