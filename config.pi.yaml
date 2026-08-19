@@ -148,6 +148,9 @@ ui:
                          # stroke - which smears a pixel font and reads as haze.
                          # This, not the blur, was why the text looked soft
                          # through glow_blur 4, 2, 1 and 0 on the TV.
+  letter_spacing: 4      # VT323 sets tightly. Opening it up stops adjacent
+                         # strokes merging at ten feet - it reads as crisper
+                         # before it reads as wider. Judge on the TV.
   glow: true
   glow_blur: 0           # 4 -> 2 -> 1 -> 0, each judged on the actual television
                          # (2026-08-19), and 4 was chosen on a computer. The

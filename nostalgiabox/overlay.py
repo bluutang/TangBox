@@ -139,6 +139,8 @@ def _style(ui: UiConfig, *, size: int, alpha: int = 0) -> str:
     color = _hex_to_ass(ui.color, alpha)
     weight = 1 if ui.bold else 0
     tags = rf"\fn{ui.font}\b{weight}\fs{size}\c{color}\1a&H{alpha:02X}&"
+    if ui.letter_spacing:
+        tags += rf"\fsp{ui.letter_spacing:g}"
     if ui.glow:
         # A blurred green border reads as phosphor bloom; a faint dark edge keeps
         # it legible over bright video. The blur is a dial (ui.glow_blur) because

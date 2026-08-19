@@ -130,3 +130,50 @@ def test_config_reads_bold(tmp_path):
         "  bold: false\n"
     )
     assert load_config(cfg_file).ui.bold is False
+
+
+# -- letter spacing ---------------------------------------------------------
+#
+# VT323's glyphs sit tightly by default. On a TV seen from ten feet, opening
+# them up reads as cleaner even before it reads as wider - the eye stops
+# merging adjacent strokes. Brian asked for this after bold:false.
+
+
+def spacing_in(tags: str):
+    m = re.search(r"\\fsp([0-9.-]+)", tags)
+    return float(m.group(1)) if m else None
+
+
+def test_letter_spacing_defaults_to_off():
+    """Absent tag, not \\fsp0 - keeps the tag string clean for everyone else."""
+    assert spacing_in(_style(UiConfig(), size=40)) is None
+
+
+def test_letter_spacing_is_applied_when_set():
+    assert spacing_in(_style(UiConfig(letter_spacing=4), size=40)) == 4.0
+
+
+def test_config_reads_letter_spacing(tmp_path):
+    cfg_file = tmp_path / "config.yaml"
+    cfg_file.write_text(
+        "channels:\n"
+        "  - number: 2\n"
+        "    name: Test\n"
+        f"    path: {tmp_path}\n"
+        "ui:\n"
+        "  letter_spacing: 3\n"
+    )
+    assert load_config(cfg_file).ui.letter_spacing == 3.0
+
+
+def test_absurd_letter_spacing_is_clamped(tmp_path):
+    cfg_file = tmp_path / "config.yaml"
+    cfg_file.write_text(
+        "channels:\n"
+        "  - number: 2\n"
+        "    name: Test\n"
+        f"    path: {tmp_path}\n"
+        "ui:\n"
+        "  letter_spacing: 500\n"
+    )
+    assert load_config(cfg_file).ui.letter_spacing <= 50

@@ -55,6 +55,11 @@ class UiConfig:
     # the edges and reads as haze. Brian found this on the TV after turning the
     # blur down through 4, 2, 1 and 0 without it ever getting crisp.
     bold: bool = True               # True is the original look; try false on a TV
+    # Extra space between glyphs, in VIRTUAL CANVAS pixels (1280x720), so it
+    # lands 1.5x wider on a 1080p screen. VT323 sets tightly; opening it up
+    # stops adjacent strokes merging at ten feet, which reads as "crisper"
+    # before it reads as "wider".
+    letter_spacing: float = 0.0
     glow: bool = True               # soft glow around text for that CRT bloom
     glow_blur: float = 4.0          # how soft. See the note below before raising
     # glow_blur is in VIRTUAL CANVAS pixels (1280x720), not screen pixels, so on
@@ -435,6 +440,10 @@ def _parse_ui(raw: Any) -> UiConfig:
         color=_valid_color(raw.get("color", defaults.color), "ui.color"),
         dim_color=_valid_color(raw.get("dim_color", defaults.dim_color), "ui.dim_color"),
         bold=bool(raw.get("bold", defaults.bold)),
+        letter_spacing=_clamp_float(
+            raw.get("letter_spacing", defaults.letter_spacing), 0.0, 50.0,
+            "ui.letter_spacing",
+        ),
         glow=bool(raw.get("glow", defaults.glow)),
         glow_blur=_clamp_float(
             raw.get("glow_blur", defaults.glow_blur), 0.0, 20.0, "ui.glow_blur"
