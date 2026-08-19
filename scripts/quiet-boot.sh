@@ -141,6 +141,13 @@ console_moved=""
 if [[ " ${line} " == *" console=tty1 "* ]]; then
   line="${line//console=tty1/console=tty3}"
   console_moved="yes"
+elif [[ " ${line} " != *" console=tty"* ]]; then
+  # No virtual-terminal console at all. One has to EXIST, not merely be out of
+  # the way: something must own and clear the framebuffer before mpv starts, or
+  # boot shows uninitialised video memory as coloured garbage. A Pi ships with
+  # console=tty1, so this only arises after the removal attempt described above.
+  line="${line} console=tty3"
+  console_moved="yes"
 fi
 
 added=()

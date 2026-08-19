@@ -197,15 +197,6 @@ def test_the_serial_console_is_left_alone(boot: Path):
     assert "console=serial0,115200" in (boot / "cmdline.txt").read_text()
 
 
-def test_no_console_is_invented_when_there_was_none(tmp_path: Path):
-    d = tmp_path / "firmware"
-    d.mkdir()
-    (d / "cmdline.txt").write_text("root=PARTUUID=abc-02 rootwait\n")
-    (d / "config.txt").write_text(REAL_CONFIG)
-    run(d)
-    assert "console=tty" not in (d / "cmdline.txt").read_text()
-
-
 def test_undo_puts_the_console_back(boot: Path):
     run(boot)
     run(boot, "--undo")
@@ -269,3 +260,25 @@ def test_service_clears_the_console_vt():
     unit = (REPO_ROOT / "scripts" / "tangbox.service").read_text()
     assert "/dev/tty3" in unit, "the service no longer clears the console VT"
     assert "ExecStartPost" in unit
+
+
+def test_a_console_is_added_when_none_exists(tmp_path: Path):
+    """A VT console has to EXIST, not merely be out of the way.
+
+    Something must own and clear the framebuffer before mpv starts. With no VT
+    at all, boot showed uninitialised video memory as coloured garbage - which
+    is how the "remove it entirely" attempt was caught. A Pi ships with
+    console=tty1 so this case only arises after that attempt, but the script has
+    to be able to put things right.
+    """
+    d = tmp_path / "firmware"
+    d.mkdir()
+    (d / "cmdline.txt").write_text(
+        "console=serial0,115200 root=PARTUUID=abc-02 rootwait quiet\n"
+    )
+    (d / "config.txt").write_text(REAL_CONFIG)
+    run(d)
+    text = (d / "cmdline.txt").read_text()
+    assert "console=tty3" in text
+    assert text.count("console=tty3") == 1
+    assert "console=serial0,115200" in text
