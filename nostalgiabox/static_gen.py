@@ -396,11 +396,13 @@ def generate_power_off(
         if t >= t_shrink:
             return 0.0
         p = t / t_shrink
-        # Closes all the way to nothing. An earlier version stopped at a small
-        # dot and dimmed it, which is the authentic CRT afterglow - but Brian
-        # wanted it to vanish at the centre, so the geometry does the work and
-        # brightness stays constant throughout.
-        return full * (1.0 - p) ** 0.85
+        # Closes all the way to nothing, DECELERATING as it goes. An exponent
+        # below 1 accelerates into the finish: the first version used 0.85 and
+        # spent only 3 frames (50ms) at small sizes, cutting out while still
+        # ~6% of the screen wide. It reached zero, but you could not see it
+        # arrive. Above 1 the tail stretches instead - 1.5 gives ~9 frames of
+        # visible convergence and still reaches a single pixel.
+        return full * (1.0 - p) ** 1.5
 
     def bright(t):
         return 1.0

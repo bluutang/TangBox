@@ -342,3 +342,24 @@ def test_the_off_zap_vanishes_rather_than_fading_a_dot(tmp_path):
     widths = [0 if not lit_box(f) else lit_box(f)[1] - lit_box(f)[0] + 1 for f in frames]
     lit = [w for w in widths if w > 0]
     assert lit[0] > 20 and min(lit) <= 3, f"did not close down: {lit[:3]} ... {lit[-3:]}"
+
+
+def test_the_off_zap_lingers_near_the_centre(tmp_path):
+    """Reaching zero is not enough - it has to be SEEN converging.
+
+    The first attempt closed to nothing but spent only 3 frames (50ms) at small
+    sizes, and its last visible state was still ~6% of the screen wide before it
+    cut out. Brian's report was "I don't see the zap reaching the center", which
+    a "does it end black" test happily passed.
+    """
+    from nostalgiabox.static_gen import generate_power_off
+
+    out = generate_power_off(tmp_path / "off.mp4", width=1280, height=720)
+    widths = []
+    for f in frames_of(out, w=128, h=72):
+        b = lit_box(f, w=128, h=72, thresh=40)
+        widths.append(0 if not b else b[1] - b[0] + 1)
+    lit = [w for w in widths if w > 0]
+    small = [w for w in lit if w <= 20]
+    assert len(small) >= 7, f"only {len(small)} frames spent near the centre"
+    assert min(lit) <= 3, f"smallest it ever gets is {min(lit)} of 128 - not a point"
