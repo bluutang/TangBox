@@ -27,6 +27,7 @@ from .channel import (
     ChannelLineup,
     PlayRequest,
     build_lineup,
+    episode_label_for,
     show_name_for,
 )
 from .config import Config
@@ -83,7 +84,9 @@ class TVApp:
         # then cut to the channel that was preloaded. The channel banner is shown
         # at the moment of the cut-over, not when the button is pressed.
         self._switch_deadline: Optional[float] = None
-        self._pending_banner: Optional[tuple[int, str, Optional[str]]] = None
+        self._pending_banner: Optional[
+            tuple[int, str, Optional[str], Optional[str]]
+        ] = None
 
         # Commercial breaks between episodes. `_pending_episode` is set for
         # exactly as long as a break is running - it is the episode waiting on
@@ -257,8 +260,10 @@ class TVApp:
             self.player.commit_switch()
             # Flash the channel banner right as the picture actually changes.
             if self._pending_banner is not None:
-                number, name, show = self._pending_banner
-                self.overlay.show_channel_bug(number, name, show=show)
+                number, name, show, episode = self._pending_banner
+                self.overlay.show_channel_bug(
+                    number, name, show=show, episode=episode
+                )
                 self._pending_banner = None
 
     # -- input handling -----------------------------------------------------
@@ -358,14 +363,20 @@ class TVApp:
             # Not a channel change (first tune / waking from standby): play now.
             self._switch_deadline = None
             self.overlay.show_channel_bug(
-                channel.number, channel.name, show=self._show_name(channel, request.path)
+                channel.number,
+                channel.name,
+                show=self._show_name(channel, request.path),
+                episode=episode_label_for(request.path),
             )
             self._play_request(request)
         elif self._transition_path is not None:
             # Transition clip (glitch/static) + preloaded episode.
             self._switch_deadline = None
             self.overlay.show_channel_bug(
-                channel.number, channel.name, show=self._show_name(channel, request.path)
+                channel.number,
+                channel.name,
+                show=self._show_name(channel, request.path),
+                episode=episode_label_for(request.path),
             )
             self._playing_path = request.path
             self.player.play_transition(
@@ -385,11 +396,15 @@ class TVApp:
                 channel.number,
                 channel.name,
                 self._show_name(channel, request.path),
+                episode_label_for(request.path),
             )
         else:
             self._switch_deadline = None
             self.overlay.show_channel_bug(
-                channel.number, channel.name, show=self._show_name(channel, request.path)
+                channel.number,
+                channel.name,
+                show=self._show_name(channel, request.path),
+                episode=episode_label_for(request.path),
             )
             self._play_request(request)
 
@@ -480,6 +495,11 @@ class TVApp:
             channel.number,
             channel.name,
             show=self._show_name(channel, self._playing_path),
+            episode=(
+                episode_label_for(self._playing_path)
+                if self._playing_path is not None
+                else None
+            ),
         )
 
     def _toggle_standby(self) -> None:

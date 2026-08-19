@@ -75,11 +75,12 @@ class OverlayManager:
         name: str,
         *,
         show: Optional[str] = None,
+        episode: Optional[str] = None,
         duration: Optional[float] = None,
     ) -> None:
-        """Flash the channel number, name and programme, like a cable box."""
+        """Flash the channel number, name, programme and episode."""
         dur = self._config.channel_bug_seconds if duration is None else duration
-        ass = _channel_bug_ass(number, name, self._ui, show=show)
+        ass = _channel_bug_ass(number, name, self._ui, show=show, episode=episode)
         self._player.set_overlay(_ID_CHANNEL, ass, CANVAS_W, CANVAS_H)
         self._arm(_ID_CHANNEL, dur)
 
@@ -164,7 +165,12 @@ def _style(ui: UiConfig, *, size: int, alpha: int = 0) -> str:
 # ASS builders (free functions so they are easy to unit test)
 # --------------------------------------------------------------------------
 def _channel_bug_ass(
-    number: int, name: str, ui: UiConfig, *, show: Optional[str] = None
+    number: int,
+    name: str,
+    ui: UiConfig,
+    *,
+    show: Optional[str] = None,
+    episode: Optional[str] = None,
 ) -> str:
     """Green digital 'CH 03', the channel name, and the programme on it.
 
@@ -180,6 +186,10 @@ def _channel_bug_ass(
     if show:
         lines.append(
             rf"{{\an9\pos({_IX1},{_IY0 + 152}){_style(ui, size=32)}}}{_escape(show)}"
+        )
+    if episode:
+        lines.append(
+            rf"{{\an9\pos({_IX1},{_IY0 + 192}){_style(ui, size=28)}}}{_escape(episode)}"
         )
     return "\n".join(lines)
 

@@ -65,6 +65,46 @@ def show_name_for(episode: Path, channel_root: Path) -> Optional[str]:
     return parts[0]
 
 
+# Patterns for pulling an EPISODE number out of a file name. Deliberately
+# narrow: a bare number is far more often a sequel or a year than an episode,
+# so "Toy Story 2 (1999)" must not become E02 or E99.
+_EPISODE_PATTERNS = (
+    re.compile(r"s\d{1,2}[ ._-]?e(\d{1,3})", re.IGNORECASE),   # S06E01, s6.e1
+    re.compile(r"\b\d{1,2}x(\d{1,3})\b"),                      # 6x01
+    re.compile(r"\bepisode[ ._-]*(\d{1,3})\b", re.IGNORECASE),  # Episode 5
+    re.compile(r"\be(\d{1,3})\b", re.IGNORECASE),               # E04
+)
+
+
+def detect_episode(text: str) -> Optional[int]:
+    """Best-effort extraction of an episode number from a file name."""
+    for pattern in _EPISODE_PATTERNS:
+        match = pattern.search(text)
+        if match:
+            return int(match.group(1))
+    return None
+
+
+def episode_label_for(path: Path) -> Optional[str]:
+    """A short "S01 E04" for the banner, or None when there is nothing to say.
+
+    Films have no label, and that is the common case on the Cine channel - the
+    banner then omits the line rather than showing a blank one.
+
+    Season and episode can live in different parts of the path
+    ("Season 2/Episode 5.mp4"), so the season is looked for across the whole
+    path while the episode comes from the file name - otherwise a folder called
+    "Season 2" would supply the episode number as well.
+    """
+    season = detect_season(str(path))
+    episode = detect_episode(path.name)
+    if season is not None and episode is not None:
+        return f"S{season:02d} E{episode:02d}"
+    if episode is not None:
+        return f"E{episode:02d}"
+    return None
+
+
 def detect_season(text: str) -> Optional[int]:
     """Best-effort extraction of a season number from a path/filename."""
     for pattern in _SEASON_PATTERNS:

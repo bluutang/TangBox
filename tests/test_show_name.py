@@ -146,3 +146,68 @@ def test_pressing_info_names_the_programme_that_is_on(tmp_path):
     banner = app.player.overlays[_ID_CHANNEL]
     assert "Los Pequeños" in banner
     assert "Pocoyo" in banner, f"INFO banner did not name the show: {banner!r}"
+
+
+# -- season and episode ------------------------------------------------------
+#
+# Reuses the same three forms detect_season() already understands, so a file the
+# exclude_seasons filter can see is a file the banner can label.
+
+
+def test_sxxexx():
+    from nostalgiabox.channel import episode_label_for
+
+    assert episode_label_for(Path("/m/Pocoyo/S01E04.mp4")) == "S01 E04"
+
+
+def test_lowercase_and_separators():
+    from nostalgiabox.channel import episode_label_for
+
+    assert episode_label_for(Path("/m/Pocoyo/s6.e12 - title.mp4")) == "S06 E12"
+
+
+def test_the_x_form():
+    from nostalgiabox.channel import episode_label_for
+
+    assert episode_label_for(Path("/m/Picapiedra/3x07 Rock Day.mp4")) == "S03 E07"
+
+
+def test_season_from_the_folder_episode_from_the_file():
+    """`Season 2/Episode 5` - the two halves live in different path components."""
+    from nostalgiabox.channel import episode_label_for
+
+    got = episode_label_for(Path("/m/Arthur/Season 2/Episode 5.mp4"))
+    assert got == "S02 E05"
+
+
+def test_episode_alone_when_there_is_no_season():
+    """Plenty of rips are just 'Episode 12' in a flat folder."""
+    from nostalgiabox.channel import episode_label_for
+
+    assert episode_label_for(Path("/m/Pocoyo/Episode 12.mp4")) == "E12"
+
+
+def test_a_film_has_no_label():
+    from nostalgiabox.channel import episode_label_for
+
+    assert episode_label_for(Path("/m/Cine/Mi Vecino Totoro.mp4")) is None
+
+
+def test_a_year_in_the_title_is_not_an_episode():
+    """'Toy Story 2 (1999)' must not become S19 E99 or E02."""
+    from nostalgiabox.channel import episode_label_for
+
+    assert episode_label_for(Path("/m/Cine/Toy Story 2 (1999).mp4")) is None
+
+
+def test_the_banner_shows_the_episode_label():
+    ass = _channel_bug_ass(
+        2, "Los Pequeños", UiConfig(), show="Pocoyo", episode="S01 E04"
+    )
+    for expected in ("CH 02", "Los Pequeños", "Pocoyo", "S01 E04"):
+        assert expected in ass
+
+
+def test_the_banner_omits_the_episode_line_when_absent():
+    ass = _channel_bug_ass(2, "Cine", UiConfig(), show="Totoro", episode=None)
+    assert len(ass.strip().splitlines()) == 3
