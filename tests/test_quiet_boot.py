@@ -184,10 +184,14 @@ def test_semicolons_in_parameters_survive(tmp_path: Path):
 # its own tests.
 
 
-def test_the_console_moves_off_the_visible_terminal(boot: Path):
+def test_the_console_leaves_the_visible_terminal(boot: Path):
+    """Superseded an earlier "move it to tty3" rule - see the note below.
+
+    Moving it hid the text during normal running but left it accumulating on
+    VT3, and systemd reveals that VT at shutdown.
+    """
     run(boot)
     text = (boot / "cmdline.txt").read_text()
-    assert "console=tty3" in text
     assert "console=tty1" not in text
 
 
@@ -212,7 +216,49 @@ def test_undo_puts_the_console_back(boot: Path):
     assert (boot / "cmdline.txt").read_text() == REAL_CMDLINE
 
 
-def test_running_twice_does_not_stack_consoles(boot: Path):
+def test_running_twice_leaves_no_terminal_console(boot: Path):
     run(boot)
     run(boot)
-    assert (boot / "cmdline.txt").read_text().count("console=tty3") == 1
+    assert (boot / "cmdline.txt").read_text().count("console=tty") == 0
+
+
+# -- taking the console off the screen entirely ------------------------------
+#
+# console=tty3 parked the text somewhere normally invisible, but it was still
+# THERE - fsck and cloud-init lines accumulating on VT3. At shutdown systemd
+# switches the display to the console VT to show its progress, which revealed
+# the lot for about a second. Confirmed by dumping /dev/vcs3 on the real Pi.
+#
+# Leaving only the serial console means no VT holds anything to reveal.
+
+
+def test_no_virtual_terminal_console_remains(boot: Path):
+    run(boot)
+    text = (boot / "cmdline.txt").read_text()
+    assert "console=tty1" not in text
+    assert "console=tty3" not in text
+    assert "console=tty" not in text
+
+
+def test_the_serial_console_survives(boot: Path):
+    """The only remaining way to see a Pi that will not boot. Never remove it."""
+    run(boot)
+    assert "console=serial0,115200" in (boot / "cmdline.txt").read_text()
+
+
+def test_an_already_moved_console_is_also_removed(tmp_path: Path):
+    """Upgrading from the earlier tty3 version must not leave it behind."""
+    d = tmp_path / "firmware"
+    d.mkdir()
+    (d / "cmdline.txt").write_text(
+        "console=serial0,115200 console=tty3 root=PARTUUID=abc-02 rootwait\n"
+    )
+    (d / "config.txt").write_text(REAL_CONFIG)
+    run(d)
+    assert "console=tty" not in (d / "cmdline.txt").read_text()
+
+
+def test_undo_brings_the_console_back(boot: Path):
+    run(boot)
+    run(boot, "--undo")
+    assert (boot / "cmdline.txt").read_text() == REAL_CMDLINE

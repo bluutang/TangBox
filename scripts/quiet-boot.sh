@@ -121,19 +121,34 @@ line="$(tr '\n' ' ' < "${CMDLINE}" | tr -s ' ')"
 line="${line#"${line%%[![:space:]]*}"}"   # trim leading space
 line="${line%"${line##*[![:space:]]}"}"   # trim trailing space
 
-# Move the console OFF the visible screen. The flags above reduce how much gets
-# written; this decides WHERE anything still written goes. tty3 is a virtual
-# terminal nobody ever displays, so stray output (early kernel lines before
-# loglevel bites, fsck, cloud-init) lands out of sight and TangBox owns tty1
-# uncontested.
+# Take the console off the SCREEN entirely.
 #
-# Only ever rewrites an existing console=tty1 - never invents one, and never
-# touches console=serial0, which is how you debug a Pi that will not boot.
-console_moved=""
-if [[ " ${line} " == *" console=tty1 "* ]]; then
-  line="${line//console=tty1/console=tty3}"
-  console_moved="yes"
-fi
+# The flags above reduce how much gets written; this decides where anything
+# still written goes. An earlier version moved it from tty1 to tty3 - a virtual
+# terminal nobody displays - which hid it during normal running. It was not
+# enough: the text was still THERE, accumulating on VT3 (fsck, cloud-init), and
+# at shutdown systemd switches the display to the console VT to show its
+# progress, revealing the lot for about a second. Confirmed on the Pi by
+# dumping /dev/vcs3.
+#
+# So: drop the virtual-terminal console completely. Nothing is written to any VT,
+# so no VT has anything to reveal, whenever it gets switched to.
+#
+# console=serial0 is deliberately left alone. It writes to a UART with no screen
+# attached, and it is the only remaining way to see a Pi that will not boot.
+#
+# THE TRADE-OFF, stated plainly: there is now NO kernel output on the television,
+# ever, including when something goes badly wrong at boot. Diagnose over SSH or
+# serial. `--undo` restores it.
+console_removed=""
+cleaned=""
+for word in ${line}; do
+  case "${word}" in
+    console=tty*) console_removed="yes" ;;
+    *) cleaned="${cleaned:+${cleaned} }${word}" ;;
+  esac
+done
+line="${cleaned}"
 
 added=()
 for flag in "${QUIET_FLAGS[@]}"; do
@@ -152,10 +167,10 @@ case "${line}" in
 esac
 [[ -n "${line}" ]] || die "refusing to write an empty cmdline.txt"
 
-if [[ ${#added[@]} -gt 0 || -n "${console_moved}" ]]; then
+if [[ ${#added[@]} -gt 0 || -n "${console_removed}" ]]; then
   printf '%s\n' "${line}" | ${SUDO} tee "${CMDLINE}" > /dev/null
   [[ ${#added[@]} -gt 0 ]] && echo "==> cmdline.txt: added ${added[*]}"
-  [[ -n "${console_moved}" ]] && echo "==> cmdline.txt: console moved tty1 -> tty3"
+  [[ -n "${console_removed}" ]] && echo "==> cmdline.txt: virtual-terminal console removed (serial kept)"
 else
   echo "==> cmdline.txt: already quiet, nothing to do"
 fi
