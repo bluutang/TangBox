@@ -320,10 +320,11 @@ def _encode_frames(out_path: Path, frames, width: int, height: int, fps: int) ->
 def generate_power_on(
     out_path: Path,
     *,
-    duration: float = 0.55,
+    duration: float = 0.95,
     width: int = 1920,
     height: int = 1080,
     fps: int = 60,
+    lead_in: float = 0.10,
 ) -> Path:
     """The switch-on: a point of light bursts outward and fills the screen.
 
@@ -339,18 +340,25 @@ def generate_power_on(
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     full = math.hypot(width / 2.0, height / 2.0)
-    t_grow, t_fade = duration * 0.62, duration * 0.68
+    body = duration - lead_in
+    t_grow, t_fade = body * 0.68, body * 0.74
 
     def radius(t):
+        t -= lead_in                      # hold on black while mpv gets going
+        if t <= 0:
+            return 0.0
         if t >= t_grow:
             return full
-        # Ease out: quick off the mark, settling as it reaches the edges.
-        return full * (t / t_grow) ** 0.55
+        # Gentle ease-out. The old 0.55 exponent moved most of the way in the
+        # first few frames, which is what read as stepping - the frame RATE was
+        # never the problem, the distance per frame was.
+        return full * (t / t_grow) ** 0.78
 
     def bright(t):
+        t -= lead_in
         if t < t_fade:
             return 1.0
-        return max(0.0, 1.0 - (t - t_fade) / (duration - t_fade))
+        return max(0.0, 1.0 - (t - t_fade) / (body - t_fade))
 
     frames = (
         _radial_frame(i / fps, radius, bright, width, height)
@@ -362,10 +370,11 @@ def generate_power_on(
 def generate_power_off(
     out_path: Path,
     *,
-    duration: float = 0.70,
+    duration: float = 1.15,
     width: int = 1920,
     height: int = 1080,
     fps: int = 60,
+    lead_in: float = 0.08,
 ) -> Path:
     """The switch-off: the picture rushes inward to a point, then winks out.
 
@@ -377,19 +386,25 @@ def generate_power_off(
     out_path.parent.mkdir(parents=True, exist_ok=True)
     full = math.hypot(width / 2.0, height / 2.0)
     dot = max(3.0, width / 260.0)
-    t_shrink, t_hold = duration * 0.50, duration * 0.72
+    body = duration - lead_in
+    t_shrink, t_hold = body * 0.58, body * 0.78
 
     def radius(t):
+        t -= lead_in                      # a beat of full picture before it goes
+        if t <= 0:
+            return full
         if t >= t_shrink:
             return dot
-        # Ease in: collapses fast, then eases as it closes on the dot.
         p = t / t_shrink
-        return dot + (full - dot) * (1.0 - p) ** 0.65
+        # Gentler than the old 0.65: the collapse still accelerates, but no
+        # single frame crosses a quarter of the screen.
+        return dot + (full - dot) * (1.0 - p) ** 0.85
 
     def bright(t):
+        t -= lead_in
         if t < t_hold:
             return 1.0
-        return max(0.0, 1.0 - (t - t_hold) / (duration - t_hold))
+        return max(0.0, 1.0 - (t - t_hold) / (body - t_hold))
 
     frames = (
         _radial_frame(i / fps, radius, bright, width, height)

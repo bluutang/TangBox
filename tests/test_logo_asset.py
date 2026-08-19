@@ -289,3 +289,46 @@ def test_the_ident_defaults_to_output_resolution():
     sig = inspect.signature(generate_logo)
     assert sig.parameters["width"].default == 1920
     assert sig.parameters["height"].default == 1080
+
+
+# -- smoothness --------------------------------------------------------------
+#
+# Brian: "both zaps are a bit too quick and lightly stuttering ... looking for a
+# smooth zap motion". The display is 60Hz and the clips are 60fps, so this is
+# not a rate mismatch - it is distance-per-frame. Covering the whole screen in
+# 0.55s means each early frame jumps a long way, which reads as stepping no
+# matter what the frame rate is.
+
+
+def test_the_zaps_are_long_enough_to_be_smooth(tmp_path):
+    import inspect
+
+    from nostalgiabox.static_gen import generate_power_off, generate_power_on
+
+    assert inspect.signature(generate_power_on).parameters["duration"].default >= 0.85
+    assert inspect.signature(generate_power_off).parameters["duration"].default >= 1.0
+
+
+def test_the_zap_starts_on_black_so_the_load_hitch_is_hidden(tmp_path):
+    """mpv takes a moment to open a file. Let that land on black, not mid-motion."""
+    from nostalgiabox.static_gen import generate_power_on
+
+    out = generate_power_on(tmp_path / "on.mp4", width=640, height=360)
+    frames = frames_of(out)
+    lead = [f for f in frames[:4]]
+    assert all(sum(f) / len(f) < 6 for f in lead), "the first frames are not black"
+
+
+def test_no_frame_jumps_a_long_way(tmp_path):
+    """The actual measure of smoothness: bounded movement between frames."""
+    from nostalgiabox.static_gen import generate_power_on
+
+    out = generate_power_on(tmp_path / "on.mp4", width=640, height=360)
+    widths = []
+    for f in frames_of(out):
+        b = lit_box(f)
+        widths.append(0 if not b else b[1] - b[0] + 1)
+    growing = [w for w in widths if w > 0]
+    jumps = [abs(b - a) for a, b in zip(growing, growing[1:])]
+    # 32 cells across; more than a quarter of the frame in one step is a jump.
+    assert max(jumps) <= 8, f"biggest single-frame jump was {max(jumps)} of 32 cells"
