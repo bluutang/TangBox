@@ -197,6 +197,25 @@ volume_step: 5
 # NOT YET CONFIRMED BY EAR - the TV is in another room. Ten-second check.
 audio_device: "alsa/hdmi:CARD=vc4hdmi0,DEV=0"
 
+# --- Display mode -------------------------------------------------------------
+# Which HDMI mode mpv sets when it takes the screen.
+#
+# THIS TV IS 4K, AND THAT IS WORSE, NOT BETTER. Left alone, mpv picks the
+# connector's PREFERRED mode - 3840x2160@30 here - and it wins over anything the
+# kernel was told on the cmdline. Proven 2026-08-19: stopping TangBox dropped the
+# display straight back to the pinned 1920x1080@60, so it was mpv all along.
+#
+# Why less is more for this box:
+#   * These are 480-line cartoons. You cannot upscale into detail the source
+#     never had; 4K just scales the same pixels further.
+#   * 1080p60 is twice the refresh of 4Kp30, and motion is what you notice.
+#   * The OSD is drawn on a 1280x720 canvas. At 4K it is stretched 3x; at 1080p
+#     only 1.5x. That, not the blur, is most of why the HUD text looked soft.
+#   * The GPU stops running the CRT shader over four times the pixels.
+#
+# 'preferred' or 'highest' also work if you ever want mpv to choose.
+display_mode: "1920x1080@60"
+
 # Volume-down again at zero cleanly powers the Pi off, so it's safe to unplug.
 # Correct on the Pi; the Mac config sets this false so it can't shut down a Mac.
 power_off_on_min_volume: true

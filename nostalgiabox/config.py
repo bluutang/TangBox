@@ -9,6 +9,7 @@ config still produces a working television.
 from __future__ import annotations
 
 import os
+import re
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional
@@ -176,7 +177,11 @@ class Config:
     # Audio.
     initial_volume: int = 70              # 0-100
     volume_step: int = 5
-    audio_device: Optional[str] = None    # mpv audio device (e.g. HDMI); None = auto
+    audio_device: Optional[str] = None
+    # Which HDMI mode mpv should set. None lets mpv pick the connector's
+    # PREFERRED mode - which on a 4K TV means 4K, even when the kernel was
+    # told otherwise on the cmdline. See config.pi.yaml for why less is more.
+    display_mode: Optional[str] = None    # mpv audio device (e.g. HDMI); None = auto
     # Press volume-down once more when already at 0 to cleanly power off the Pi
     # (so it's safe to unplug). The command run to shut down:
     power_off_on_min_volume: bool = True
@@ -406,6 +411,7 @@ def config_from_dict(data: Dict[str, Any], *, base_dir: Optional[Path] = None) -
         initial_volume=initial_volume,
         volume_step=volume_step,
         audio_device=audio_device,
+        display_mode=_valid_display_mode(data.get("display_mode")),
         power_off_on_min_volume=bool(data.get("power_off_on_min_volume", True)),
         power_off_command=power_off_command,
         scan_recursive=bool(data.get("scan_recursive", True)),
@@ -525,6 +531,24 @@ def _offset_range(data: Dict[str, Any]) -> tuple[float, float]:
         else:
             lo = hi = _clamp_float(raw, 0.0, 3600.0, "start_offset")
     return (lo, max(lo, hi))
+
+
+def _valid_display_mode(value: Any) -> Optional[str]:
+    """WIDTHxHEIGHT@RATE, or mpv's own 'preferred'/'highest'.
+
+    Validated rather than passed through because mpv SILENTLY IGNORES a mode it
+    cannot parse - which looks exactly like the setting having no effect.
+    """
+    if value is None:
+        return None
+    text = str(value).strip()
+    if text in ("preferred", "highest"):
+        return text
+    if re.fullmatch(r"[0-9]{3,5}x[0-9]{3,5}@[0-9]{2,3}", text):
+        return text
+    raise ConfigError(
+        f"'display_mode' must be like 1920x1080@60, or 'preferred'/'highest'; got {value!r}"
+    )
 
 
 def _valid_transition(value: Any) -> str:

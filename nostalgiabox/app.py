@@ -160,6 +160,7 @@ class TVApp:
                     fullscreen=config.fullscreen,
                     force_4_3=config.force_4_3,
                     audio_device=config.audio_device,
+                    display_mode=config.display_mode,
                 )
 
         if input_manager is None:
