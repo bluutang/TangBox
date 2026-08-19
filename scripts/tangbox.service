@@ -28,6 +28,12 @@ Environment=XDG_RUNTIME_DIR=/run/user/__UID__
 # 4 KB buffer. Confirmed on the Pi: running by hand logged nine startup lines,
 # the same build as a service logged none.
 Environment=PYTHONUNBUFFERED=1
+# Wipe the console VT once we are up. Boot leaves fsck and cloud-init lines on
+# tty3 (where quiet-boot.sh puts the console), and at shutdown systemd switches
+# the DISPLAY to that VT to show its progress - revealing the lot for about a
+# second, right after the sign-off animation. Clearing it means there is nothing
+# left to reveal. Best-effort: `|| true` so a failure here never blocks the TV.
+ExecStartPost=/bin/sh -c 'printf "\033[2J\033[3J\033[H" > /dev/tty3 2>/dev/null || true'
 ExecStart=__REPO_DIR__/.venv/bin/tangbox --config __REPO_DIR__/config.yaml
 Restart=always
 RestartSec=3

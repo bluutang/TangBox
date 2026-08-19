@@ -184,14 +184,10 @@ def test_semicolons_in_parameters_survive(tmp_path: Path):
 # its own tests.
 
 
-def test_the_console_leaves_the_visible_terminal(boot: Path):
-    """Superseded an earlier "move it to tty3" rule - see the note below.
-
-    Moving it hid the text during normal running but left it accumulating on
-    VT3, and systemd reveals that VT at shutdown.
-    """
+def test_the_console_moves_off_the_visible_terminal(boot: Path):
     run(boot)
     text = (boot / "cmdline.txt").read_text()
+    assert "console=tty3" in text
     assert "console=tty1" not in text
 
 
@@ -216,49 +212,60 @@ def test_undo_puts_the_console_back(boot: Path):
     assert (boot / "cmdline.txt").read_text() == REAL_CMDLINE
 
 
-def test_running_twice_leaves_no_terminal_console(boot: Path):
+def test_running_twice_does_not_stack_consoles(boot: Path):
     run(boot)
     run(boot)
-    assert (boot / "cmdline.txt").read_text().count("console=tty") == 0
+    assert (boot / "cmdline.txt").read_text().count("console=tty3") == 1
 
 
-# -- taking the console off the screen entirely ------------------------------
+# -- keeping the console off the screen --------------------------------------
 #
-# console=tty3 parked the text somewhere normally invisible, but it was still
-# THERE - fsck and cloud-init lines accumulating on VT3. At shutdown systemd
-# switches the display to the console VT to show its progress, which revealed
-# the lot for about a second. Confirmed by dumping /dev/vcs3 on the real Pi.
+# console=tty3 is a virtual terminal nobody displays. Dropping the VT console
+# ENTIRELY was tried and reverted: it stopped the shutdown flash, but with no VT
+# owning the framebuffer nothing cleared it before mpv started, and boot showed
+# uninitialised video memory as coloured garbage. Boot is seen every day.
 #
-# Leaving only the serial console means no VT holds anything to reveal.
-
-
-def test_no_virtual_terminal_console_remains(boot: Path):
-    run(boot)
-    text = (boot / "cmdline.txt").read_text()
-    assert "console=tty1" not in text
-    assert "console=tty3" not in text
-    assert "console=tty" not in text
+# The text tty3 accumulates is dealt with by tangbox.service clearing it at
+# startup - see test_service_clears_the_console_vt.
 
 
 def test_the_serial_console_survives(boot: Path):
-    """The only remaining way to see a Pi that will not boot. Never remove it."""
+    """The only way to see a Pi that will not boot. Never remove it."""
     run(boot)
     assert "console=serial0,115200" in (boot / "cmdline.txt").read_text()
 
 
-def test_an_already_moved_console_is_also_removed(tmp_path: Path):
-    """Upgrading from the earlier tty3 version must not leave it behind."""
-    d = tmp_path / "firmware"
-    d.mkdir()
-    (d / "cmdline.txt").write_text(
-        "console=serial0,115200 console=tty3 root=PARTUUID=abc-02 rootwait\n"
-    )
-    (d / "config.txt").write_text(REAL_CONFIG)
-    run(d)
-    assert "console=tty" not in (d / "cmdline.txt").read_text()
+def test_an_already_moved_console_is_left_alone(boot_tty3: Path):
+    """Re-running on a box already set up must not disturb it."""
+    run(boot_tty3)
+    text = (boot_tty3 / "cmdline.txt").read_text()
+    assert text.count("console=tty3") == 1
+    assert "console=tty1" not in text
 
 
 def test_undo_brings_the_console_back(boot: Path):
     run(boot)
     run(boot, "--undo")
     assert (boot / "cmdline.txt").read_text() == REAL_CMDLINE
+
+
+@pytest.fixture
+def boot_tty3(tmp_path: Path) -> Path:
+    d = tmp_path / "firmware"
+    d.mkdir()
+    (d / "cmdline.txt").write_text(
+        "console=serial0,115200 console=tty3 root=PARTUUID=abc-02 rootwait\n"
+    )
+    (d / "config.txt").write_text(REAL_CONFIG)
+    return d
+
+
+def test_service_clears_the_console_vt():
+    """The other half of the shutdown fix, and the half that is not in cmdline.
+
+    Without it tty3 keeps its fsck and cloud-init lines, and systemd shows them
+    for about a second at shutdown when it switches the display to that VT.
+    """
+    unit = (REPO_ROOT / "scripts" / "tangbox.service").read_text()
+    assert "/dev/tty3" in unit, "the service no longer clears the console VT"
+    assert "ExecStartPost" in unit
