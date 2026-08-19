@@ -20,7 +20,7 @@ import shutil
 from functools import lru_cache
 import subprocess
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 log = logging.getLogger(__name__)
 
@@ -30,6 +30,9 @@ DEFAULT_ASSETS_DIR = Path(__file__).resolve().parent / "assets"
 STATIC_FILENAME = "static.mp4"
 COLORBARS_FILENAME = "colorbars.mp4"
 LOGO_FILENAME = "logo.mp4"
+# Brian's wordmark, white on transparent, rasterised from brand/. When this
+# is present the ident is built from it; otherwise a placeholder is drawn.
+LOGO_IMAGE_FILENAME = "logo.png"
 POWER_ON_FILENAME = "power_on.mp4"
 POWER_OFF_FILENAME = "power_off.mp4"
 GLITCH_FILENAME = "glitch.mp4"
@@ -158,29 +161,51 @@ def generate_logo(
     out_path: Path,
     *,
     text: str = "TANGBOX",
-    duration: float = 3.0,
-    width: int = 1280,
-    height: int = 720,
-    fps: int = 25,
+    duration: float = 2.5,
+    width: int = 1920,
+    height: int = 1080,
+    fps: int = 60,
     color: str = "0x4DFF5A",
+    image: Optional[Path] = None,
 ) -> Path:
-    """Render a PLACEHOLDER station ident: the name in phosphor green, fading up.
+    """The station ident, played after the switch-on zap.
 
-    This exists so the sign-on sequence works before any artwork does. Replace
-    it by dropping a real ``logo.mp4`` into the assets folder - nothing else has
-    to change, and generate_all() will leave yours alone because it only fills
-    in what is missing.
+    Uses ``logo.png`` (Brian's wordmark, white on transparent) when it is there,
+    and falls back to drawing the name in phosphor green when it is not. The
+    fallback matters: this runs before any television happens, and a missing
+    file must never mean a black screen.
 
-    Three seconds on purpose. This plays every single time the box is switched
-    on, in front of small children who want cartoons; a longer ident is charming
-    for about two days.
+    2.5 seconds on purpose. It plays EVERY time the box is switched on, in front
+    of small children who want cartoons, so it is kept short - and any button
+    press skips the whole sign-on anyway.
+
+    To replace it with an animation, drop your own ``logo.mp4`` into the assets
+    folder: generate_all() only fills in what is missing, and deliberately will
+    not overwrite it even under --force.
     """
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    # Fade up from black and back out, so it reads as a station ident rather
-    # than a still image someone forgot to remove.
-    fade_out_at = max(0.0, duration - 0.6)
-    fade = f"fade=t=in:st=0:d=0.6,fade=t=out:st={fade_out_at:.2f}:d=0.6"
+    image = image if image is not None else out_path.parent / LOGO_IMAGE_FILENAME
+    fade_out_at = max(0.0, duration - 0.5)
 
+    if image.is_file():
+        # Centre it at ~62% of the frame width, on black, fading up and out.
+        overlay_w = int(width * 0.62)
+        cmd = [
+            "ffmpeg", "-y", "-v", "error",
+            "-f", "lavfi", "-i", f"color=c=black:s={width}x{height}:r={fps}:d={duration}",
+            "-loop", "1", "-t", str(duration), "-i", str(image),
+            "-filter_complex",
+            f"[1:v]scale={overlay_w}:-1[lg];"
+            f"[0:v][lg]overlay=(W-w)/2:(H-h)/2:format=auto,"
+            f"fade=t=in:st=0:d=0.5,fade=t=out:st={fade_out_at:.2f}:d=0.5,format=yuv420p",
+            "-c:v", "libx264", "-preset", "slow", "-crf", "16", "-an",
+            str(out_path),
+        ]
+        _run(cmd)
+        return out_path
+
+    log.info("%s not found; drawing a placeholder ident", image)
+    fade = f"fade=t=in:st=0:d=0.5,fade=t=out:st={fade_out_at:.2f}:d=0.5"
     if drawtext_available():
         font = FONTS_DIR / "VT323-Regular.ttf"
         draw = (
@@ -192,179 +217,185 @@ def generate_logo(
         vf = f"{draw},{fade}"
         source = f"color=c=black:s={width}x{height}:r={fps}:d={duration}"
     else:
-        # No text renderer. Rather than fail (and be swallowed by install.sh),
-        # produce a plain phosphor-green card that fades - still a usable
-        # placeholder, and still obviously a placeholder.
         log.info("ffmpeg has no drawtext filter; rendering a plain ident card")
         vf = fade
         source = f"color=c={color.replace('0x', '#')}:s={width}x{height}:r={fps}:d={duration}"
 
-    cmd = [
-        "ffmpeg", "-y",
-        "-f", "lavfi",
-        "-i", source,
+    _run([
+        "ffmpeg", "-y", "-v", "error",
+        "-f", "lavfi", "-i", source,
         "-vf", vf,
-        "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p",
-        "-an",
+        "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p", "-an",
+        str(out_path),
+    ])
+    return out_path
+
+
+def _radial_frame(
+    t: float, radius_of, brightness_of, width: int, height: int
+) -> bytes:
+    """One frame of a radial zap: a white disc on black, antialiased.
+
+    Built row by row. A circle covers each row as a single span, so the interior
+    is one solid fill and only the two edge bands need per-pixel coverage - which
+    is what makes 1920x1080 generatable in plain Python at all. Doing the float
+    work across the whole row was ~270 million operations per clip and far too
+    slow.
+
+    Vertically supersampled 4x: near the top and bottom of the disc the span
+    width changes quickly, and integer rows alone read as steps.
+    """
+    import math
+
+    r = radius_of(t)
+    v = max(0, min(255, int(255 * brightness_of(t))))
+    cx, cy = width / 2.0, height / 2.0
+    black_row = b"\x00" * (width * 3)
+    solid_px = bytes((v, v, v))
+    rows = []
+    for y in range(height):
+        widths = []
+        for sub in range(4):
+            dy = (y + (sub + 0.5) / 4) - cy
+            widths.append(math.sqrt(max(0.0, r * r - dy * dy)))
+        wmax = max(widths)
+        if wmax <= 0.0 or v == 0:
+            rows.append(black_row)
+            continue
+        wmin = min(widths)
+        lo = max(0, int(math.floor(cx - wmax)))
+        hi = min(width - 1, int(math.ceil(cx + wmax)))
+        s_lo = max(lo, int(math.ceil(cx - wmin)) + 1)
+        s_hi = min(hi, int(math.floor(cx + wmin)) - 1)
+
+        parts = [b"\x00" * (lo * 3)]
+        edge_end = s_lo if s_hi >= s_lo else hi + 1
+        for x in range(lo, edge_end):
+            cover = 0.0
+            for w in widths:
+                cover += max(0.0, min(x + 1, cx + w) - max(x, cx - w))
+            cover = min(1.0, cover / 4.0)
+            val = int(v * cover)
+            parts.append(bytes((val, val, val)))
+        if s_hi >= s_lo:
+            parts.append(solid_px * (s_hi - s_lo + 1))
+            for x in range(s_hi + 1, hi + 1):
+                cover = 0.0
+                for w in widths:
+                    cover += max(0.0, min(x + 1, cx + w) - max(x, cx - w))
+                cover = min(1.0, cover / 4.0)
+                val = int(v * cover)
+                parts.append(bytes((val, val, val)))
+        parts.append(b"\x00" * ((width - 1 - hi) * 3))
+        rows.append(b"".join(parts))
+    return b"".join(rows)
+
+
+def _encode_frames(out_path: Path, frames, width: int, height: int, fps: int) -> Path:
+    cmd = [
+        "ffmpeg", "-y", "-v", "error",
+        "-f", "rawvideo", "-pix_fmt", "rgb24",
+        "-s", f"{width}x{height}", "-r", str(fps),
+        "-i", "-",
+        # A hard-edged white shape on black is the worst case for compression,
+        # and these are under a second, so quality costs almost nothing here.
+        "-c:v", "libx264", "-preset", "slow", "-crf", "16",
+        "-pix_fmt", "yuv420p", "-an",
         str(out_path),
     ]
-    _run(cmd)
+    log.info("running: %s", " ".join(cmd))
+    proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
+    assert proc.stdin is not None
+    try:
+        for f in frames:
+            proc.stdin.write(f)
+    finally:
+        proc.stdin.close()
+        proc.wait()
+    if proc.returncode != 0:
+        raise RuntimeError(f"ffmpeg failed generating {out_path}")
     return out_path
 
 
 def generate_power_on(
     out_path: Path,
     *,
-    duration: float = 0.75,
-    width: int = 1280,
-    height: int = 720,
+    duration: float = 0.55,
+    width: int = 1920,
+    height: int = 1080,
     fps: int = 60,
 ) -> Path:
-    """The CRT switch-on: a dot blooms to a line, the line opens to the frame.
+    """The switch-on: a point of light bursts outward and fills the screen.
 
-    Frames are built here and piped to ffmpeg as raw pixels rather than
-    described as an ffmpeg filter. That is deliberate: `drawbox` takes `t` as
-    its THICKNESS option while `t` inside an expression means time, and the
-    resulting clip was a solid white rectangle. Generating the pixels is
-    completely predictable and needs no filter-syntax guesswork.
+    RADIAL, not the older collapse-to-a-horizontal-line. Both are real CRT
+    behaviours; Brian preferred the quicker radial pop.
 
-    60fps, not the 25 the other assets use - the whole thing lasts under a
-    second and the movement is fast, so fewer frames read as a stutter.
-
-    60 SPECIFICALLY, to match the display's refresh. The first version was 50fps
-    against a screen running at 30Hz, and 50 into 30 does not divide - frames
-    were dropped unevenly and Brian saw exactly that as judder. Matching the
-    refresh rate is the whole point; if the display mode ever changes, this
-    should follow it.
+    1920x1080 to match the mode mpv sets, so nothing is scaled up - a hard-edged
+    white disc is the worst possible content for an upscale.
 
     Ends on black so the ident can fade up cleanly behind it.
     """
+    import math
+
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    line_h = 6
-    t_widen, t_open, t_fade = 0.16, 0.40, 0.52
+    full = math.hypot(width / 2.0, height / 2.0)
+    t_grow, t_fade = duration * 0.62, duration * 0.68
 
-    def frame(t: float) -> bytes:
-        if t < t_widen:                       # dot -> horizontal line
-            w, h, bright = max(2, int(width * (t / t_widen))), line_h, 1.0
-        elif t < t_open:                      # line -> full frame
-            progress = (t - t_widen) / (t_open - t_widen)
-            w = width
-            h = max(line_h, int(line_h + (height - line_h) * progress))
-            bright = 1.0
-        else:                                 # settle to black for the ident
-            w, h = width, height
-            bright = (
-                max(0.0, 1.0 - (t - t_fade) / (duration - t_fade))
-                if t >= t_fade
-                else 1.0
-            )
-        value = max(0, min(255, int(255 * bright)))
-        x0, y0 = (width - w) // 2, (height - h) // 2
-        black_row = b"\x00" * (width * 3)
-        lit_row = (
-            b"\x00" * (x0 * 3)
-            + bytes([value]) * (w * 3)
-            + b"\x00" * ((width - x0 - w) * 3)
-        )
-        return b"".join(
-            lit_row if y0 <= y < y0 + h else black_row for y in range(height)
-        )
+    def radius(t):
+        if t >= t_grow:
+            return full
+        # Ease out: quick off the mark, settling as it reaches the edges.
+        return full * (t / t_grow) ** 0.55
 
-    cmd = [
-        "ffmpeg", "-y", "-v", "error",
-        "-f", "rawvideo", "-pix_fmt", "rgb24",
-        "-s", f"{width}x{height}", "-r", str(fps),
-        "-i", "-",
-        "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p",
-        "-an",
-        str(out_path),
-    ]
-    log.info("running: %s", " ".join(cmd))
-    proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
-    assert proc.stdin is not None
-    try:
-        for i in range(int(duration * fps)):
-            proc.stdin.write(frame(i / fps))
-    finally:
-        proc.stdin.close()
-        proc.wait()
-    if proc.returncode != 0:
-        raise RuntimeError(f"ffmpeg failed generating {out_path}")
-    return out_path
+    def bright(t):
+        if t < t_fade:
+            return 1.0
+        return max(0.0, 1.0 - (t - t_fade) / (duration - t_fade))
+
+    frames = (
+        _radial_frame(i / fps, radius, bright, width, height)
+        for i in range(int(duration * fps))
+    )
+    return _encode_frames(out_path, frames, width, height, fps)
 
 
 def generate_power_off(
     out_path: Path,
     *,
-    duration: float = 0.85,
-    width: int = 1280,
-    height: int = 720,
+    duration: float = 0.70,
+    width: int = 1920,
+    height: int = 1080,
     fps: int = 60,
 ) -> Path:
-    """The CRT switch-off: the picture collapses to a line, then a dot, then out.
+    """The switch-off: the picture rushes inward to a point, then winks out.
 
-    The mirror of :func:`generate_power_on`, and the more recognisable of the
-    two - everyone who grew up with a CRT knows this one. It is slower than the
-    switch-on because the real thing was: the phosphor takes a moment to give
-    up, and the lingering dot is the whole charm of it.
-
-    60fps for the same reason as the power-on: the movement is fast, and a rate
-    that divides evenly into the display's refresh is what stops it juddering.
+    The mirror of the switch-on, and slightly slower - the lingering dot is the
+    part everyone remembers, so it is given time to be seen.
     """
+    import math
+
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    line_h = 6
-    t_collapse, t_narrow, t_dot = 0.30, 0.55, 0.72
-    dot_w = 40
+    full = math.hypot(width / 2.0, height / 2.0)
+    dot = max(3.0, width / 260.0)
+    t_shrink, t_hold = duration * 0.50, duration * 0.72
 
-    def frame(t: float) -> bytes:
-        if t < t_collapse:                       # full frame -> horizontal line
-            progress = t / t_collapse
-            w = width
-            h = max(line_h, int(height - (height - line_h) * progress))
-            bright = 1.0
-        elif t < t_narrow:                       # line -> short dash
-            progress = (t - t_collapse) / (t_narrow - t_collapse)
-            w = max(dot_w, int(width - (width - dot_w) * progress))
-            h = line_h
-            bright = 1.0
-        elif t < t_dot:                          # the lingering dot
-            w, h, bright = dot_w, line_h, 1.0
-        else:                                    # winks out
-            w, h = dot_w, line_h
-            bright = max(0.0, 1.0 - (t - t_dot) / (duration - t_dot))
-        value = max(0, min(255, int(255 * bright)))
-        x0, y0 = (width - w) // 2, (height - h) // 2
-        black_row = b"\x00" * (width * 3)
-        lit_row = (
-            b"\x00" * (x0 * 3)
-            + bytes([value]) * (w * 3)
-            + b"\x00" * ((width - x0 - w) * 3)
-        )
-        return b"".join(
-            lit_row if y0 <= y < y0 + h else black_row for y in range(height)
-        )
+    def radius(t):
+        if t >= t_shrink:
+            return dot
+        # Ease in: collapses fast, then eases as it closes on the dot.
+        p = t / t_shrink
+        return dot + (full - dot) * (1.0 - p) ** 0.65
 
-    cmd = [
-        "ffmpeg", "-y", "-v", "error",
-        "-f", "rawvideo", "-pix_fmt", "rgb24",
-        "-s", f"{width}x{height}", "-r", str(fps),
-        "-i", "-",
-        "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p",
-        "-an",
-        str(out_path),
-    ]
-    log.info("running: %s", " ".join(cmd))
-    proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
-    assert proc.stdin is not None
-    try:
-        for i in range(int(duration * fps)):
-            proc.stdin.write(frame(i / fps))
-    finally:
-        proc.stdin.close()
-        proc.wait()
-    if proc.returncode != 0:
-        raise RuntimeError(f"ffmpeg failed generating {out_path}")
-    return out_path
+    def bright(t):
+        if t < t_hold:
+            return 1.0
+        return max(0.0, 1.0 - (t - t_hold) / (duration - t_hold))
+
+    frames = (
+        _radial_frame(i / fps, radius, bright, width, height)
+        for i in range(int(duration * fps))
+    )
+    return _encode_frames(out_path, frames, width, height, fps)
 
 
 def generate_all(assets_dir: Path, *, force: bool = False) -> List[Path]:
