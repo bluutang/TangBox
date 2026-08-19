@@ -216,3 +216,91 @@ def test_a_bad_sign_on_block_is_rejected(tmp_path):
                 "sign_on": "yes please",
             }
         )
+
+
+# -- the CRT power-on zap ----------------------------------------------------
+#
+# A telly doesn't cut to a picture, it blooms into one: a dot opens to a line,
+# the line opens to the frame. The zap runs BEFORE everything else, so it is
+# the very first thing the screen does.
+
+
+def build_zap(tmp_path, *, assets=("power_on.mp4", "colorbars.mp4", "logo.mp4"), **over):
+    return build(tmp_path, assets=assets, **over)
+
+
+def test_the_zap_plays_first(tmp_path):
+    app, player, _, assets = build_zap(tmp_path)
+    app.start()
+    assert played_names(player) == ["power_on.mp4"]
+
+
+def test_the_zap_hands_over_to_the_bars(tmp_path):
+    app, player, _, _ = build_zap(tmp_path)
+    app.start()
+    player.finish_current(END_EOF)
+    app.step()
+    assert player.looping is not None and player.looping.name == "colorbars.mp4"
+
+
+def test_zap_then_logo_when_bars_are_off(tmp_path):
+    """bars_seconds: 0 is the real Pi config - straight to the ident."""
+    app, player, _, _ = build_zap(
+        tmp_path, sign_on={"enabled": True, "bars_seconds": 0}
+    )
+    app.start()
+    player.finish_current(END_EOF)
+    app.step()
+    assert played_names(player) == ["power_on.mp4", "logo.mp4"]
+
+
+def test_the_whole_sequence_ends_on_a_channel(tmp_path):
+    app, player, _, _ = build_zap(
+        tmp_path, sign_on={"enabled": True, "bars_seconds": 0}
+    )
+    app.start()
+    player.finish_current(END_EOF)   # zap done
+    app.step()
+    player.finish_current(END_EOF)   # ident done
+    app.step()
+    assert played_names(player)[-1].startswith("dragon")
+
+
+def test_a_missing_zap_asset_just_skips_it(tmp_path):
+    """Every stage is optional. A missing file must never cost the cartoons."""
+    app, player, _, _ = build_zap(
+        tmp_path,
+        assets=("logo.mp4",),
+        sign_on={"enabled": True, "bars_seconds": 0},
+    )
+    app.start()
+    assert played_names(player) == ["logo.mp4"]
+
+
+def test_a_button_skips_the_zap_too(tmp_path):
+    app, player, _, _ = build_zap(tmp_path)
+    app.start()
+    app.handle_event(InputEvent(Action.CHANNEL_UP))
+    assert played_names(player)[-1].startswith("dragon")
+
+
+def test_the_zap_ending_does_not_burn_an_episode(tmp_path):
+    """Same trap as the ident: an end-of-clip here is a cue, not a finished show."""
+    app, player, _, _ = build_zap(
+        tmp_path, sign_on={"enabled": True, "bars_seconds": 0}
+    )
+    app.start()
+    player.finish_current(END_EOF)
+    app.step()
+    player.finish_current(END_EOF)
+    app.step()
+    episodes = [n for n in played_names(player) if n.startswith("dragon")]
+    assert len(episodes) == 1, f"expected one episode, got {episodes}"
+
+
+def test_config_default_zap_filename(tmp_path):
+    make_show(tmp_path, "dragon", 1)
+    cfg = config_from_dict(
+        {"channels": [{"number": 2, "name": "D", "path": str(tmp_path / "dragon")}]}
+    )
+    assert cfg.sign_on.power_on == "power_on.mp4"

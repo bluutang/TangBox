@@ -65,3 +65,50 @@ def test_force_must_not_destroy_real_artwork(tmp_path):
     logo.write_bytes(b"pretend this is Brian's artwork")
     generate_all(tmp_path, force=True)
     assert logo.read_bytes() == b"pretend this is Brian's artwork"
+
+
+# -- the CRT power-on zap ----------------------------------------------------
+
+
+def test_the_zap_actually_animates(tmp_path):
+    """A clip that renders but never changes would pass a "file exists" test.
+
+    Decode it and check the brightness really does rise then fall: dark at the
+    start (a thin line on black), bright in the middle (full frame), dark at the
+    end (settled, so the ident can fade up behind it).
+    """
+    import subprocess
+
+    from nostalgiabox.static_gen import generate_power_on
+
+    out = generate_power_on(tmp_path / "power_on.mp4")
+    raw = subprocess.run(
+        ["ffmpeg", "-v", "error", "-i", str(out),
+         "-f", "rawvideo", "-pix_fmt", "gray", "-s", "32x18", "-"],
+        capture_output=True, check=True,
+    ).stdout
+    per_frame = 32 * 18
+    frames = [raw[i:i + per_frame] for i in range(0, len(raw), per_frame)]
+    assert len(frames) > 10, "suspiciously few frames"
+    means = [sum(f) / len(f) for f in frames]
+
+    assert means[0] < 40, f"should start nearly black, got {means[0]:.0f}"
+    assert max(means) > 180, f"should reach near-white, got {max(means):.0f}"
+    assert means[-1] < 60, f"should settle dark, got {means[-1]:.0f}"
+    assert means.index(max(means)) > 0, "brightest frame should not be the first"
+
+
+def test_generate_all_creates_the_zap(tmp_path):
+    from nostalgiabox.static_gen import POWER_ON_FILENAME
+
+    generate_all(tmp_path)
+    assert (tmp_path / POWER_ON_FILENAME).is_file()
+
+
+def test_force_spares_a_replaced_zap(tmp_path):
+    from nostalgiabox.static_gen import POWER_ON_FILENAME
+
+    zap = tmp_path / POWER_ON_FILENAME
+    zap.write_bytes(b"someone's own switch-on effect")
+    generate_all(tmp_path, force=True)
+    assert zap.read_bytes() == b"someone's own switch-on effect"

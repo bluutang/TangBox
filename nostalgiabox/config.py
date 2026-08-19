@@ -85,6 +85,9 @@ class SignOnConfig:
     enabled: bool = False
     bars_seconds: float = 2.0       # colour bars with the 1 kHz tone
     logo: str = "logo.mp4"          # asset filename; missing = bars only
+    # The CRT switch-on: a dot blooms to a line, the line opens to the frame.
+    # Runs FIRST, so it is the very first thing the screen does.
+    power_on: str = "power_on.mp4"
 
 
 @dataclass(frozen=True)
@@ -465,6 +468,7 @@ def _parse_sign_on(raw: Any) -> SignOnConfig:
             raw.get("bars_seconds", d.bars_seconds), 0.0, 30.0, "sign_on.bars_seconds"
         ),
         logo=str(raw.get("logo", d.logo)),
+        power_on=str(raw.get("power_on", d.power_on)),
     )
 
 

@@ -44,6 +44,10 @@ from .static_gen import (
 
 log = logging.getLogger(__name__)
 
+# The sign-on, in order. Each stage is optional; the sequence skips any
+# whose asset is missing and tunes in if none of them have anything.
+_SIGN_ON_STAGES = ("zap", "bars", "logo")
+
 
 class TVApp:
     """The retro-TV application state machine."""
@@ -109,6 +113,7 @@ class TVApp:
         self._assets_dir = assets_dir or config.assets_dir or DEFAULT_ASSETS_DIR
         self._colorbars_path = self._resolve_asset(COLORBARS_FILENAME)
         self._logo_path = self._resolve_asset(config.sign_on.logo)
+        self._zap_path = self._resolve_asset(config.sign_on.power_on)
         # Sign-on state: None (on air), "bars", or "logo".
         self._sign_on_stage: Optional[str] = None
         self._sign_on_deadline: Optional[float] = None
@@ -177,35 +182,65 @@ class TVApp:
     def _begin_sign_on(self) -> bool:
         """Start the sequence. False means "nothing to show, just tune in".
 
-        This runs before any television happens, so every branch degrades to
-        tuning in. A missing logo must never cost the kids their cartoons.
+        This runs before any television happens, so every stage is optional and
+        every branch degrades to tuning in. A missing asset must never cost the
+        kids their cartoons.
         """
-        cfg = self.config.sign_on
-        if not cfg.enabled:
+        if not self.config.sign_on.enabled:
             return False
-        if cfg.bars_seconds > 0 and self._colorbars_path is not None:
-            self._sign_on_stage = "bars"
-            self._sign_on_deadline = self._clock() + cfg.bars_seconds
-            self.player.play_loop(self._colorbars_path)
-            return True
-        return self._play_sign_on_logo()
+        return self._enter_sign_on_stage_after(None)
 
-    def _play_sign_on_logo(self) -> bool:
-        if self._logo_path is None:
-            return False
-        self._sign_on_stage = "logo"
+    def _enter_sign_on_stage_after(self, previous: Optional[str]) -> bool:
+        """Start the first stage after ``previous`` that has something to show.
+
+        Walking an ordered list rather than chaining "if this fails try that"
+        keeps every stage genuinely optional - the zap, the bars and the ident
+        can each be absent without the others caring.
+        """
+        start = 0 if previous is None else _SIGN_ON_STAGES.index(previous) + 1
+        for stage in _SIGN_ON_STAGES[start:]:
+            if self._start_sign_on_stage(stage):
+                return True
+        self._sign_on_stage = None
         self._sign_on_deadline = None
-        self.player.play(self._logo_path)
+        return False
+
+    def _start_sign_on_stage(self, stage: str) -> bool:
+        """Begin one stage, or return False if it has no asset to play."""
+        if stage == "zap":
+            if self._zap_path is None:
+                return False
+            self.player.play(self._zap_path)
+        elif stage == "bars":
+            if self.config.sign_on.bars_seconds <= 0 or self._colorbars_path is None:
+                return False
+            self.player.play_loop(self._colorbars_path)
+        elif stage == "logo":
+            if self._logo_path is None:
+                return False
+            self.player.play(self._logo_path)
+        else:  # pragma: no cover - guarded by _SIGN_ON_STAGES
+            return False
+
+        self._sign_on_stage = stage
+        # Only the bars are timed. The clips end on their own and are advanced
+        # from the playback drain.
+        self._sign_on_deadline = (
+            self._clock() + self.config.sign_on.bars_seconds if stage == "bars" else None
+        )
         return True
 
+    def _advance_sign_on(self, after: str) -> None:
+        if not self._enter_sign_on_stage_after(after):
+            self._finish_sign_on()
+
     def _maybe_advance_sign_on(self, now: float) -> None:
-        """Colour bars are timed; the logo ends on its own (see the drain)."""
+        """Colour bars are timed; the clips end on their own (see the drain)."""
         if self._sign_on_stage != "bars" or self._sign_on_deadline is None:
             return
         if now < self._sign_on_deadline:
             return
-        if not self._play_sign_on_logo():
-            self._finish_sign_on()
+        self._advance_sign_on("bars")
 
     def _finish_sign_on(self) -> None:
         """Hand over to the first channel. Safe to call at any stage."""
@@ -547,11 +582,14 @@ class TVApp:
                 reason = self._ended.get_nowait()
             except queue.Empty:
                 break
-            if self._sign_on_stage == "logo" and reason in (END_EOF, END_ERROR):
-                # The logo finished. That is the cue to tune in - emphatically
-                # not a finished episode, which would burn one before anyone
-                # had seen it.
-                self._finish_sign_on()
+            if self._sign_on_stage in ("zap", "logo") and reason in (
+                END_EOF,
+                END_ERROR,
+            ):
+                # A sign-on clip finished. That is a cue to move on - emphatically
+                # NOT a finished episode, which would burn one before anyone had
+                # seen it.
+                self._advance_sign_on(self._sign_on_stage)
                 continue
             # Coalesce: only advance once even if several events queued up.
             if reason in (END_EOF, END_ERROR) and not advanced and not self.standby:

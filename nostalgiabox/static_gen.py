@@ -30,6 +30,7 @@ DEFAULT_ASSETS_DIR = Path(__file__).resolve().parent / "assets"
 STATIC_FILENAME = "static.mp4"
 COLORBARS_FILENAME = "colorbars.mp4"
 LOGO_FILENAME = "logo.mp4"
+POWER_ON_FILENAME = "power_on.mp4"
 GLITCH_FILENAME = "glitch.mp4"
 
 # The bundled retro OSD font, used for the placeholder ident.
@@ -210,6 +211,81 @@ def generate_logo(
     return out_path
 
 
+def generate_power_on(
+    out_path: Path,
+    *,
+    duration: float = 0.75,
+    width: int = 1280,
+    height: int = 720,
+    fps: int = 50,
+) -> Path:
+    """The CRT switch-on: a dot blooms to a line, the line opens to the frame.
+
+    Frames are built here and piped to ffmpeg as raw pixels rather than
+    described as an ffmpeg filter. That is deliberate: `drawbox` takes `t` as
+    its THICKNESS option while `t` inside an expression means time, and the
+    resulting clip was a solid white rectangle. Generating the pixels is
+    completely predictable and needs no filter-syntax guesswork.
+
+    50fps, not the 25 the other assets use - the whole thing lasts under a
+    second and the movement is fast, so half the frames look like a stutter.
+
+    Ends on black so the ident can fade up cleanly behind it.
+    """
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    line_h = 6
+    t_widen, t_open, t_fade = 0.16, 0.40, 0.52
+
+    def frame(t: float) -> bytes:
+        if t < t_widen:                       # dot -> horizontal line
+            w, h, bright = max(2, int(width * (t / t_widen))), line_h, 1.0
+        elif t < t_open:                      # line -> full frame
+            progress = (t - t_widen) / (t_open - t_widen)
+            w = width
+            h = max(line_h, int(line_h + (height - line_h) * progress))
+            bright = 1.0
+        else:                                 # settle to black for the ident
+            w, h = width, height
+            bright = (
+                max(0.0, 1.0 - (t - t_fade) / (duration - t_fade))
+                if t >= t_fade
+                else 1.0
+            )
+        value = max(0, min(255, int(255 * bright)))
+        x0, y0 = (width - w) // 2, (height - h) // 2
+        black_row = b"\x00" * (width * 3)
+        lit_row = (
+            b"\x00" * (x0 * 3)
+            + bytes([value]) * (w * 3)
+            + b"\x00" * ((width - x0 - w) * 3)
+        )
+        return b"".join(
+            lit_row if y0 <= y < y0 + h else black_row for y in range(height)
+        )
+
+    cmd = [
+        "ffmpeg", "-y", "-v", "error",
+        "-f", "rawvideo", "-pix_fmt", "rgb24",
+        "-s", f"{width}x{height}", "-r", str(fps),
+        "-i", "-",
+        "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p",
+        "-an",
+        str(out_path),
+    ]
+    log.info("running: %s", " ".join(cmd))
+    proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
+    assert proc.stdin is not None
+    try:
+        for i in range(int(duration * fps)):
+            proc.stdin.write(frame(i / fps))
+    finally:
+        proc.stdin.close()
+        proc.wait()
+    if proc.returncode != 0:
+        raise RuntimeError(f"ffmpeg failed generating {out_path}")
+    return out_path
+
+
 def generate_all(assets_dir: Path, *, force: bool = False) -> List[Path]:
     """Generate any missing assets in ``assets_dir``; return what exists."""
     if not ffmpeg_available():
@@ -246,6 +322,14 @@ def generate_all(assets_dir: Path, *, force: bool = False) -> List[Path]:
         results.append(generate_logo(logo_path))
     else:
         results.append(logo_path)
+
+    # Also spared by `force`, on the same rule as the logo: never regenerate
+    # something a person may have replaced with their own.
+    zap_path = assets_dir / POWER_ON_FILENAME
+    if not zap_path.exists():
+        results.append(generate_power_on(zap_path))
+    else:
+        results.append(zap_path)
 
     return results
 
