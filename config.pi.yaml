@@ -102,6 +102,31 @@ tune_in: random
 
 start_channel: 2         # what it powers on to
 
+# --- Sign-on ------------------------------------------------------------------
+# How a TV station used to start the broadcast day: colour bars with the 1 kHz
+# tone, then a station ident, then the first channel tunes in.
+#
+# OFF by default in the code (it changes the first thing anyone ever sees), ON
+# here because it is the whole point of the box.
+#
+# ANY BUTTON SKIPS IT. That is deliberate and not optional: this plays every
+# single time the box is switched on, in front of a 2- and a 4-year-old who
+# want cartoons. A lovely twelve-second ident is charming on Tuesday and
+# unbearable by Friday. Real station idents were short for the same reason.
+#
+# `logo` is a filename inside the assets folder. Until Brian's artwork lands,
+# install.sh generates a placeholder - "TANGBOX" in phosphor green, fading up.
+# To use the real thing: drop your own logo.mp4 into
+# nostalgiabox/assets/ and restart. Nothing else changes, and
+# `static_gen --force` deliberately will NOT overwrite it.
+#
+# It plays through the CRT shader, so it gets the scanlines and the phosphor
+# bloom - bold shapes survive that, thin lines and small text do not.
+sign_on:
+  enabled: true
+  bars_seconds: 2        # colour bars before the ident. 0 goes straight to it
+  logo: logo.mp4
+
 # --- The "feel" of the TV -----------------------------------------------------
 fullscreen: true         # true on the TV (this is the default)
 force_4_3: false         # let 4:3 shows pillarbox and 16:9 fill the screen

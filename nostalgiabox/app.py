@@ -99,6 +99,10 @@ class TVApp:
         # Filler assets.
         self._assets_dir = assets_dir or config.assets_dir or DEFAULT_ASSETS_DIR
         self._colorbars_path = self._resolve_asset(COLORBARS_FILENAME)
+        self._logo_path = self._resolve_asset(config.sign_on.logo)
+        # Sign-on state: None (on air), "bars", or "logo".
+        self._sign_on_stage: Optional[str] = None
+        self._sign_on_deadline: Optional[float] = None
         # The channel-change transition clip depends on the configured effect.
         self._transition_path = self._resolve_transition_asset()
 
@@ -152,6 +156,52 @@ class TVApp:
         self.player.set_mute(self.muted)
         self.input.start()
         self._select_start_channel()
+        if not self._begin_sign_on():
+            self.tune_current(show_static=False)
+
+    # -- sign-on ------------------------------------------------------------
+    @property
+    def signing_on(self) -> bool:
+        """True while the station is signing on, before any channel is showing."""
+        return self._sign_on_stage is not None
+
+    def _begin_sign_on(self) -> bool:
+        """Start the sequence. False means "nothing to show, just tune in".
+
+        This runs before any television happens, so every branch degrades to
+        tuning in. A missing logo must never cost the kids their cartoons.
+        """
+        cfg = self.config.sign_on
+        if not cfg.enabled:
+            return False
+        if cfg.bars_seconds > 0 and self._colorbars_path is not None:
+            self._sign_on_stage = "bars"
+            self._sign_on_deadline = self._clock() + cfg.bars_seconds
+            self.player.play_loop(self._colorbars_path)
+            return True
+        return self._play_sign_on_logo()
+
+    def _play_sign_on_logo(self) -> bool:
+        if self._logo_path is None:
+            return False
+        self._sign_on_stage = "logo"
+        self._sign_on_deadline = None
+        self.player.play(self._logo_path)
+        return True
+
+    def _maybe_advance_sign_on(self, now: float) -> None:
+        """Colour bars are timed; the logo ends on its own (see the drain)."""
+        if self._sign_on_stage != "bars" or self._sign_on_deadline is None:
+            return
+        if now < self._sign_on_deadline:
+            return
+        if not self._play_sign_on_logo():
+            self._finish_sign_on()
+
+    def _finish_sign_on(self) -> None:
+        """Hand over to the first channel. Safe to call at any stage."""
+        self._sign_on_stage = None
+        self._sign_on_deadline = None
         self.tune_current(show_static=False)
 
     def run(self) -> None:
@@ -185,6 +235,7 @@ class TVApp:
         """
         now = self._clock()
         self.overlay.tick()
+        self._maybe_advance_sign_on(now)
         self._maybe_commit_switch(now)
         self._maybe_commit_digits(now)
         self._drain_playback_events()
@@ -210,6 +261,12 @@ class TVApp:
         if action == Action.QUIT:
             self._running = False
             return
+        # Any press during the sign-on skips it, and is consumed doing so - a
+        # channel-up here means "get on with it", not "channel 3".
+        if self.signing_on:
+            self._finish_sign_on()
+            return
+
         if action == Action.POWER:
             self._toggle_standby()
             return
@@ -427,6 +484,12 @@ class TVApp:
                 reason = self._ended.get_nowait()
             except queue.Empty:
                 break
+            if self._sign_on_stage == "logo" and reason in (END_EOF, END_ERROR):
+                # The logo finished. That is the cue to tune in - emphatically
+                # not a finished episode, which would burn one before anyone
+                # had seen it.
+                self._finish_sign_on()
+                continue
             # Coalesce: only advance once even if several events queued up.
             if reason in (END_EOF, END_ERROR) and not advanced and not self.standby:
                 self._advance_current()

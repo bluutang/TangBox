@@ -60,6 +60,24 @@ class UiConfig:
 
 
 @dataclass(frozen=True)
+class SignOnConfig:
+    """The station sign-on: colour bars, then a logo, then the first channel.
+
+    How a TV station used to start the broadcast day. It runs EVERY time the box
+    is switched on, in front of small children who want cartoons, so it is kept
+    short and any button press skips it.
+    """
+
+    # OFF by default, on purpose. This changes what happens at power-on, and a
+    # new feature should not quietly restyle the first thing anyone sees - the
+    # 17 existing tests that broke when it defaulted to True made that point
+    # clearly. config.pi.yaml switches it on for the real box.
+    enabled: bool = False
+    bars_seconds: float = 2.0       # colour bars with the 1 kHz tone
+    logo: str = "logo.mp4"          # asset filename; missing = bars only
+
+
+@dataclass(frozen=True)
 class CrtConfig:
     """The CRT picture effect applied to the 4:3 video via a GLSL shader."""
 
@@ -140,6 +158,7 @@ class Config:
     osd_duration: float = 2.0             # how long volume/message overlays linger
     ui: UiConfig = field(default_factory=UiConfig)
     crt: CrtConfig = field(default_factory=CrtConfig)
+    sign_on: SignOnConfig = field(default_factory=SignOnConfig)
 
     # Audio.
     initial_volume: int = 70              # 0-100
@@ -370,6 +389,7 @@ def config_from_dict(data: Dict[str, Any], *, base_dir: Optional[Path] = None) -
         osd_duration=_clamp_float(data.get("osd_duration", 2.0), 0.0, 60.0, "osd_duration"),
         ui=_parse_ui(data.get("ui")),
         crt=_parse_crt(data.get("crt")),
+        sign_on=_parse_sign_on(data.get("sign_on")),
         initial_volume=initial_volume,
         volume_step=volume_step,
         audio_device=audio_device,
@@ -413,6 +433,23 @@ def _parse_ui(raw: Any) -> UiConfig:
         glow_blur=_clamp_float(
             raw.get("glow_blur", defaults.glow_blur), 0.0, 20.0, "ui.glow_blur"
         ),
+    )
+
+
+def _parse_sign_on(raw: Any) -> SignOnConfig:
+    if raw is None:
+        return SignOnConfig()
+    if not isinstance(raw, dict):
+        raise ConfigError("'sign_on' must be a mapping")
+    d = SignOnConfig()
+    return SignOnConfig(
+        enabled=bool(raw.get("enabled", d.enabled)),
+        # Capped at 30s deliberately: nobody wants a five-minute ident before
+        # the cartoons, and a typo here would be maddening to diagnose.
+        bars_seconds=_clamp_float(
+            raw.get("bars_seconds", d.bars_seconds), 0.0, 30.0, "sign_on.bars_seconds"
+        ),
+        logo=str(raw.get("logo", d.logo)),
     )
 
 
@@ -517,6 +554,7 @@ def _clamp_float(value: Any, lo: float, hi: float, name: str) -> float:
 
 __all__ = [
     "Config",
+    "SignOnConfig",
     "ChannelConfig",
     "UiConfig",
     "CrtConfig",

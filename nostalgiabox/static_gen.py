@@ -17,6 +17,7 @@ from __future__ import annotations
 import argparse
 import logging
 import shutil
+from functools import lru_cache
 import subprocess
 from pathlib import Path
 from typing import List
@@ -28,11 +29,35 @@ DEFAULT_ASSETS_DIR = Path(__file__).resolve().parent / "assets"
 
 STATIC_FILENAME = "static.mp4"
 COLORBARS_FILENAME = "colorbars.mp4"
+LOGO_FILENAME = "logo.mp4"
 GLITCH_FILENAME = "glitch.mp4"
+
+# The bundled retro OSD font, used for the placeholder ident.
+FONTS_DIR = DEFAULT_ASSETS_DIR / "fonts"
 
 
 def ffmpeg_available() -> bool:
     return shutil.which("ffmpeg") is not None
+
+
+@lru_cache(maxsize=1)
+def drawtext_available() -> bool:
+    """Whether this ffmpeg can render text (needs libfreetype).
+
+    Debian's build on the Pi can; Homebrew's on a Mac often cannot. Worth
+    checking rather than discovering through a non-zero exit buried in
+    install.sh, where the error would be swallowed by `|| echo "skipped"`.
+    """
+    if not ffmpeg_available():
+        return False
+    try:
+        out = subprocess.run(
+            ["ffmpeg", "-hide_banner", "-filters"],
+            check=False, capture_output=True, text=True, timeout=20,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return " drawtext " in out.stdout
 
 
 def _run(cmd: List[str]) -> None:
@@ -127,6 +152,64 @@ def generate_color_bars(
     return out_path
 
 
+def generate_logo(
+    out_path: Path,
+    *,
+    text: str = "TANGBOX",
+    duration: float = 3.0,
+    width: int = 1280,
+    height: int = 720,
+    fps: int = 25,
+    color: str = "0x4DFF5A",
+) -> Path:
+    """Render a PLACEHOLDER station ident: the name in phosphor green, fading up.
+
+    This exists so the sign-on sequence works before any artwork does. Replace
+    it by dropping a real ``logo.mp4`` into the assets folder - nothing else has
+    to change, and generate_all() will leave yours alone because it only fills
+    in what is missing.
+
+    Three seconds on purpose. This plays every single time the box is switched
+    on, in front of small children who want cartoons; a longer ident is charming
+    for about two days.
+    """
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    # Fade up from black and back out, so it reads as a station ident rather
+    # than a still image someone forgot to remove.
+    fade_out_at = max(0.0, duration - 0.6)
+    fade = f"fade=t=in:st=0:d=0.6,fade=t=out:st={fade_out_at:.2f}:d=0.6"
+
+    if drawtext_available():
+        font = FONTS_DIR / "VT323-Regular.ttf"
+        draw = (
+            f"drawtext=text='{text}':fontcolor={color}:fontsize={height // 6}"
+            f":x=(w-text_w)/2:y=(h-text_h)/2"
+        )
+        if font.is_file():
+            draw += f":fontfile='{font}'"
+        vf = f"{draw},{fade}"
+        source = f"color=c=black:s={width}x{height}:r={fps}:d={duration}"
+    else:
+        # No text renderer. Rather than fail (and be swallowed by install.sh),
+        # produce a plain phosphor-green card that fades - still a usable
+        # placeholder, and still obviously a placeholder.
+        log.info("ffmpeg has no drawtext filter; rendering a plain ident card")
+        vf = fade
+        source = f"color=c={color.replace('0x', '#')}:s={width}x{height}:r={fps}:d={duration}"
+
+    cmd = [
+        "ffmpeg", "-y",
+        "-f", "lavfi",
+        "-i", source,
+        "-vf", vf,
+        "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p",
+        "-an",
+        str(out_path),
+    ]
+    _run(cmd)
+    return out_path
+
+
 def generate_all(assets_dir: Path, *, force: bool = False) -> List[Path]:
     """Generate any missing assets in ``assets_dir``; return what exists."""
     if not ffmpeg_available():
@@ -154,6 +237,15 @@ def generate_all(assets_dir: Path, *, force: bool = False) -> List[Path]:
         results.append(generate_color_bars(bars_path))
     else:
         results.append(bars_path)
+
+    # NOTE: deliberately NOT regenerated under `force`. Everything else here is
+    # synthetic and disposable; logo.mp4 is the one asset a person may have
+    # replaced with real artwork, and `--force` must not overwrite it.
+    logo_path = assets_dir / LOGO_FILENAME
+    if not logo_path.exists():
+        results.append(generate_logo(logo_path))
+    else:
+        results.append(logo_path)
 
     return results
 
