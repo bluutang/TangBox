@@ -324,3 +324,21 @@ def test_no_frame_jumps_a_long_way(tmp_path):
     # 32 cells across. Tightened from 8 once 0.95s proved smooth on the TV, so
     # speeding the zaps back up cannot quietly undo that.
     assert max(jumps) <= 5, f"biggest single-frame jump was {max(jumps)} of 32 cells"
+
+
+def test_the_off_zap_vanishes_rather_than_fading_a_dot(tmp_path):
+    """Brian: "make the off zap completely disappear at the center".
+
+    It should end by shrinking to NOTHING, not by holding a dot and dimming it.
+    So the final frames must have no lit pixels at all - not merely dark ones.
+    """
+    from nostalgiabox.static_gen import generate_power_off
+
+    out = generate_power_off(tmp_path / "off.mp4", width=640, height=360)
+    frames = frames_of(out)
+    assert lit_box(frames[-1], thresh=40) is None, "something is still lit at the end"
+    assert lit_box(frames[-2], thresh=40) is None, "still lit one frame from the end"
+    # And it must genuinely shrink on the way, not just cut out.
+    widths = [0 if not lit_box(f) else lit_box(f)[1] - lit_box(f)[0] + 1 for f in frames]
+    lit = [w for w in widths if w > 0]
+    assert lit[0] > 20 and min(lit) <= 3, f"did not close down: {lit[:3]} ... {lit[-3:]}"

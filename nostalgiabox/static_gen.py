@@ -370,7 +370,7 @@ def generate_power_on(
 def generate_power_off(
     out_path: Path,
     *,
-    duration: float = 0.90,
+    duration: float = 0.75,
     width: int = 1920,
     height: int = 1080,
     fps: int = 60,
@@ -378,33 +378,32 @@ def generate_power_off(
 ) -> Path:
     """The switch-off: the picture rushes inward to a point, then winks out.
 
-    The mirror of the switch-on, and slightly slower - the lingering dot is the
-    part everyone remembers, so it is given time to be seen.
+    The mirror of the switch-on. It closes all the way to nothing at the centre
+    rather than leaving a dot to fade: the geometry does the disappearing, so
+    brightness is constant the whole way down.
     """
     import math
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     full = math.hypot(width / 2.0, height / 2.0)
-    dot = max(3.0, width / 260.0)
     body = duration - lead_in
-    t_shrink, t_hold = body * 0.58, body * 0.78
+    t_shrink = body * 0.85              # then black for what remains
 
     def radius(t):
         t -= lead_in                      # a beat of full picture before it goes
         if t <= 0:
             return full
         if t >= t_shrink:
-            return dot
+            return 0.0
         p = t / t_shrink
-        # Gentler than the old 0.65: the collapse still accelerates, but no
-        # single frame crosses a quarter of the screen.
-        return dot + (full - dot) * (1.0 - p) ** 0.85
+        # Closes all the way to nothing. An earlier version stopped at a small
+        # dot and dimmed it, which is the authentic CRT afterglow - but Brian
+        # wanted it to vanish at the centre, so the geometry does the work and
+        # brightness stays constant throughout.
+        return full * (1.0 - p) ** 0.85
 
     def bright(t):
-        t -= lead_in
-        if t < t_hold:
-            return 1.0
-        return max(0.0, 1.0 - (t - t_hold) / (body - t_hold))
+        return 1.0
 
     frames = (
         _radial_frame(i / fps, radius, bright, width, height)
