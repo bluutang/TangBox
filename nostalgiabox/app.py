@@ -483,23 +483,29 @@ class TVApp:
         self.overlay.show_volume(self.volume, self.muted)
 
     # -- info / standby -----------------------------------------------------
-    def _show_info(self) -> None:
-        """Re-show the banner for whatever is on RIGHT NOW.
+    def _billed_path(self) -> Optional[Path]:
+        """The episode the banner should name, adverts included.
 
-        Unlike tuning in, there is no PlayRequest to hand - the show has to come
-        from whatever is currently playing. During a commercial break that is an
-        advert, which belongs to no channel, so the line is correctly omitted.
+        During a break the thing on screen is an advert, which belongs to no
+        programme - but the CHANNEL has not changed and the held episode is
+        coming straight back. Naming it is what a real broadcaster does: the
+        channel bug stays up through the ads so you can see what you are
+        waiting for. Going quiet would mean a bare channel number for a minute
+        at a time.
         """
+        if self._pending_episode is not None:
+            return self._pending_episode.path
+        return self._playing_path
+
+    def _show_info(self) -> None:
+        """Re-show the banner for whatever is on RIGHT NOW."""
         channel = self.lineup.current
+        path = self._billed_path()
         self.overlay.show_channel_bug(
             channel.number,
             channel.name,
-            show=self._show_name(channel, self._playing_path),
-            episode=(
-                episode_label_for(self._playing_path)
-                if self._playing_path is not None
-                else None
-            ),
+            show=self._show_name(channel, path),
+            episode=episode_label_for(path) if path is not None else None,
         )
 
     def _toggle_standby(self) -> None:

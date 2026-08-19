@@ -211,3 +211,64 @@ def test_the_banner_shows_the_episode_label():
 def test_the_banner_omits_the_episode_line_when_absent():
     ass = _channel_bug_ass(2, "Cine", UiConfig(), show="Totoro", episode=None)
     assert len(ass.strip().splitlines()) == 3
+
+
+# -- during a commercial break -----------------------------------------------
+
+
+def _app_with_ads(tmp_path):
+    from nostalgiabox.app import TVApp
+    from nostalgiabox.config import config_from_dict
+    from nostalgiabox.input.manager import InputManager
+    from nostalgiabox.player import MockPlayer
+    from tests.helpers import FakeClock, make_show
+
+    channel_dir = tmp_path / "Pequenos"
+    make_show(channel_dir, "Pocoyo", 4)
+    ads = tmp_path / "_ads"
+    make_show(ads, "spots", 3)
+
+    return TVApp(
+        config_from_dict(
+            {
+                "shuffle_seed": 7,
+                "start_channel": 2,
+                "start_offset": 0,
+                "power_off_command": [],
+                "scan_recursive": True,
+                "channels": [
+                    {"number": 2, "name": "Los Pequeños", "path": str(channel_dir)}
+                ],
+                "commercials": {
+                    "path": str(ads / "spots"),
+                    "enabled": True,
+                    "break_seconds": 60,
+                },
+            }
+        ),
+        MockPlayer(),
+        InputManager([]),
+        clock=FakeClock(),
+    )
+
+
+def test_the_banner_still_names_the_show_during_a_break(tmp_path):
+    """Real broadcasters keep the channel bug up through the ads.
+
+    Going quiet mid-break means a bare channel number for a minute at a time,
+    and no way to tell what is coming back.
+    """
+    from nostalgiabox.actions import Action, InputEvent
+    from nostalgiabox.overlay import _ID_CHANNEL
+    from nostalgiabox.player import END_EOF
+
+    app = _app_with_ads(tmp_path)
+    app.start()
+    app.player.finish_current(END_EOF)
+    app.step()
+    assert app.in_break, "expected a commercial break"
+
+    app.handle_event(InputEvent(Action.INFO))
+    banner = app.player.overlays[_ID_CHANNEL]
+    assert "Los Pequeños" in banner
+    assert "Pocoyo" in banner, f"break banner lost the show: {banner!r}"
