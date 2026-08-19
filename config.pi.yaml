@@ -152,7 +152,8 @@ ui:
                          # strokes merging at ten feet - it reads as crisper
                          # before it reads as wider. Judge on the TV.
   glow: true
-  glow_blur: 0           # 4 -> 2 -> 1 -> 0, each judged on the actual television
+  glow_blur: 0.5         # 4 -> 2 -> 1 -> 0 -> 0.5, each judged on the TV. The
+                         # haze was bold, not this - a little bloom is character.
                          # (2026-08-19), and 4 was chosen on a computer. The
                          # overlay is drawn on a 1280x720 canvas and stretched,
                          # so the blur lands 1.5x wider on a 1080p screen than

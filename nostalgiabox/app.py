@@ -22,7 +22,13 @@ from pathlib import Path
 from typing import Callable, List, Optional
 
 from .actions import Action, InputEvent
-from .channel import Channel, ChannelLineup, PlayRequest, build_lineup
+from .channel import (
+    Channel,
+    ChannelLineup,
+    PlayRequest,
+    build_lineup,
+    show_name_for,
+)
 from .config import Config
 from .input.manager import InputManager, create_backends
 from .interstitial import CommercialPool
@@ -77,7 +83,7 @@ class TVApp:
         # then cut to the channel that was preloaded. The channel banner is shown
         # at the moment of the cut-over, not when the button is pressed.
         self._switch_deadline: Optional[float] = None
-        self._pending_banner: Optional[tuple[int, str]] = None
+        self._pending_banner: Optional[tuple[int, str, Optional[str]]] = None
 
         # Commercial breaks between episodes. `_pending_episode` is set for
         # exactly as long as a break is running - it is the episode waiting on
@@ -251,7 +257,8 @@ class TVApp:
             self.player.commit_switch()
             # Flash the channel banner right as the picture actually changes.
             if self._pending_banner is not None:
-                self.overlay.show_channel_bug(*self._pending_banner)
+                number, name, show = self._pending_banner
+                self.overlay.show_channel_bug(number, name, show=show)
                 self._pending_banner = None
 
     # -- input handling -----------------------------------------------------
@@ -350,12 +357,16 @@ class TVApp:
         if not show_static:
             # Not a channel change (first tune / waking from standby): play now.
             self._switch_deadline = None
-            self.overlay.show_channel_bug(channel.number, channel.name)
+            self.overlay.show_channel_bug(
+                channel.number, channel.name, show=self._show_name(channel, request.path)
+            )
             self._play_request(request)
         elif self._transition_path is not None:
             # Transition clip (glitch/static) + preloaded episode.
             self._switch_deadline = None
-            self.overlay.show_channel_bug(channel.number, channel.name)
+            self.overlay.show_channel_bug(
+                channel.number, channel.name, show=self._show_name(channel, request.path)
+            )
             self._playing_path = request.path
             self.player.play_transition(
                 self._transition_path,
@@ -370,11 +381,27 @@ class TVApp:
             self._playing_path = request.path
             self.player.preload_next(request.path, start=request.start)
             self._switch_deadline = self._clock() + self.config.bridge_seconds
-            self._pending_banner = (channel.number, channel.name)
+            self._pending_banner = (
+                channel.number,
+                channel.name,
+                self._show_name(channel, request.path),
+            )
         else:
             self._switch_deadline = None
-            self.overlay.show_channel_bug(channel.number, channel.name)
+            self.overlay.show_channel_bug(
+                channel.number, channel.name, show=self._show_name(channel, request.path)
+            )
             self._play_request(request)
+
+    def _show_name(self, channel: Channel, path: Optional[Path]) -> Optional[str]:
+        """Which programme is on: the folder the episode sits in, or None.
+
+        None for an advert, or an episode loose in the channel folder - the
+        banner then omits the line rather than showing a blank one.
+        """
+        if path is None:
+            return None
+        return show_name_for(path, channel.config.path)
 
     def _play_request(self, request: PlayRequest) -> None:
         self._playing_path = request.path
@@ -442,8 +469,18 @@ class TVApp:
 
     # -- info / standby -----------------------------------------------------
     def _show_info(self) -> None:
+        """Re-show the banner for whatever is on RIGHT NOW.
+
+        Unlike tuning in, there is no PlayRequest to hand - the show has to come
+        from whatever is currently playing. During a commercial break that is an
+        advert, which belongs to no channel, so the line is correctly omitted.
+        """
         channel = self.lineup.current
-        self.overlay.show_channel_bug(channel.number, channel.name)
+        self.overlay.show_channel_bug(
+            channel.number,
+            channel.name,
+            show=self._show_name(channel, self._playing_path),
+        )
 
     def _toggle_standby(self) -> None:
         self.standby = not self.standby

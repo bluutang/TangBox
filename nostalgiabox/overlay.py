@@ -70,11 +70,16 @@ class OverlayManager:
 
     # -- public API ---------------------------------------------------------
     def show_channel_bug(
-        self, number: int, name: str, *, duration: Optional[float] = None
+        self,
+        number: int,
+        name: str,
+        *,
+        show: Optional[str] = None,
+        duration: Optional[float] = None,
     ) -> None:
-        """Flash the channel number + name, like changing channels on a cable box."""
+        """Flash the channel number, name and programme, like a cable box."""
         dur = self._config.channel_bug_seconds if duration is None else duration
-        ass = _channel_bug_ass(number, name, self._ui)
+        ass = _channel_bug_ass(number, name, self._ui, show=show)
         self._player.set_overlay(_ID_CHANNEL, ass, CANVAS_W, CANVAS_H)
         self._arm(_ID_CHANNEL, dur)
 
@@ -158,16 +163,25 @@ def _style(ui: UiConfig, *, size: int, alpha: int = 0) -> str:
 # --------------------------------------------------------------------------
 # ASS builders (free functions so they are easy to unit test)
 # --------------------------------------------------------------------------
-def _channel_bug_ass(number: int, name: str, ui: UiConfig) -> str:
-    """Green digital 'CH 03' + show name, flashed inside the top-right of the frame."""
+def _channel_bug_ass(
+    number: int, name: str, ui: UiConfig, *, show: Optional[str] = None
+) -> str:
+    """Green digital 'CH 03', the channel name, and the programme on it.
+
+    Three sizes descending, so the eye reads number -> channel -> programme.
+    The show line is omitted entirely when there is nothing to name, rather
+    than left blank - a floating gap under the channel name looks like a fault.
+    """
     num = f"{number:02d}"
-    number_line = (
-        rf"{{\an9\pos({_IX1},{_IY0}){_style(ui, size=88)}}}CH {num}"
-    )
-    name_line = (
-        rf"{{\an9\pos({_IX1},{_IY0 + 104}){_style(ui, size=40)}}}{_escape(name)}"
-    )
-    return "\n".join([number_line, name_line])
+    lines = [
+        rf"{{\an9\pos({_IX1},{_IY0}){_style(ui, size=88)}}}CH {num}",
+        rf"{{\an9\pos({_IX1},{_IY0 + 104}){_style(ui, size=40)}}}{_escape(name)}",
+    ]
+    if show:
+        lines.append(
+            rf"{{\an9\pos({_IX1},{_IY0 + 152}){_style(ui, size=32)}}}{_escape(show)}"
+        )
+    return "\n".join(lines)
 
 
 def _volume_ass(level: int, muted: bool, ui: UiConfig) -> str:

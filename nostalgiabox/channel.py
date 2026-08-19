@@ -43,6 +43,28 @@ class PlayRequest:
     start: float = 0.0
 
 
+def show_name_for(episode: Path, channel_root: Path) -> Optional[str]:
+    """Which programme an episode belongs to: its folder under the channel.
+
+    A channel is a GROUP of shows, so the layout is
+    ``<channel>/<show>/<episode>`` - and with ``scan_recursive`` often
+    ``<channel>/<show>/Season 2/<episode>``, hence taking the FIRST component
+    rather than the parent folder.
+
+    Returns None when there is nothing to name: an episode sitting loose in the
+    channel folder, or a path from somewhere else entirely (an advert, say).
+    The banner then simply omits the line rather than showing a blank one.
+    """
+    try:
+        rel = episode.relative_to(channel_root)
+    except ValueError:
+        return None
+    parts = rel.parts
+    if len(parts) < 2:
+        return None
+    return parts[0]
+
+
 def detect_season(text: str) -> Optional[int]:
     """Best-effort extraction of a season number from a path/filename."""
     for pattern in _SEASON_PATTERNS:
