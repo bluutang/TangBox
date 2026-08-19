@@ -24,26 +24,59 @@
 #
 # To add a show: make the folder, then add a block here with a free number.
 # To rename one: change BOTH the folder name and `name` below.
+# A CHANNEL IS A GROUP OF SHOWS, not a single show. `scan_recursive: true`
+# (further down) sweeps every sub-folder, so a channel folder holds one folder
+# per show and tuning in gives a random episode of any of them:
+#
+#     /media/tangbox/Pequenos/Pocoyo/S01E01.mp4
+#     /media/tangbox/Pequenos/Plaza Sesamo/S01E01.mp4
+#
+# This matches the media spreadsheet, and it suits the audience - the kids are
+# 2 and 4 and neither can read, so four tiles they can learn beats twenty-eight.
+# The one-show-per-channel layout this replaced came from upstream placeholders;
+# it was never chosen.
+#
+# PATHS ARE ASCII ON PURPOSE. macOS writes accented filenames decomposed (e plus
+# a combining acute) while Linux expects them composed, so "Pequeños" typed here
+# can silently fail to match the folder Finder actually made on the USB drive.
+# `name:` is only ever drawn on screen, so it keeps its accents; `path:` has to
+# survive two operating systems, so it doesn't have any.
+#
+# Lineup and per-show curation live in the spreadsheet:
+# https://docs.google.com/spreadsheets/d/1fb_Xrny0GPkuBbcgE3VtzWoS1DsKUzRlx3RdoxrERIw/edit
 channels:
   - number: 2
-    name: "Dragon Tales"
-    path: /media/tangbox/Dragon Tales
+    name: "Los Pequeños"
+    path: /media/tangbox/Pequenos
+    # Pocoyo, Plaza Sesamo, Backyardigans, Las Tres Mellizas, Bob el
+    # Constructor, Thomas, Barney, Los Lunnis. The 2-year-old's channel.
 
   - number: 4
-    name: "Arthur"
-    path: /media/tangbox/Arthur
-    # Trim the run to the era you actually want. Seasons are detected from
-    # names like S06E01, "Season 6" or 6x01. Uncomment to use:
+    name: "Caricaturas"
+    path: /media/tangbox/Caricaturas
+    # Dora, El Chavo Animado, Los Picapiedra, Los Supersonicos, Don Gato,
+    # David el Gnomo, Odisea Burbujas, Bizbirije. The 4-year-old's channel.
+    #
+    # Trim a run to the era you actually want. Seasons are detected from names
+    # like S06E01, "Season 6" or 6x01. Uncomment to use:
     # exclude_seasons: ["6-25"]
     # exclude: ["*special*"]
 
   - number: 6
-    name: "The Magic School Bus"
-    path: /media/tangbox/The Magic School Bus
+    name: "Cine"
+    path: /media/tangbox/Cine
+    # Totoro, Toy Story 1 & 2, Bichos, Nemo, Monsters Inc., Kiki, Lilo y Stitch.
+    #
+    # Films RESUME rather than starting part-way in. Without this override every
+    # tune-in would drop you into the middle of a different film. Note the
+    # position is held in memory only: it survives channel hopping but not
+    # switching the box off, so a film started tonight begins again tomorrow.
+    tune_in: resume
 
   - number: 8
-    name: "Mister Rogers' Neighborhood"
-    path: /media/tangbox/Mister Rogers' Neighborhood
+    name: "En Inglés"
+    path: /media/tangbox/Ingles
+    # Dragon Tales, Mister Rogers, Arthur, The Magic School Bus.
 
 # --- How a channel behaves when you tune in -----------------------------------
 #   random    - a fresh random episode starts, a few seconds in  [chosen]
