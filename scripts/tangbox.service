@@ -33,7 +33,12 @@ Environment=PYTHONUNBUFFERED=1
 # the DISPLAY to that VT to show its progress - revealing the lot for about a
 # second, right after the sign-off animation. Clearing it means there is nothing
 # left to reveal. Best-effort: `|| true` so a failure here never blocks the TV.
-ExecStartPost=/bin/sh -c 'printf "\033[2J\033[3J\033[H" > /dev/tty3 2>/dev/null || true'
+# The leading + runs this as ROOT, ignoring User= above. /dev/tty3 is mode 0600
+# root:tty on this Pi - NOT the usual 0620 - so the service user cannot write to
+# it, and the first attempt failed silently for exactly that reason.
+# Errors are NOT swallowed: a failure here should appear in the journal rather
+# than look like the clear having worked. `|| true` keeps it from blocking the TV.
+ExecStartPost=+/bin/sh -c 'printf "\033[2J\033[3J\033[H" > /dev/tty3 || { echo "tangbox: could not clear tty3" >&2; true; }'
 ExecStart=__REPO_DIR__/.venv/bin/tangbox --config __REPO_DIR__/config.yaml
 Restart=always
 RestartSec=3

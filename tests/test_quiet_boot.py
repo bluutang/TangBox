@@ -282,3 +282,22 @@ def test_a_console_is_added_when_none_exists(tmp_path: Path):
     assert "console=tty3" in text
     assert text.count("console=tty3") == 1
     assert "console=serial0,115200" in text
+
+
+def test_the_console_clear_runs_as_root():
+    """/dev/tty3 is 0600 root:tty on this Pi - NOT the usual 0620.
+
+    The service user cannot write to it, so the clear needs systemd's `+`
+    prefix to run privileged. Without it the step failed silently, which looked
+    exactly like it having worked.
+    """
+    unit = (REPO_ROOT / "scripts" / "tangbox.service").read_text()
+    line = next(l for l in unit.splitlines() if l.startswith("ExecStartPost="))
+    assert line.startswith("ExecStartPost=+"), f"not privileged: {line}"
+
+
+def test_the_console_clear_does_not_swallow_errors():
+    """The same silent-failure trap as the install.sh font glob."""
+    unit = (REPO_ROOT / "scripts" / "tangbox.service").read_text()
+    line = next(l for l in unit.splitlines() if l.startswith("ExecStartPost="))
+    assert "2>/dev/null" not in line, "a failure here would be invisible again"
