@@ -22,11 +22,25 @@ WorkingDirectory=__REPO_DIR__
 Environment=HOME=__HOME__
 # Render straight to the console/HDMI via KMS-DRM.
 Environment=XDG_RUNTIME_DIR=/run/user/__UID__
+# Flush log lines as they happen. Without this Python block-buffers stdout when
+# it isn't a terminal, so `journalctl -u tangbox -f` - the command this project
+# tells you to debug with - shows nothing for hours while the lines sit in a
+# 4 KB buffer. Confirmed on the Pi: running by hand logged nine startup lines,
+# the same build as a service logged none.
+Environment=PYTHONUNBUFFERED=1
 ExecStart=__REPO_DIR__/.venv/bin/tangbox --config __REPO_DIR__/config.yaml
 Restart=always
 RestartSec=3
 # Own the console so video can be shown on it.
 StandardInput=tty
+# Send logs to the journal, NOT to the console. systemd defaults both output
+# streams to `inherit`, meaning "follow StandardInput" - and StandardInput is
+# the TTY, so without these two lines every log line is printed onto /dev/tty1
+# behind the video, and `journalctl -u tangbox -f` shows nothing. Verified on
+# the Pi 2026-08-19. Doesn't affect video: mpv renders via KMS/DRM, not through
+# this file descriptor.
+StandardOutput=journal
+StandardError=journal
 TTYPath=/dev/tty1
 TTYReset=yes
 TTYVHangup=yes
