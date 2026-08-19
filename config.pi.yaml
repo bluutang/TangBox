@@ -135,10 +135,30 @@ commercials:
 scan_recursive: true     # look inside season sub-folders too
 
 # --- Remote control -----------------------------------------------------------
-# Both are on so you can try the TV's own remote (cec) before opening the Flirc.
-# The Flirc appears as an ordinary USB keyboard, which is the `keyboard` backend.
-# Whichever is unavailable is skipped quietly.
+# The Flirc is the remote for this box. It appears to Linux as an ordinary USB
+# keyboard, so it arrives through the `keyboard` backend.
+#
+# CEC is OFF ON PURPOSE, and this is a choice rather than a limitation.
+# Tested on the Samsung 2026-08-19: CEC works fully. The TV forwards up, down,
+# left, right and select to the Pi - but only once the box announces itself as
+# the active source, which cec.py never does. Brian chose a dedicated remote so
+# the kids cannot land in the TV's own menus, so the TV remote is deliberately
+# cut off here.
+#
+# This ONE switch is total separation. Verified the same night that CEC keys do
+# NOT also arrive as evdev events: 0 events on vc4-hdmi-0/1 while cec-client
+# logged 26 for the same presses. There is no second route in.
+#
+# Turning `cec: true` back on is NOT enough to make the TV remote work - cec.py
+# has three real bugs (no active-source announcement, wrong libCEC log level,
+# and a double-event duplicate). The session wrap has the diagnosis and fixes.
 input:
   keyboard: true
-  cec: true
+  cec: false
   stdin: false
+
+  # Once the Flirc is plugged in, restrict the keyboard backend to it by name.
+  # Without this the backend also binds vc4-hdmi-0, vc4-hdmi-1 and pwr_button -
+  # the Pi's own power button ends up wired into the remote control system,
+  # which nobody intended. Read the real name first:  cat /proc/bus/input/devices
+  # keyboard_name_filter: "flirc"
