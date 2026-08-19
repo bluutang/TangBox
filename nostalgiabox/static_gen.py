@@ -217,7 +217,7 @@ def generate_power_on(
     duration: float = 0.75,
     width: int = 1280,
     height: int = 720,
-    fps: int = 50,
+    fps: int = 60,
 ) -> Path:
     """The CRT switch-on: a dot blooms to a line, the line opens to the frame.
 
@@ -227,8 +227,14 @@ def generate_power_on(
     resulting clip was a solid white rectangle. Generating the pixels is
     completely predictable and needs no filter-syntax guesswork.
 
-    50fps, not the 25 the other assets use - the whole thing lasts under a
-    second and the movement is fast, so half the frames look like a stutter.
+    60fps, not the 25 the other assets use - the whole thing lasts under a
+    second and the movement is fast, so fewer frames read as a stutter.
+
+    60 SPECIFICALLY, to match the display's refresh. The first version was 50fps
+    against a screen running at 30Hz, and 50 into 30 does not divide - frames
+    were dropped unevenly and Brian saw exactly that as judder. Matching the
+    refresh rate is the whole point; if the display mode ever changes, this
+    should follow it.
 
     Ends on black so the ident can fade up cleanly behind it.
     """
