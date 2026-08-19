@@ -33,7 +33,13 @@ display_auto_detect=1
 arm_64bit=1
 """
 
-QUIET_FLAGS = ["quiet", "loglevel=0", "logo.nologo", "vt.global_cursor_default=0"]
+QUIET_FLAGS = [
+    "quiet",
+    "loglevel=0",
+    "logo.nologo",
+    "vt.global_cursor_default=0",
+    "systemd.show_status=false",
+]
 
 
 @pytest.fixture
@@ -131,3 +137,37 @@ def test_status_reports_without_changing_anything(boot: Path):
     result = run(boot, "--status")
     assert result.returncode == 0
     assert (boot / "cmdline.txt").read_text() == REAL_CMDLINE
+
+
+def test_it_silences_systemd_not_just_the_kernel(boot: Path):
+    """`quiet` covers the KERNEL. Most boot text is systemd's own status output.
+
+    Brian watched the first quiet boot and still saw terminal lines - these were
+    "[ OK ] Started ..." from systemd, which quiet and loglevel do nothing about.
+    """
+    run(boot)
+    assert "systemd.show_status=false" in (boot / "cmdline.txt").read_text()
+
+
+def test_a_cmdline_with_no_trailing_newline_is_handled(tmp_path: Path):
+    """The real Pi's file has none - Imager writes it without one."""
+    d = tmp_path / "firmware"
+    d.mkdir()
+    (d / "cmdline.txt").write_text(REAL_CMDLINE.rstrip("\n"))
+    (d / "config.txt").write_text(REAL_CONFIG)
+    assert run(d).returncode == 0
+    text = (d / "cmdline.txt").read_text()
+    assert text.rstrip("\n").count("\n") == 0
+    assert "quiet" in text
+
+
+def test_semicolons_in_parameters_survive(tmp_path: Path):
+    """The real Pi carries ds=nocloud;i=rpi-imager-... - a semicolon mid-line."""
+    d = tmp_path / "firmware"
+    d.mkdir()
+    (d / "cmdline.txt").write_text(
+        "root=PARTUUID=7cc30427-02 ds=nocloud;i=rpi-imager-1787023251516 rootwait\n"
+    )
+    (d / "config.txt").write_text(REAL_CONFIG)
+    run(d)
+    assert "ds=nocloud;i=rpi-imager-1787023251516" in (d / "cmdline.txt").read_text()

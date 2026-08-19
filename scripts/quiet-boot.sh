@@ -37,11 +37,24 @@ CONFIG="${BOOT_DIR}/config.txt"
 CMDLINE_BAK="${CMDLINE}.tangbox-backup"
 CONFIG_BAK="${CONFIG}.tangbox-backup"
 
-# quiet                     - suppress most kernel chatter
-# loglevel=0                - and the rest of it
-# logo.nologo               - no raspberry logos in the corner
+# quiet                      - suppress most kernel chatter
+# loglevel=0                 - and the rest of it
+# logo.nologo                - no raspberry logos in the corner
 # vt.global_cursor_default=0 - no blinking cursor left on screen
-QUIET_FLAGS=(quiet loglevel=0 logo.nologo vt.global_cursor_default=0)
+# systemd.show_status=false  - THE IMPORTANT ONE. `quiet` only silences the
+#                              KERNEL; most of what scrolls past on a Linux boot
+#                              is systemd announcing each service it starts
+#                              ("[ OK ] Started ..."), written straight to the
+#                              console. Both other flags sail right past it.
+#                              Added 2026-08-19 after Brian watched the first
+#                              quiet boot and still saw terminal lines.
+QUIET_FLAGS=(
+  quiet
+  loglevel=0
+  logo.nologo
+  vt.global_cursor_default=0
+  systemd.show_status=false
+)
 
 MODE=apply
 for arg in "$@"; do
