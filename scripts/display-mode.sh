@@ -36,7 +36,9 @@ if [[ -z "${BOOT_DIR}" ]]; then
 fi
 
 CMDLINE="${BOOT_DIR}/cmdline.txt"
+CONFIG="${BOOT_DIR}/config.txt"
 BACKUP="${CMDLINE}.tangbox-display-backup"
+CONFIG_BACKUP="${CONFIG}.tangbox-display-backup"
 
 # HDMI0 on a Pi 5 - the port nearest the power connector, which is the one this
 # project uses. HDMI-A-2 would be the second port.
@@ -83,6 +85,7 @@ fi
 if [[ "${ACTION}" == "undo" ]]; then
   [[ -f "${BACKUP}" ]] || die "no backup at ${BACKUP}; nothing to undo"
   ${SUDO} cp "${BACKUP}" "${CMDLINE}"
+  [[ -f "${CONFIG_BACKUP}" ]] && ${SUDO} cp "${CONFIG_BACKUP}" "${CONFIG}"
   echo "==> Restored. The TV picks the mode again after a reboot."
   exit 0
 fi
@@ -90,6 +93,9 @@ fi
 # Back up ONCE, so --undo always reaches the pristine original rather than a
 # previous run's output.
 [[ -f "${BACKUP}" ]] || ${SUDO} cp "${CMDLINE}" "${BACKUP}"
+if [[ -f "${CONFIG}" && ! -f "${CONFIG_BACKUP}" ]]; then
+  ${SUDO} cp "${CONFIG}" "${CONFIG_BACKUP}"
+fi
 
 line="$(tr '\n' ' ' < "${CMDLINE}" | tr -s ' ')"
 line="${line#"${line%%[![:space:]]*}"}"
@@ -114,6 +120,22 @@ esac
 
 printf '%s\n' "${line}" | ${SUDO} tee "${CMDLINE}" > /dev/null
 echo "==> cmdline.txt: display pinned to ${CONNECTOR} ${MODE}"
+
+# WITHOUT THIS THE PIN IS IGNORED. On a Raspberry Pi the FIRMWARE sets the
+# display mode before the kernel starts and hands it over as a fait accompli,
+# so video= never gets a look in. Confirmed here: /proc/cmdline carried
+# video=HDMI-A-1:1920x1080@60, the TV's EDID listed 1920x1080, and the display
+# still came up 3840x2160@30. disable_fw_kms_setup=1 makes the kernel do its
+# own mode setting.
+if [[ -f "${CONFIG}" ]]; then
+  if grep -q "^disable_fw_kms_setup=1" "${CONFIG}"; then
+    echo "==> config.txt:  firmware mode-setting already disabled"
+  else
+    printf '\n# TangBox: let the KERNEL set the mode, so video= above is honoured.\ndisable_fw_kms_setup=1\n' \
+      | ${SUDO} tee -a "${CONFIG}" > /dev/null
+    echo "==> config.txt:  disabled firmware mode-setting"
+  fi
+fi
 
 cat <<EOF
 

@@ -112,3 +112,57 @@ def test_force_spares_a_replaced_zap(tmp_path):
     zap.write_bytes(b"someone's own switch-on effect")
     generate_all(tmp_path, force=True)
     assert zap.read_bytes() == b"someone's own switch-on effect"
+
+
+# -- the CRT power-off zap ---------------------------------------------------
+
+
+def test_the_power_off_zap_collapses(tmp_path):
+    """The reverse of switching on: the picture collapses to a line, the line
+    to a dot, the dot winks out. Brightness must therefore START high.
+    """
+    import subprocess
+
+    from nostalgiabox.static_gen import generate_power_off
+
+    out = generate_power_off(tmp_path / "power_off.mp4")
+    raw = subprocess.run(
+        ["ffmpeg", "-v", "error", "-i", str(out),
+         "-f", "rawvideo", "-pix_fmt", "gray", "-s", "32x18", "-"],
+        capture_output=True, check=True,
+    ).stdout
+    per_frame = 32 * 18
+    frames = [raw[i:i + per_frame] for i in range(0, len(raw), per_frame)]
+    means = [sum(f) / len(f) for f in frames]
+
+    assert len(frames) > 10
+    assert means[0] > 150, f"should start bright, got {means[0]:.0f}"
+    assert means[-1] < 20, f"should end black, got {means[-1]:.0f}"
+    assert means[0] > means[len(means) // 2] > means[-1], "should fall throughout"
+
+
+def test_the_two_zaps_are_mirror_images(tmp_path):
+    """On starts dark and ends dark; off starts bright and ends dark."""
+    import subprocess
+
+    from nostalgiabox.static_gen import generate_power_off, generate_power_on
+
+    def first_mean(path):
+        raw = subprocess.run(
+            ["ffmpeg", "-v", "error", "-i", str(path),
+             "-f", "rawvideo", "-pix_fmt", "gray", "-s", "32x18", "-vframes", "1", "-"],
+            capture_output=True, check=True,
+        ).stdout
+        return sum(raw) / len(raw)
+
+    on = generate_power_on(tmp_path / "on.mp4")
+    off = generate_power_off(tmp_path / "off.mp4")
+    assert first_mean(on) < 40
+    assert first_mean(off) > 150
+
+
+def test_generate_all_creates_the_power_off(tmp_path):
+    from nostalgiabox.static_gen import POWER_OFF_FILENAME
+
+    generate_all(tmp_path)
+    assert (tmp_path / POWER_OFF_FILENAME).is_file()

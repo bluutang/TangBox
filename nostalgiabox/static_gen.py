@@ -31,6 +31,7 @@ STATIC_FILENAME = "static.mp4"
 COLORBARS_FILENAME = "colorbars.mp4"
 LOGO_FILENAME = "logo.mp4"
 POWER_ON_FILENAME = "power_on.mp4"
+POWER_OFF_FILENAME = "power_off.mp4"
 GLITCH_FILENAME = "glitch.mp4"
 
 # The bundled retro OSD font, used for the placeholder ident.
@@ -292,6 +293,80 @@ def generate_power_on(
     return out_path
 
 
+def generate_power_off(
+    out_path: Path,
+    *,
+    duration: float = 0.85,
+    width: int = 1280,
+    height: int = 720,
+    fps: int = 60,
+) -> Path:
+    """The CRT switch-off: the picture collapses to a line, then a dot, then out.
+
+    The mirror of :func:`generate_power_on`, and the more recognisable of the
+    two - everyone who grew up with a CRT knows this one. It is slower than the
+    switch-on because the real thing was: the phosphor takes a moment to give
+    up, and the lingering dot is the whole charm of it.
+
+    60fps for the same reason as the power-on: the movement is fast, and a rate
+    that divides evenly into the display's refresh is what stops it juddering.
+    """
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    line_h = 6
+    t_collapse, t_narrow, t_dot = 0.30, 0.55, 0.72
+    dot_w = 40
+
+    def frame(t: float) -> bytes:
+        if t < t_collapse:                       # full frame -> horizontal line
+            progress = t / t_collapse
+            w = width
+            h = max(line_h, int(height - (height - line_h) * progress))
+            bright = 1.0
+        elif t < t_narrow:                       # line -> short dash
+            progress = (t - t_collapse) / (t_narrow - t_collapse)
+            w = max(dot_w, int(width - (width - dot_w) * progress))
+            h = line_h
+            bright = 1.0
+        elif t < t_dot:                          # the lingering dot
+            w, h, bright = dot_w, line_h, 1.0
+        else:                                    # winks out
+            w, h = dot_w, line_h
+            bright = max(0.0, 1.0 - (t - t_dot) / (duration - t_dot))
+        value = max(0, min(255, int(255 * bright)))
+        x0, y0 = (width - w) // 2, (height - h) // 2
+        black_row = b"\x00" * (width * 3)
+        lit_row = (
+            b"\x00" * (x0 * 3)
+            + bytes([value]) * (w * 3)
+            + b"\x00" * ((width - x0 - w) * 3)
+        )
+        return b"".join(
+            lit_row if y0 <= y < y0 + h else black_row for y in range(height)
+        )
+
+    cmd = [
+        "ffmpeg", "-y", "-v", "error",
+        "-f", "rawvideo", "-pix_fmt", "rgb24",
+        "-s", f"{width}x{height}", "-r", str(fps),
+        "-i", "-",
+        "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p",
+        "-an",
+        str(out_path),
+    ]
+    log.info("running: %s", " ".join(cmd))
+    proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
+    assert proc.stdin is not None
+    try:
+        for i in range(int(duration * fps)):
+            proc.stdin.write(frame(i / fps))
+    finally:
+        proc.stdin.close()
+        proc.wait()
+    if proc.returncode != 0:
+        raise RuntimeError(f"ffmpeg failed generating {out_path}")
+    return out_path
+
+
 def generate_all(assets_dir: Path, *, force: bool = False) -> List[Path]:
     """Generate any missing assets in ``assets_dir``; return what exists."""
     if not ffmpeg_available():
@@ -336,6 +411,12 @@ def generate_all(assets_dir: Path, *, force: bool = False) -> List[Path]:
         results.append(generate_power_on(zap_path))
     else:
         results.append(zap_path)
+
+    off_path = assets_dir / POWER_OFF_FILENAME
+    if not off_path.exists():
+        results.append(generate_power_off(off_path))
+    else:
+        results.append(off_path)
 
     return results
 

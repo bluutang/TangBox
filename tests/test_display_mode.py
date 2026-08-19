@@ -129,3 +129,41 @@ def test_missing_cmdline_is_an_error(tmp_path: Path):
     result = run(empty)
     assert result.returncode != 0
     assert "cmdline.txt" in (result.stderr + result.stdout)
+
+
+# -- letting the kernel actually do the mode setting -------------------------
+
+
+@pytest.fixture
+def boot_with_config(tmp_path: Path) -> Path:
+    d = tmp_path / "firmware"
+    d.mkdir()
+    (d / "cmdline.txt").write_text(REAL_CMDLINE)
+    (d / "config.txt").write_text("[all]\ndtparam=audio=on\narm_64bit=1\n")
+    return d
+
+
+def test_it_stops_the_firmware_pre_setting_the_mode(boot_with_config: Path):
+    """video= alone is ignored on a Pi. The firmware sets the mode BEFORE the
+    kernel starts and hands it over as a fait accompli; disable_fw_kms_setup=1
+    is what makes the kernel do its own mode setting and honour the parameter.
+
+    Confirmed on the real Pi: /proc/cmdline carried video=HDMI-A-1:1920x1080@60,
+    the TV's EDID listed 1920x1080, and the display still came up 3840x2160@30.
+    """
+    run(boot_with_config)
+    assert "disable_fw_kms_setup=1" in (boot_with_config / "config.txt").read_text()
+
+
+def test_the_firmware_setting_is_not_added_twice(boot_with_config: Path):
+    run(boot_with_config)
+    run(boot_with_config)
+    text = (boot_with_config / "config.txt").read_text()
+    assert text.count("disable_fw_kms_setup=1") == 1
+
+
+def test_undo_also_restores_config_txt(boot_with_config: Path):
+    original = (boot_with_config / "config.txt").read_text()
+    run(boot_with_config)
+    run(boot_with_config, "--undo")
+    assert (boot_with_config / "config.txt").read_text() == original

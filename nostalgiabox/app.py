@@ -39,6 +39,7 @@ from .static_gen import (
     COLORBARS_FILENAME,
     DEFAULT_ASSETS_DIR,
     GLITCH_FILENAME,
+    POWER_OFF_FILENAME,
     STATIC_FILENAME,
 )
 
@@ -47,6 +48,10 @@ log = logging.getLogger(__name__)
 # The sign-on, in order. Each stage is optional; the sequence skips any
 # whose asset is missing and tunes in if none of them have anything.
 _SIGN_ON_STAGES = ("zap", "bars", "logo")
+
+# How long to hold before halting, so the collapse is actually seen. Matches
+# generate_power_off's duration with a little slack for mpv to get going.
+SIGN_OFF_SECONDS = 1.1
 
 
 class TVApp:
@@ -61,12 +66,14 @@ class TVApp:
         overlay: Optional[OverlayManager] = None,
         clock: Callable[[], float] = time.monotonic,
         assets_dir: Optional[Path] = None,
+        sleep: Callable[[float], None] = time.sleep,
     ) -> None:
         self.config = config
         self.player = player
         self.input = input_manager
         self.overlay = overlay or OverlayManager(player, config, clock=clock)
         self._clock = clock
+        self._sleep = sleep
 
         self.lineup: ChannelLineup = build_lineup(config)
 
@@ -114,6 +121,7 @@ class TVApp:
         self._colorbars_path = self._resolve_asset(COLORBARS_FILENAME)
         self._logo_path = self._resolve_asset(config.sign_on.logo)
         self._zap_path = self._resolve_asset(config.sign_on.power_on)
+        self._power_off_path = self._resolve_asset(POWER_OFF_FILENAME)
         # Sign-on state: None (on air), "bars", or "logo".
         self._sign_on_stage: Optional[str] = None
         self._sign_on_deadline: Optional[float] = None
@@ -494,12 +502,23 @@ class TVApp:
         self.powered_off = True
         self._switch_deadline = None
         self._pending_banner = None
+        # Everything here is best-effort. This sits in front of an actual
+        # shutdown, and ceremony must never be able to PREVENT one - a telly
+        # that will not switch off is worse than one that switches off without
+        # any flourish. Hence the bare except and the bounded wait.
         try:
             self.overlay.clear_all()
-            self.overlay.show_message("GOODBYE", duration=0)
+            if self._power_off_path is not None:
+                self.player.play(self._power_off_path)
+                # A fixed, bounded wait rather than waiting for an end-of-clip
+                # event: the main loop is about to stop, and nothing here may
+                # hang the halt.
+                self._sleep(SIGN_OFF_SECONDS)
+            else:
+                self.overlay.show_message("GOODBYE", duration=0)
             self.player.stop()
         except Exception:  # noqa: BLE001
-            pass
+            log.debug("sign-off did not play; halting anyway", exc_info=True)
         self._run_power_off_command()
         self._running = False  # exit the main loop
 
