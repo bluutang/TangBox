@@ -320,7 +320,7 @@ def _encode_frames(out_path: Path, frames, width: int, height: int, fps: int) ->
 def generate_power_on(
     out_path: Path,
     *,
-    duration: float = 0.95,
+    duration: float = 0.75,
     width: int = 1920,
     height: int = 1080,
     fps: int = 60,
@@ -370,7 +370,7 @@ def generate_power_on(
 def generate_power_off(
     out_path: Path,
     *,
-    duration: float = 1.15,
+    duration: float = 0.90,
     width: int = 1920,
     height: int = 1080,
     fps: int = 60,

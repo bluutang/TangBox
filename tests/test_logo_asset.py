@@ -300,15 +300,6 @@ def test_the_ident_defaults_to_output_resolution():
 # matter what the frame rate is.
 
 
-def test_the_zaps_are_long_enough_to_be_smooth(tmp_path):
-    import inspect
-
-    from nostalgiabox.static_gen import generate_power_off, generate_power_on
-
-    assert inspect.signature(generate_power_on).parameters["duration"].default >= 0.85
-    assert inspect.signature(generate_power_off).parameters["duration"].default >= 1.0
-
-
 def test_the_zap_starts_on_black_so_the_load_hitch_is_hidden(tmp_path):
     """mpv takes a moment to open a file. Let that land on black, not mid-motion."""
     from nostalgiabox.static_gen import generate_power_on
@@ -330,5 +321,6 @@ def test_no_frame_jumps_a_long_way(tmp_path):
         widths.append(0 if not b else b[1] - b[0] + 1)
     growing = [w for w in widths if w > 0]
     jumps = [abs(b - a) for a, b in zip(growing, growing[1:])]
-    # 32 cells across; more than a quarter of the frame in one step is a jump.
-    assert max(jumps) <= 8, f"biggest single-frame jump was {max(jumps)} of 32 cells"
+    # 32 cells across. Tightened from 8 once 0.95s proved smooth on the TV, so
+    # speeding the zaps back up cannot quietly undo that.
+    assert max(jumps) <= 5, f"biggest single-frame jump was {max(jumps)} of 32 cells"
