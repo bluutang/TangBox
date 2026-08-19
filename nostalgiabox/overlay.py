@@ -137,7 +137,8 @@ def _hex_to_ass(hex_color: str, alpha: int = 0) -> str:
 def _style(ui: UiConfig, *, size: int, alpha: int = 0) -> str:
     """Common ASS override tags: retro font, green fill, and a soft CRT glow."""
     color = _hex_to_ass(ui.color, alpha)
-    tags = rf"\fn{ui.font}\b1\fs{size}\c{color}\1a&H{alpha:02X}&"
+    weight = 1 if ui.bold else 0
+    tags = rf"\fn{ui.font}\b{weight}\fs{size}\c{color}\1a&H{alpha:02X}&"
     if ui.glow:
         # A blurred green border reads as phosphor bloom; a faint dark edge keeps
         # it legible over bright video. The blur is a dial (ui.glow_blur) because

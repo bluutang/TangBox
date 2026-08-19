@@ -143,8 +143,13 @@ ui:
   font: "VT323"
   color: "#4DFF5A"       # phosphor green
   dim_color: "#123B18"
+  bold: false            # VT323 is a PIXEL font with no bold weight, so bold
+                         # makes libass synthesise one by thickening every
+                         # stroke - which smears a pixel font and reads as haze.
+                         # This, not the blur, was why the text looked soft
+                         # through glow_blur 4, 2, 1 and 0 on the TV.
   glow: true
-  glow_blur: 2           # was 4. Brian called the channel banner hazy on the TV
+  glow_blur: 0           # 4 -> 2 -> 1 -> 0, each judged on the actual television
                          # (2026-08-19), and 4 was chosen on a computer. The
                          # overlay is drawn on a 1280x720 canvas and stretched,
                          # so the blur lands 1.5x wider on a 1080p screen than

@@ -96,3 +96,37 @@ def test_nonsense_glow_blur_is_rejected(tmp_path):
     )
     with pytest.raises(ConfigError):
         load_config(cfg_file)
+
+
+# -- font weight ------------------------------------------------------------
+#
+# VT323 is a PIXEL font with no bold weight of its own, so \b1 makes libass
+# synthesise one by thickening the strokes. On a pixel font that smears the
+# edges - it reads as haze, and no amount of turning the blur down fixes it.
+# Brian spotted this on the TV after 4 -> 2 -> 1 -> 0 all still looked soft.
+
+
+def bold_in(tags: str):
+    m = re.search(r"\\b([01])", tags)
+    return m.group(1) if m else None
+
+
+def test_bold_defaults_to_the_current_look():
+    assert bold_in(_style(UiConfig(), size=40)) == "1"
+
+
+def test_bold_can_be_turned_off():
+    assert bold_in(_style(UiConfig(bold=False), size=40)) == "0"
+
+
+def test_config_reads_bold(tmp_path):
+    cfg_file = tmp_path / "config.yaml"
+    cfg_file.write_text(
+        "channels:\n"
+        "  - number: 2\n"
+        "    name: Test\n"
+        f"    path: {tmp_path}\n"
+        "ui:\n"
+        "  bold: false\n"
+    )
+    assert load_config(cfg_file).ui.bold is False
