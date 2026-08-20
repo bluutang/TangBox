@@ -1,117 +1,123 @@
 # Programming the Flirc for TangBox
 
-**Written 2026-08-20.** Everything here is derived from the code
-(`nostalgiabox/input/keymap.py`), not from memory. If the box ever stops
-responding to a button, check that file first — it is the authority.
+**Remote:** GE Big Button Universal, **2-device**, model 83036 (charcoal).
+**Written 2026-08-20.** Every keystroke below was checked against
+`nostalgiabox/input/keymap.py`, not written from memory. If a button ever stops
+working, that file is the authority.
 
 ## How this works
 
-The Flirc is a USB dongle that **learns infrared and reports it as a USB
-keyboard**. You teach it once, on any computer, and it remembers: the mapping
-lives in the dongle, not on the Pi. So this whole job can be done at the Mac
-with the Pi switched off, and the dongle then works in any machine you plug it
-into.
+The Flirc is a USB dongle that **learns infrared and reports itself as a USB
+keyboard**. You teach it once, on any computer, and the mapping lives in the
+dongle — not on the Pi. So this whole job can be done at the Mac with the Pi
+switched off, and the dongle then works in whatever machine you plug it into.
 
-Because any button can send any keystroke, **the printing on the remote's
-buttons is irrelevant.** We choose what each one does. A button labelled AUX can
-send the letter `h` if that is what we want.
+Because any button can send any keystroke, **the printing on the buttons is
+irrelevant.** We choose what each one does.
 
-## Before you start
+## It fits
 
-The remote is a **GE Big Button Universal (83036)**, chosen because it has a
-d-pad, a full number pad, and large buttons a small child can hit.
+The box can use 25 buttons. This remote has 29 that are free to teach. Nothing
+has to be dropped, and there are spares left over for later.
 
-**Use the GE's two-device feature.** Program `AUX` to a brand you do not own,
-and teach the Flirc only those codes. Then `AUX` drives TangBox and `TV` drives
-the television. Without this, pressing channel-up would talk to both at once.
+## Do this first: put the remote in AUX mode
 
-You will need: the Flirc dongle, the GE remote, fresh batteries, and the Flirc
-GUI app on the Mac.
+Program **`AUX`** to a brand you do not own, and teach the Flirc only those
+codes. `AUX` then drives TangBox and `TV` drives the television.
+
+Without this, one press talks to both at once — channel-up would change TangBox
+*and* the telly.
+
+> ⚠️ **This creates a mode the kids can get lost in.** If someone presses `TV`,
+> the number buttons drive the television instead of TangBox and nothing works
+> as expected until `AUX` is pressed again. Worth watching. Since TangBox now
+> switches the TV on and off by itself over CEC and the input stays on HDMI 3,
+> the `TV` side may never be needed at all in normal use.
 
 ## The mapping
 
-Work down this table in order. The first block is the one that matters — stop
-there if you run out of patience, and the box is already fully usable.
-
-### Essential — do these first
-
-| GE button | Teach this keystroke | What it does |
+| Remote button | Teach it | What it does |
 |---|---|---|
-| `0`–`9` | `0`–`9` | Tune straight to a channel |
-| d-pad **up** | Up arrow | Channel up (guide closed) / move cursor (guide open) |
-| d-pad **down** | Down arrow | Channel down / move cursor |
-| d-pad **left** | Left arrow | Volume down / move cursor |
-| d-pad **right** | Right arrow | Volume up / move cursor |
-| **OK / Select** | `Enter` | Tune to the highlighted channel, or open the guide |
-| **Menu** or **Guide** | `h` | Open and close the channel guide |
-| **Back / Exit** | `l` (lowercase L) | Leave the guide, or jump to the previous channel |
+| `1`–`9`, `0` | `1`–`9`, `0` | Tune straight to that channel |
+| ▲ up | Up arrow | Channel up / move the guide cursor |
+| ▼ down | Down arrow | Channel down / move the guide cursor |
+| ◀ left | Left arrow | Volume down / move the guide cursor |
+| ▶ right | Right arrow | Volume up / move the guide cursor |
+| **OK** | `Enter` | Tune to the highlighted channel, or open the guide |
+| `ENTER` | `Enter` | Same as OK — harmless duplicate |
+| 🏠 house | `h` | Open and close the channel guide |
+| ☰ hamburger | `h` | Same as the house — harmless duplicate |
+| ↰ back | `l` (lowercase L) | Leave the guide, or jump to the previous channel |
+| `ch⤸` return | `l` | Same as back — this is the classic "last channel" button |
+| `CH` ▲ | `Page Up` | **Always** changes channel, even with the guide open |
+| `CH` ▼ | `Page Down` | **Always** changes channel, even with the guide open |
+| `VOL` **+** | `=` | **Always** volume, even with the guide open |
+| `VOL` **−** | `-` | **Always** volume, even with the guide open |
+| 🔇 mute | `m` | Mute |
+| **`•`** | `.` (full stop) | ⭐ **Random channel** |
+| ⏻ power | `p` | Sign-off collapse, TV off, clean shutdown |
 
-### Worth doing
+### Why the `•` key matters most
 
-| GE button | Teach this keystroke | What it does |
-|---|---|---|
-| **CH +** | `Page Up` | Always changes channel, even with the guide open |
-| **CH −** | `Page Down` | Always changes channel, even with the guide open |
-| **VOL +** | `=` | Always volume, even with the guide open |
-| **VOL −** | `-` | Always volume, even with the guide open |
-| **Mute** | `m` | Mute |
-| any spare button | `.` (full stop) | **Random channel.** See the note below |
-| **Info** | `i` | Re-show the channel banner |
+The users are 2 and 4, and neither can read. One button that always does
+something good, needs no aiming and no reading, may be the only control the
+2-year-old ever uses. It is on the number pad next to `0`, it is easy to find by
+feel, and the guide spec named this exact key before the remote was chosen.
 
-> ⭐ **Give the random-channel button a big, obvious key.** The users are 2 and
-> 4 and neither can read. One button that always does something good, needs no
-> aiming and no reading, may be the only control the 2-year-old ever uses. It
-> deserves a better button than "whatever was left over".
+### The duplicates are deliberate
 
-### The power button — decided 2026-08-20
+`OK`/`ENTER`, the house/hamburger, and back/`ch⤸` each do one thing between
+them. The box accepts several keystrokes per action on purpose, so teach
+whichever the Flirc GUI makes easiest. Nothing breaks if you skip a duplicate.
 
-**Teach it `p`.** Brian's decision: the power button does a real shutdown, and
-starting the next session means pressing the Pi's onboard button. TangBox is a
-box you switch on for a session, not an always-on appliance.
+## Leave these alone
 
-> ⚠️ **`p` does not do that yet.** Today `p` triggers *standby*: the picture
-> stops, a green STANDBY notice sits on screen, and the Pi stays fully on. The
-> real shutdown — the one that plays the switch-off zap and halts cleanly —
-> exists and works, but the only thing that reaches it today is holding
-> volume-down past zero.
->
-> Teach `p` anyway. The button is right; what it does behind the scenes is a
-> small change still to be made, and making it will not change the mapping.
-
-The intended behaviour, once wired:
-
-| | |
+| Button | Why |
 |---|---|
-| **Off** | zap collapses to a dot → TV told to standby over CEC → Pi halts cleanly |
-| **On** | onboard button → Pi boots → TV woken to HDMI 3 → ident → channel 2 |
+| `SETUP` | Programs the remote itself. Teaching it to the Flirc could make the remote unconfigurable. |
+| `TV` / `AUX` | Device selectors. They switch which device the remote talks to; they are not TangBox actions. |
+| `INPUT` | **Reserved.** Phase 3 puts the CRT intensity cycle here. |
+| `✱` star | **Reserved.** Phase 3 puts the bedtime sign-off here. |
+
+> 🔴 **Never teach any button `Esc` or `q`.** Both map to QUIT, which exits
+> TangBox. systemd restarts it after about three seconds, so it recovers — but
+> it comes back from scratch: black screen, full sign-on, back to channel 2, and
+> the place in the episode is lost. There is no reason for that to be reachable
+> from a remote a 4-year-old is holding.
+
+## About the power button
+
+`p` gives a **real shutdown**: the picture collapses to a dot, the television is
+told to switch off over CEC, and the Pi halts cleanly.
 
 Known and accepted: a halted Pi cuts power to its own USB ports, so the Flirc
-stops listening. **The remote cannot switch the box back on** — only the Pi's
-onboard button or the inline switch, both behind the television.
-
-## Why several keystrokes do the same thing
-
-The box deliberately accepts more than one key per action — `Enter`, `Space` and
-`OK` all confirm; `h` and `Menu` both open the guide. Cheap IR remotes report a
-grab-bag of codes, so the map is generous on purpose. **Use whichever keystroke
-the Flirc GUI makes easiest.** You are not constrained to the one in the table.
+stops listening. **The remote cannot switch the box back on.** That needs the
+Pi's onboard button or the inline switch, both of which live behind the
+television. TangBox is a box you switch on for a session.
 
 ## Checking it worked
 
-With the Flirc plugged into the **Mac**, open any text editor and press the
-remote's buttons. The characters should appear. That alone proves the dongle
-learned them, with no Pi involved.
+**On the Mac, with no Pi involved.** Plug the Flirc in, open any text editor,
+and press the remote's buttons. The characters should appear — `h` for the
+house, `.` for the dot, digits for digits. That alone proves the dongle learned
+them.
 
-Then, on the Pi:
+> ⚠️ **Passing this test is not proof it works on the box.** A keystroke can
+> type perfectly here and still do nothing on the Pi if the box has no mapping
+> for it. That happened on 2026-08-20 with `h`, which worked when typed at a
+> terminal and was a dead button on a remote until `KEY_H` was added. Everything
+> in the table above has since been checked against the code.
+
+**Then on the Pi:**
 
 ```bash
 cat /proc/bus/input/devices          # find the Flirc's exact device name
 ```
 
 Put that name into `keyboard_name_filter:` in `config.pi.yaml`. **This matters.**
-Without it the keyboard backend also binds `pwr_button`, which means the Pi's own
-power button is wired into the remote-control system — pressing it blanks
-TangBox's screen as well as shutting down. Harmless, but nobody intended it.
+Without it the keyboard backend also binds `pwr_button`, wiring the Pi's own
+power button into the remote-control system — so pressing it would blank the
+screen as well as shutting down. Nobody intended that.
 
 ```bash
 sudo systemctl restart tangbox       # after any config change
