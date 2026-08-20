@@ -41,6 +41,10 @@ LOGO_LAYER_CIRCLE = "logo-circle.png"
 # The leaves are their own layer so they can LAG behind the fruit as it
 # accelerates and catch up as it settles - momentum, as in Brian's original.
 LOGO_LAYER_LEAVES = "logo-leaves.png"
+# The same leaves on a square canvas centred on their ROOT, so ffmpeg's
+# rotate - which always pivots on the frame centre - swings them about where
+# they join the fruit rather than sliding them bodily off it.
+LOGO_LAYER_LEAVES_PIVOT = "logo-leaves-pivot.png"
 LOGO_LAYER_FRUIT = "logo-fruit.png"
 POWER_ON_FILENAME = "power_on.mp4"
 POWER_OFF_FILENAME = "power_off.mp4"
@@ -171,6 +175,7 @@ def _ident_command(
     glyphs: list,
     circle: Path,
     leaves: Optional[Path],
+    leaves_pivot: Optional[Path],
     *,
     width: int,
     height: int,
@@ -224,7 +229,10 @@ def _ident_command(
         """
         p = f"clip(({t_expr}-{t0:.3f})/{max(0.01, t1 - t0):.3f},0,1)"
         u = f"({p}-1)"
-        return f"(1+2.70158*{u}*{u}*{u}+1.70158*{u}*{u})"
+        # easeOutBack. The textbook constant is 1.70158, which overshoots ~6%;
+        # Brian asked for less, so 0.85 gives about 3% - present but restrained.
+        c1 = 0.85
+        return f"(1+{c1 + 1:.5f}*{u}*{u}*{u}+{c1:.5f}*{u}*{u})"
 
     fruit_final_cx = lock_x + fruit_cx
     ef = ease("t", t_alone, t_end)
@@ -235,10 +243,55 @@ def _ident_command(
     inputs = ["-f", "lavfi", "-i", f"color=black:s={width}x{height}:r={fps}:d={duration}"]
     for g in glyphs:
         inputs += ["-loop", "1", "-t", str(duration), "-i", str(g)]
+    # The occluder. Two earlier shapes were wrong, both instructively:
+    #
+    #   A RECTANGLE hid everything, but its straight vertical edge made letters
+    #   appear along a line - they "slid out of nowhere" rather than from behind
+    #   something round.
+    #
+    #   A CIRCLE sized to the letters' HEIGHT left white crescents, because a
+    #   letter is a rectangle of ink: its corners escape a disc that only spans
+    #   its height.
+    #
+    # An ELLIPSE tall enough for the ascenders and wide enough to contain the
+    # corners fits far more tightly than a circle would, so a letter appears
+    # close to the fruit's edge, along a curve. It is pure black on black and
+    # therefore invisible in itself.
+    boxes = [_png_opaque_bbox(g) for g in glyphs]
+    # The occluder: an ellipse EXACTLY the fruit's width, and tall enough to
+    # cover the letters. Three earlier shapes were wrong, each instructively:
+    #
+    #   A full-height RECTANGLE hid everything but revealed letters along a
+    #   straight line running the whole frame - "out of nowhere", not from
+    #   behind anything.
+    #   A CIRCLE sized to the letters' height left white crescents: a letter is
+    #   a rectangle of ink and its corners escape such a disc.
+    #   A WIDE ellipse hid the stacked letters but then covered the b and the x
+    #   in their finished places, either side of the fruit.
+    #
+    # Matching the fruit's width solves all three at once: letters are revealed
+    # at the fruit's own edge, nothing pokes out above or below, and the final
+    # lockup is untouched because the b and x both sit clear of that band.
+    letters_top = min(bx[1] for bx in boxes) * base
+    letters_bot = max(bx[3] for bx in boxes) * base
+    occ_cy = (letters_top + letters_bot) / 2
+    occ_w = max(2, int(fruit_dia * 1.02))
+    occ_h = max(2, int((letters_bot - letters_top) * 1.08))
+    # A plain rectangle, and it has to be. Anything that narrows away from its
+    # centre - circle, ellipse, capsule - lets the wide parts of a letter escape
+    # at its top and bottom, which shows as white crescents around the fruit.
+    # The T's crossbar is at the very top AND full width, so only a shape that
+    # holds the fruit's width at every height will do.
+    #
+    # Bounded to the LETTERS' height rather than the whole frame: it is black on
+    # black either way, but this keeps it from masking anything else later.
     inputs += ["-f", "lavfi", "-i",
-               f"color=black:s={max(2,int(fruit_dia))}x{height}:r={fps}:d={duration}"]
+               f"color=black:s={occ_w}x{occ_h}:r={fps}:d={duration}"]
     inputs += ["-loop", "1", "-t", str(duration), "-i", str(circle)]
-    if leaves is not None:
+    animate_leaves = leaves is not None and leaves_pivot is not None
+    if animate_leaves:
+        inputs += ["-loop", "1", "-t", str(duration), "-i", str(leaves_pivot)]
+    elif leaves is not None:
         inputs += ["-loop", "1", "-t", str(duration), "-i", str(leaves)]
 
     steps = []
@@ -256,17 +309,35 @@ def _ident_command(
 
     bar_i = len(glyphs) + 1
     steps.append(
-        f"[{prev}][{bar_i}:v]overlay=x='({fx_now}-{fruit_dia/2:.1f})':y=0[masked]"
+        f"[{prev}][{bar_i}:v]overlay="
+        f"x='({fx_now}-{occ_w/2:.1f})':"
+        f"y={lock_y + occ_cy - occ_h/2:.1f}[masked]"
     )
     steps.append(
         f"[{bar_i+1}:v]scale={lw}:{lh}[circ];"
         f"[masked][circ]overlay=x='({fx_now}-{fruit_cx:.1f})':y={lock_y}"
         + ("[withfruit]" if leaves is not None else "")
     )
-    if leaves is not None:
+    if animate_leaves:
+        # The root stays welded to the fruit; the leaves SWING about it, so they
+        # look whisked along rather than sliding off. The angle is driven by how
+        # far the lagged position trails the real one, so they sweep back as the
+        # fruit accelerates and settle as it lands.
+        rx, ry = _leaf_root(leaves)
+        pivot_px = max(2, int(_png_size(leaves_pivot)[0] * base))
+        root_x = f"({fx_now}-{fruit_cx:.1f}+{rx * base:.1f})"
+        root_y = lock_y + ry * base
+        swing = f"(({fx_lag}-{fx_now})*0.0018)"
+        steps.append(
+            f"[{bar_i+2}:v]scale={pivot_px}:{pivot_px},"
+            f"rotate=a='{swing}':c=black@0[lv];"
+            f"[withfruit][lv]overlay="
+            f"x='({root_x}-{pivot_px/2:.1f})':y={root_y - pivot_px/2:.1f}"
+        )
+    elif leaves is not None:
         steps.append(
             f"[{bar_i+2}:v]scale={lw}:{lh}[lv];"
-            f"[withfruit][lv]overlay=x='({fx_lag}-{fruit_cx:.1f})':y={lock_y}"
+            f"[withfruit][lv]overlay=x='({fx_now}-{fruit_cx:.1f})':y={lock_y}"
         )
 
     return (
@@ -276,6 +347,59 @@ def _ident_command(
            "-c:v", "libx264", "-preset", "slow", "-crf", "16",
            "-pix_fmt", "yuv420p", "-an", str(out_path)]
     )
+
+
+def _png_opaque_bbox(path: Path) -> tuple:
+    """(x0, y0, x1, y1) of a PNG's opaque pixels."""
+    import subprocess as sp
+
+    w, h = _png_size(path)
+    raw = sp.run(
+        ["ffmpeg", "-v", "error", "-i", str(path),
+         "-vf", "alphaextract,format=gray", "-f", "rawvideo", "-"],
+        capture_output=True, check=True,
+    ).stdout
+    xs = [i % w for i, v in enumerate(raw) if v > 40]
+    ys = [i // w for i, v in enumerate(raw) if v > 40]
+    if not xs:
+        return 0, 0, w, h
+    return min(xs), min(ys), max(xs), max(ys)
+
+
+def _png_opaque_height(path: Path) -> float:
+    """Height of a PNG's opaque pixels."""
+    import subprocess as sp
+
+    w, _h = _png_size(path)
+    raw = sp.run(
+        ["ffmpeg", "-v", "error", "-i", str(path),
+         "-vf", "alphaextract,format=gray", "-f", "rawvideo", "-"],
+        capture_output=True, check=True,
+    ).stdout
+    ys = [i // w for i, v in enumerate(raw) if v > 40]
+    return (max(ys) - min(ys) + 1) if ys else _h
+
+
+def _leaf_root(leaves: Path) -> tuple:
+    """Where the leaves meet the fruit: the centre of their lowest edge.
+
+    That point is the hinge - it stays welded to the fruit while the leaves
+    swing about it.
+    """
+    import subprocess as sp
+
+    w, h = _png_size(leaves)
+    raw = sp.run(
+        ["ffmpeg", "-v", "error", "-i", str(leaves),
+         "-vf", "alphaextract,format=gray", "-f", "rawvideo", "-"],
+        capture_output=True, check=True,
+    ).stdout
+    pts = [(i % w, i // w) for i, v in enumerate(raw) if v > 40]
+    if not pts:
+        return w / 2, h / 2
+    y_bottom = max(p[1] for p in pts)
+    band = [p for p in pts if p[1] >= y_bottom - 6]
+    return sum(p[0] for p in band) / len(band), y_bottom
 
 
 def _png_opaque_width(path: Path) -> float:
@@ -352,10 +476,12 @@ def generate_logo(
     glyphs = sorted(out_path.parent.glob(f"{LOGO_GLYPH_PREFIX}*.png"))
     fade_out_at = max(0.0, duration - 0.5)
 
+    pivot = out_path.parent / LOGO_LAYER_LEAVES_PIVOT
     if glyphs and circle.is_file():
         _run(_ident_command(
             out_path, glyphs, circle,
             leaves if leaves.is_file() else None,
+            pivot if pivot.is_file() else None,
             width=width, height=height, fps=fps, duration=duration,
         ))
         return out_path

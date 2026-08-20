@@ -461,7 +461,7 @@ def test_the_letters_never_scale_or_fade(tmp_path):
     """
     from nostalgiabox.static_gen import (
         DEFAULT_ASSETS_DIR, LOGO_GLYPH_PREFIX, LOGO_LAYER_CIRCLE,
-        LOGO_LAYER_LEAVES, _ident_command,
+        LOGO_LAYER_LEAVES, LOGO_LAYER_LEAVES_PIVOT, _ident_command,
     )
 
     glyphs = sorted(DEFAULT_ASSETS_DIR.glob(f"{LOGO_GLYPH_PREFIX}*.png"))
@@ -469,20 +469,24 @@ def test_the_letters_never_scale_or_fade(tmp_path):
         tmp_path / "out.mp4", glyphs,
         DEFAULT_ASSETS_DIR / LOGO_LAYER_CIRCLE,
         DEFAULT_ASSETS_DIR / LOGO_LAYER_LEAVES,
+        DEFAULT_ASSETS_DIR / LOGO_LAYER_LEAVES_PIVOT,
         width=1920, height=1080, fps=60, duration=5.0,
     )
     graph = cmd[cmd.index("-filter_complex") + 1]
     assert "colorchannelmixer" not in graph, "something is fading"
-    # Every scale= must be to a fixed size, never an expression in t.
+    # Every scale= must be to a fixed size, never an expression in t. Parse only
+    # the scale's own arguments - the leaves' rotate= follows it in the same
+    # segment and DOES depend on t, quite legitimately.
     for seg in graph.split(";"):
-        if seg.strip().startswith("[") and "scale=" in seg:
-            scale_arg = seg.split("scale=")[1].split("[")[0]
-            assert "t" not in scale_arg.replace("scale", ""), f"scale varies: {seg}"
-    # y must be constant; only x moves.
+        for part in seg.split("scale=")[1:]:
+            scale_arg = part.split(",")[0].split("[")[0]
+            assert "t" not in scale_arg, f"scale varies with time: {scale_arg}"
+    # No letter may move vertically - only x. (The leaves rotate rather than
+    # translate, so they are exempt and checked separately.)
     for seg in graph.split(";"):
-        if "overlay=" in seg:
+        if "overlay=" in seg and "[lv]" not in seg:
             y_arg = seg.split(":y=")[1].split(":")[0].split("[")[0]
-            assert y_arg.strip().lstrip("-").isdigit(), f"y is not constant: {y_arg}"
+            assert "t" not in y_arg, f"a layer moves vertically: {y_arg}"
 
 
 def test_the_easing_overshoots_and_settles(tmp_path):
@@ -495,7 +499,7 @@ def test_the_easing_overshoots_and_settles(tmp_path):
 
     from nostalgiabox.static_gen import (
         DEFAULT_ASSETS_DIR, LOGO_GLYPH_PREFIX, LOGO_LAYER_CIRCLE,
-        LOGO_LAYER_LEAVES, _ident_command,
+        LOGO_LAYER_LEAVES, LOGO_LAYER_LEAVES_PIVOT, _ident_command,
     )
 
     glyphs = sorted(DEFAULT_ASSETS_DIR.glob(f"{LOGO_GLYPH_PREFIX}*.png"))
@@ -503,6 +507,7 @@ def test_the_easing_overshoots_and_settles(tmp_path):
     subprocess.run(_ident_command(
         out, glyphs, DEFAULT_ASSETS_DIR / LOGO_LAYER_CIRCLE,
         DEFAULT_ASSETS_DIR / LOGO_LAYER_LEAVES,
+        DEFAULT_ASSETS_DIR / LOGO_LAYER_LEAVES_PIVOT,
         width=960, height=540, fps=60, duration=5.0,
     ), check=True)
     raw = subprocess.run(
