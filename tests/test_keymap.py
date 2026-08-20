@@ -147,3 +147,29 @@ def test_the_cec_dpad_also_produces_navigation():
     assert cec_key_to_event("up").action == Action.NAV_UP
     assert cec_key_to_event("left").action == Action.NAV_LEFT
     assert cec_key_to_event("channel up").action == Action.CHANNEL_UP
+
+
+def test_the_single_letter_shortcuts_all_work_from_a_real_keyboard():
+    """The letter shortcuts must exist in the EVDEV map, not just the stdin one.
+
+    A Flirc reports as a USB keyboard, so a button taught the letter `h`
+    arrives at the Pi as KEY_H - it never goes near the stdin backend. A letter
+    that only exists in _CHAR_TO_KEY works when typed at a terminal during
+    development and is a dead button on the remote, with nothing on screen to
+    say why.
+    """
+    assert evdev_key_to_event("KEY_H").action == Action.HOME
+    assert evdev_key_to_event("KEY_L").action == Action.LAST_CHANNEL
+    assert evdev_key_to_event("KEY_M").action == Action.MUTE
+    assert evdev_key_to_event("KEY_I").action == Action.INFO
+    assert evdev_key_to_event("KEY_P").action == Action.POWER
+
+
+def test_every_dev_keyboard_shortcut_also_works_on_a_real_remote():
+    """Nothing may be reachable by typing that is unreachable by remote."""
+    from nostalgiabox.input.keymap import _CHAR_TO_KEY
+
+    unreachable = sorted(
+        {key for key in _CHAR_TO_KEY.values() if evdev_key_to_event(key) is None}
+    )
+    assert not unreachable, f"typed-only, dead on a remote: {unreachable}"

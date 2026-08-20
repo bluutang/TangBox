@@ -47,6 +47,9 @@ _EVDEV_ACTIONS: Dict[str, InputEvent] = {
     "KEY_HOME": InputEvent(Action.HOME),
     "KEY_HOMEPAGE": InputEvent(Action.HOME),
     "KEY_MENU": InputEvent(Action.HOME),
+    # A Flirc reports as a USB keyboard, so a remote button taught the letter
+    # `h` arrives here as KEY_H. Matches KEY_M / KEY_I / KEY_L / KEY_P below.
+    "KEY_H": InputEvent(Action.HOME),
     "KEY_KPDOT": InputEvent(Action.RANDOM),
     "KEY_DOT": InputEvent(Action.RANDOM),
     "KEY_M": InputEvent(Action.MUTE),
