@@ -257,36 +257,14 @@ def _ident_command(
     # corners fits far more tightly than a circle would, so a letter appears
     # close to the fruit's edge, along a curve. It is pure black on black and
     # therefore invisible in itself.
-    boxes = [_png_opaque_bbox(g) for g in glyphs]
-    # The occluder: an ellipse EXACTLY the fruit's width, and tall enough to
-    # cover the letters. Three earlier shapes were wrong, each instructively:
+    # NO OCCLUDER. Brian, having seen every shape that could hide the letters:
+    # "just remove the plain rectangle behind the orange. i'd rather have a
+    # smooth animation."
     #
-    #   A full-height RECTANGLE hid everything but revealed letters along a
-    #   straight line running the whole frame - "out of nowhere", not from
-    #   behind anything.
-    #   A CIRCLE sized to the letters' height left white crescents: a letter is
-    #   a rectangle of ink and its corners escape such a disc.
-    #   A WIDE ellipse hid the stacked letters but then covered the b and the x
-    #   in their finished places, either side of the fruit.
-    #
-    # Matching the fruit's width solves all three at once: letters are revealed
-    # at the fruit's own edge, nothing pokes out above or below, and the final
-    # lockup is untouched because the b and x both sit clear of that band.
-    letters_top = min(bx[1] for bx in boxes) * base
-    letters_bot = max(bx[3] for bx in boxes) * base
-    occ_cy = (letters_top + letters_bot) / 2
-    occ_w = max(2, int(fruit_dia * 1.02))
-    occ_h = max(2, int((letters_bot - letters_top) * 1.08))
-    # A plain rectangle, and it has to be. Anything that narrows away from its
-    # centre - circle, ellipse, capsule - lets the wide parts of a letter escape
-    # at its top and bottom, which shows as white crescents around the fruit.
-    # The T's crossbar is at the very top AND full width, so only a shape that
-    # holds the fruit's width at every height will do.
-    #
-    # Bounded to the LETTERS' height rather than the whole frame: it is black on
-    # black either way, but this keeps it from masking anything else later.
-    inputs += ["-f", "lavfi", "-i",
-               f"color=black:s={occ_w}x{occ_h}:r={fps}:d={duration}"]
+    # So the fruit is the only thing that hides anything, by simply being drawn
+    # on top. The letters are taller than it is wide, so their tops and tails
+    # ARE visible while stacked behind it - the trade he chose knowingly, over
+    # a mask that clipped them along a hard edge.
     inputs += ["-loop", "1", "-t", str(duration), "-i", str(circle)]
     animate_leaves = leaves is not None and leaves_pivot is not None
     if animate_leaves:
@@ -307,15 +285,10 @@ def _ident_command(
         )
         prev = lbl
 
-    bar_i = len(glyphs) + 1
-    steps.append(
-        f"[{prev}][{bar_i}:v]overlay="
-        f"x='({fx_now}-{occ_w/2:.1f})':"
-        f"y={lock_y + occ_cy - occ_h/2:.1f}[masked]"
-    )
+    bar_i = len(glyphs)
     steps.append(
         f"[{bar_i+1}:v]scale={lw}:{lh}[circ];"
-        f"[masked][circ]overlay=x='({fx_now}-{fruit_cx:.1f})':y={lock_y}"
+        f"[{prev}][circ]overlay=x='({fx_now}-{fruit_cx:.1f})':y={lock_y}"
         + ("[withfruit]" if leaves is not None else "")
     )
     if animate_leaves:
