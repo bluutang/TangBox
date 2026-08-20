@@ -33,9 +33,10 @@ LOGO_FILENAME = "logo.mp4"
 # Brian's wordmark, white on transparent, rasterised from brand/. When this
 # is present the ident is built from it; otherwise a placeholder is drawn.
 LOGO_IMAGE_FILENAME = "logo.png"
-# The two halves of the wordmark, so the ident can ANIMATE them separately:
-# the fruit holds its size while the lettering grows around it.
-LOGO_LAYER_WORD = "logo-word.png"
+# The wordmark split into pieces, so the ident can ANIMATE them separately:
+# one layer per letter (logo-g0..g5) plus the fruit. The letters slide OUT FROM
+# BEHIND the fruit at constant size - they never scale and never fade.
+LOGO_GLYPH_PREFIX = "logo-g"
 LOGO_LAYER_FRUIT = "logo-fruit.png"
 POWER_ON_FILENAME = "power_on.mp4"
 POWER_OFF_FILENAME = "power_off.mp4"
@@ -161,97 +162,83 @@ def generate_color_bars(
     return out_path
 
 
-def _ident_frames(
-    out_dir: Path,
-    word: Path,
+def _ident_command(
+    out_path: Path,
+    glyphs: list,
     fruit: Path,
     *,
     width: int,
     height: int,
     fps: int,
     duration: float,
-) -> int:
-    """Render the ident frame by frame with ffmpeg. Returns the frame count.
+) -> list:
+    """Build the ffmpeg command for the ident.
 
-    The motion is measured from Brian's own animation: the fruit sits alone,
-    dead centre, at CONSTANT size, then the lettering scales up around it while
-    the fruit slides right into place as the letter o. The fruit never resizes -
-    that is the whole trick of it.
+    ONE ffmpeg pass, not a frame at a time: the whole animation is pure
+    horizontal translation, and overlay's x accepts an expression in ``t``. That
+    makes it both far faster and far easier to retime than rendering frames.
 
-    Frames are composited by ffmpeg rather than in Python: a 1920x1080 alpha
-    blend per frame is far too slow in plain Python, and identical frames (the
-    opening hold and the closing hold) are copied rather than re-rendered.
+    The motion: every letter starts hidden behind the fruit and slides out to
+    its place at CONSTANT SIZE - no scaling, no fading. The fruit itself drifts
+    right from dead centre into position as the letter o.
     """
-    import shutil
-    import subprocess as sp
-
-    raw_w, raw_h = _png_size(word)
-    raw_fx, raw_fy = _png_opaque_centre(fruit)
+    raw_w, raw_h = _png_size(fruit)
     # Scale the artwork to the FRAME rather than assuming its native size, so
-    # this works at any resolution - the tests render small, the box renders
-    # 1080p. 0.76 of the frame width matches the proportions of Brian's own
-    # animation.
+    # this renders correctly at any resolution. 0.76 of the frame width matches
+    # the proportions of Brian's original animation.
     base = (width * 0.76) / raw_w
     lw, lh = max(2, int(raw_w * base)), max(2, int(raw_h * base))
-    fx_in_layer, fy_in_layer = raw_fx * base, raw_fy * base
     lock_x, lock_y = (width - lw) // 2, (height - lh) // 2
-    word_cx, word_cy = lock_x + lw / 2, lock_y + lh / 2
-    fruit_final_cx = lock_x + fx_in_layer
-    fruit_start_cx = width / 2
-    fruit_cy = lock_y + fy_in_layer
+    fruit_cx = _png_opaque_centre(fruit)[0] * base
+    start_cx = width / 2
 
-    t_alone = duration * 0.12          # the fruit on its own
-    t_build = duration * 0.52          # the lettering arriving
-    s_min = 0.06
+    t_alone = duration * 0.12          # the fruit alone, before anything moves
+    t_end = duration * 0.64            # everything has arrived
 
-    def params(t):
-        if t < t_alone:
-            return 0.0, fruit_start_cx, 0.0
-        p = min(1.0, (t - t_alone) / t_build)
-        # Strong ease-out, matching the original: most of the growth happens
-        # early and the last stretch is a long settle.
-        e = p ** 0.25
-        return (
-            s_min + (1.0 - s_min) * e,
-            fruit_start_cx + (fruit_final_cx - fruit_start_cx) * e,
-            min(1.0, (t - t_alone) / (duration * 0.05)),
+    centres = [_png_opaque_centre(g)[0] * base for g in glyphs]
+    # Farthest-travelling letters leave first and they all arrive together, so
+    # the word settles as one piece rather than trickling into place.
+    order = sorted(range(len(glyphs)), key=lambda i: -abs(centres[i] - fruit_cx))
+    starts = {gi: t_alone + n * (duration * 0.022) for n, gi in enumerate(order)}
+
+    inputs = ["-f", "lavfi", "-i", f"color=black:s={width}x{height}:r={fps}:d={duration}"]
+    for g in glyphs:
+        inputs += ["-loop", "1", "-t", str(duration), "-i", str(g)]
+    inputs += ["-loop", "1", "-t", str(duration), "-i", str(fruit)]
+
+    steps = []
+    prev = "0:v"
+    for gi, _ in enumerate(glyphs):
+        s0 = starts[gi]
+        p = f"clip((t-{s0:.3f})/{max(0.01, t_end - s0):.3f},0,1)"
+        ease = f"(1-pow(1-{p},3))"       # smooth ease-out, settling into place
+        sx = start_cx - centres[gi]
+        x = f"({sx:.1f}+({lock_x}-({sx:.1f}))*{ease})"
+        lbl = f"s{gi}"
+        # enable= keeps a letter hidden until the instant it starts moving.
+        # Without it they sit stacked behind the fruit and poke out above and
+        # below it - the letters are taller than the fruit is wide.
+        steps.append(
+            f"[{gi+1}:v]scale={lw}:{lh}[g{gi}];"
+            f"[{prev}][g{gi}]overlay=x='{x}':y={lock_y}:enable='gte(t,{s0:.3f})'[{lbl}]"
         )
+        prev = lbl
+    pf = f"clip((t-{t_alone:.3f})/{t_end - t_alone:.3f},0,1)"
+    ef = f"(1-pow(1-{pf},3))"
+    sfx = start_cx - fruit_cx
+    xf = f"({sfx:.1f}+({lock_x}-({sfx:.1f}))*{ef})"
+    steps.append(
+        f"[{len(glyphs)+1}:v]scale={lw}:{lh}[fr];"
+        f"[{prev}][fr]overlay=x='{xf}':y={lock_y}"
+    )
 
-    total = int(duration * fps)
-    prev_key = prev_path = None
-    for i in range(total):
-        scale, fx, alpha = params(i / fps)
-        key = (round(scale, 4), round(fx, 1), round(alpha, 3))
-        out = out_dir / f"f{i:05d}.png"
-        if key == prev_key and prev_path is not None:
-            shutil.copy(prev_path, out)
-            continue
-        fx0, fy0 = int(fx - fx_in_layer), int(fruit_cy - fy_in_layer)
-        if scale <= 0.0 or alpha <= 0.0:
-            cmd = [
-                "ffmpeg", "-y", "-v", "error",
-                "-f", "lavfi", "-i", f"color=black:s={width}x{height}",
-                "-i", str(fruit),
-                "-filter_complex",
-                f"[1:v]scale={lw}:{lh}[f];[0:v][f]overlay={fx0}:{fy0}",
-                "-frames:v", "1", str(out),
-            ]
-        else:
-            ww, wh = max(2, int(lw * scale)), max(2, int(lh * scale))
-            wx, wy = int(word_cx - ww / 2), int(word_cy - wh / 2)
-            cmd = [
-                "ffmpeg", "-y", "-v", "error",
-                "-f", "lavfi", "-i", f"color=black:s={width}x{height}",
-                "-i", str(word), "-i", str(fruit),
-                "-filter_complex",
-                f"[1:v]scale={ww}:{wh},format=rgba,colorchannelmixer=aa={alpha:.3f}[w];"
-                f"[2:v]scale={lw}:{lh}[f];"
-                f"[0:v][w]overlay={wx}:{wy}[a];[a][f]overlay={fx0}:{fy0}",
-                "-frames:v", "1", str(out),
-            ]
-        sp.run(cmd, check=True)
-        prev_key, prev_path = key, out
-    return total
+    return (
+        ["ffmpeg", "-y", "-v", "error"]
+        + inputs
+        + ["-filter_complex", ";".join(steps),
+           "-c:v", "libx264", "-preset", "slow", "-crf", "16",
+           "-pix_fmt", "yuv420p", "-an", str(out_path)]
+    )
 
 
 def _png_size(path: Path) -> tuple:
@@ -296,7 +283,7 @@ def generate_logo(
     Three tiers, each falling back to the next, because this runs before any
     television happens and a missing file must never mean a black screen:
 
-      1. ``logo-word.png`` + ``logo-fruit.png``  -> Brian's ANIMATED ident
+      1. ``logo-g*.png`` + ``logo-fruit.png``    -> Brian's ANIMATED ident
       2. ``logo.png``                            -> the wordmark, fading up
       3. nothing                                 -> "TANGBOX" in phosphor green
 
@@ -308,29 +295,16 @@ def generate_logo(
     assets folder. generate_all() only fills in what is missing and will not
     overwrite it, even under --force.
     """
-    import shutil
-    import tempfile
-
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    word = out_path.parent / LOGO_LAYER_WORD
     fruit = out_path.parent / LOGO_LAYER_FRUIT
+    glyphs = sorted(out_path.parent.glob(f"{LOGO_GLYPH_PREFIX}*.png"))
     fade_out_at = max(0.0, duration - 0.5)
 
-    if word.is_file() and fruit.is_file():
-        tmp = Path(tempfile.mkdtemp(prefix="tangbox-ident-"))
-        try:
-            _ident_frames(
-                tmp, word, fruit,
-                width=width, height=height, fps=fps, duration=duration,
-            )
-            _run([
-                "ffmpeg", "-y", "-v", "error",
-                "-framerate", str(fps), "-i", str(tmp / "f%05d.png"),
-                "-c:v", "libx264", "-preset", "slow", "-crf", "16",
-                "-pix_fmt", "yuv420p", "-an", str(out_path),
-            ])
-        finally:
-            shutil.rmtree(tmp, ignore_errors=True)
+    if glyphs and fruit.is_file():
+        _run(_ident_command(
+            out_path, glyphs, fruit,
+            width=width, height=height, fps=fps, duration=duration,
+        ))
         return out_path
 
     image = image if image is not None else out_path.parent / LOGO_IMAGE_FILENAME

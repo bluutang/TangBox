@@ -383,15 +383,16 @@ def test_the_ident_animates_when_the_layers_are_present(tmp_path):
 
     from nostalgiabox.static_gen import (
         DEFAULT_ASSETS_DIR,
+        LOGO_GLYPH_PREFIX,
         LOGO_LAYER_FRUIT,
-        LOGO_LAYER_WORD,
         generate_logo,
     )
 
-    for name in (LOGO_LAYER_WORD, LOGO_LAYER_FRUIT):
-        src = DEFAULT_ASSETS_DIR / name
-        assert src.is_file(), f"bundled {name} is missing"
-        shutil.copy(src, tmp_path / name)
+    layers = sorted(DEFAULT_ASSETS_DIR.glob(f"{LOGO_GLYPH_PREFIX}*.png"))
+    assert layers, "bundled glyph layers are missing"
+    for src in layers + [DEFAULT_ASSETS_DIR / LOGO_LAYER_FRUIT]:
+        assert src.is_file(), f"bundled {src.name} is missing"
+        shutil.copy(src, tmp_path / src.name)
 
     out = generate_logo(tmp_path / "logo.mp4", width=640, height=360, duration=5.0)
 
@@ -421,11 +422,13 @@ def test_the_ident_is_silent(tmp_path):
     import subprocess
 
     from nostalgiabox.static_gen import (
-        DEFAULT_ASSETS_DIR, LOGO_LAYER_FRUIT, LOGO_LAYER_WORD, generate_logo,
+        DEFAULT_ASSETS_DIR, LOGO_GLYPH_PREFIX, LOGO_LAYER_FRUIT, generate_logo,
     )
 
-    for name in (LOGO_LAYER_WORD, LOGO_LAYER_FRUIT):
-        shutil.copy(DEFAULT_ASSETS_DIR / name, tmp_path / name)
+    for src in sorted(DEFAULT_ASSETS_DIR.glob(f"{LOGO_GLYPH_PREFIX}*.png")) + [
+        DEFAULT_ASSETS_DIR / LOGO_LAYER_FRUIT
+    ]:
+        shutil.copy(src, tmp_path / src.name)
     out = generate_logo(tmp_path / "logo.mp4", width=640, height=360, duration=5.0)
     streams = subprocess.run(
         ["ffprobe", "-v", "error", "-show_entries", "stream=codec_type",
@@ -442,3 +445,36 @@ def test_the_ident_defaults_to_five_seconds():
     from nostalgiabox.static_gen import generate_logo
 
     assert inspect.signature(generate_logo).parameters["duration"].default == 5.0
+
+
+
+def test_the_letters_never_scale_or_fade(tmp_path):
+    """Brian: "the letters should smoothly slide out from behind the orange and
+    not scale up in size or fade in."
+
+    Checked structurally, on the generated ffmpeg command: no per-letter alpha
+    ramp, and each letter's only time-varying property is its x position. A
+    pixel test could not distinguish "grew into place" from "slid into place"
+    at the moment it arrives.
+    """
+    from nostalgiabox.static_gen import (
+        DEFAULT_ASSETS_DIR, LOGO_GLYPH_PREFIX, LOGO_LAYER_FRUIT, _ident_command,
+    )
+
+    glyphs = sorted(DEFAULT_ASSETS_DIR.glob(f"{LOGO_GLYPH_PREFIX}*.png"))
+    cmd = _ident_command(
+        tmp_path / "out.mp4", glyphs, DEFAULT_ASSETS_DIR / LOGO_LAYER_FRUIT,
+        width=1920, height=1080, fps=60, duration=5.0,
+    )
+    graph = cmd[cmd.index("-filter_complex") + 1]
+    assert "colorchannelmixer" not in graph, "something is fading"
+    # Every scale= must be to a fixed size, never an expression in t.
+    for seg in graph.split(";"):
+        if seg.strip().startswith("[") and "scale=" in seg:
+            scale_arg = seg.split("scale=")[1].split("[")[0]
+            assert "t" not in scale_arg.replace("scale", ""), f"scale varies: {seg}"
+    # y must be constant; only x moves.
+    for seg in graph.split(";"):
+        if "overlay=" in seg:
+            y_arg = seg.split(":y=")[1].split(":")[0].split("[")[0]
+            assert y_arg.strip().lstrip("-").isdigit(), f"y is not constant: {y_arg}"
