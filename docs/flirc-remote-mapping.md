@@ -17,8 +17,8 @@ irrelevant.** We choose what each one does.
 
 ## It fits
 
-The box can use 25 buttons. This remote has 29 that are free to teach. Nothing
-has to be dropped, and there are spares left over for later.
+**27 buttons taught. 2 held back for Phase 3** (`INPUT`, `✱`). **3 never
+touched** (`SETUP`, `TV`, `AUX`). Nothing the box can do is left unreachable.
 
 ## Do this first: put the remote in AUX mode
 
@@ -46,7 +46,7 @@ Without this, one press talks to both at once — channel-up would change TangBo
 | **OK** | `Enter` | Tune to the highlighted channel, or open the guide |
 | `ENTER` | `Enter` | Same as OK — harmless duplicate |
 | 🏠 house | `h` | Open and close the channel guide |
-| ☰ hamburger | `h` | Same as the house — harmless duplicate |
+| ☰ hamburger | `i` | Re-show the channel banner — what am I watching? |
 | ↰ back | `l` (lowercase L) | Leave the guide, or jump to the previous channel |
 | `ch⤸` return | `l` | Same as back — this is the classic "last channel" button |
 | `CH` ▲ | `Page Up` | **Always** changes channel, even with the guide open |
@@ -64,11 +64,20 @@ something good, needs no aiming and no reading, may be the only control the
 2-year-old ever uses. It is on the number pad next to `0`, it is easy to find by
 feel, and the guide spec named this exact key before the remote was chosen.
 
-### The duplicates are deliberate
+### Why the hamburger is the info button
 
-`OK`/`ENTER`, the house/hamburger, and back/`ch⤸` each do one thing between
-them. The box accepts several keystrokes per action on purpose, so teach
-whichever the Flirc GUI makes easiest. Nothing breaks if you skip a duplicate.
+There is no dedicated info button on this remote. Left as a second way to open
+the guide — which the house already does — the channel banner would have been
+unreachable, so there would be no way to ask "what am I watching?" without
+changing channel to find out. The hamburger is the only spare that Phase 3 has
+not already claimed.
+
+### The two remaining duplicates are deliberate
+
+`OK`/`ENTER` sit next to each other and mean the same thing, and back/`ch⤸` are
+two names for "previous channel". The box accepts several keystrokes per action
+on purpose, so teach whichever the Flirc GUI makes easiest. Nothing breaks if
+you skip one.
 
 ## Leave these alone
 
