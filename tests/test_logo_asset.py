@@ -384,13 +384,15 @@ def test_the_ident_animates_when_the_layers_are_present(tmp_path):
     from nostalgiabox.static_gen import (
         DEFAULT_ASSETS_DIR,
         LOGO_GLYPH_PREFIX,
-        LOGO_LAYER_FRUIT,
+        LOGO_LAYER_CIRCLE,
+        LOGO_LAYER_LEAVES,
         generate_logo,
     )
 
     layers = sorted(DEFAULT_ASSETS_DIR.glob(f"{LOGO_GLYPH_PREFIX}*.png"))
     assert layers, "bundled glyph layers are missing"
-    for src in layers + [DEFAULT_ASSETS_DIR / LOGO_LAYER_FRUIT]:
+    for src in layers + [DEFAULT_ASSETS_DIR / LOGO_LAYER_CIRCLE,
+                         DEFAULT_ASSETS_DIR / LOGO_LAYER_LEAVES]:
         assert src.is_file(), f"bundled {src.name} is missing"
         shutil.copy(src, tmp_path / src.name)
 
@@ -422,11 +424,11 @@ def test_the_ident_is_silent(tmp_path):
     import subprocess
 
     from nostalgiabox.static_gen import (
-        DEFAULT_ASSETS_DIR, LOGO_GLYPH_PREFIX, LOGO_LAYER_FRUIT, generate_logo,
+        DEFAULT_ASSETS_DIR, LOGO_GLYPH_PREFIX, LOGO_LAYER_CIRCLE, LOGO_LAYER_LEAVES, generate_logo,
     )
 
     for src in sorted(DEFAULT_ASSETS_DIR.glob(f"{LOGO_GLYPH_PREFIX}*.png")) + [
-        DEFAULT_ASSETS_DIR / LOGO_LAYER_FRUIT
+        DEFAULT_ASSETS_DIR / LOGO_LAYER_CIRCLE, DEFAULT_ASSETS_DIR / LOGO_LAYER_LEAVES
     ]:
         shutil.copy(src, tmp_path / src.name)
     out = generate_logo(tmp_path / "logo.mp4", width=640, height=360, duration=5.0)
@@ -458,12 +460,15 @@ def test_the_letters_never_scale_or_fade(tmp_path):
     at the moment it arrives.
     """
     from nostalgiabox.static_gen import (
-        DEFAULT_ASSETS_DIR, LOGO_GLYPH_PREFIX, LOGO_LAYER_FRUIT, _ident_command,
+        DEFAULT_ASSETS_DIR, LOGO_GLYPH_PREFIX, LOGO_LAYER_CIRCLE,
+        LOGO_LAYER_LEAVES, _ident_command,
     )
 
     glyphs = sorted(DEFAULT_ASSETS_DIR.glob(f"{LOGO_GLYPH_PREFIX}*.png"))
     cmd = _ident_command(
-        tmp_path / "out.mp4", glyphs, DEFAULT_ASSETS_DIR / LOGO_LAYER_FRUIT,
+        tmp_path / "out.mp4", glyphs,
+        DEFAULT_ASSETS_DIR / LOGO_LAYER_CIRCLE,
+        DEFAULT_ASSETS_DIR / LOGO_LAYER_LEAVES,
         width=1920, height=1080, fps=60, duration=5.0,
     )
     graph = cmd[cmd.index("-filter_complex") + 1]
@@ -478,3 +483,42 @@ def test_the_letters_never_scale_or_fade(tmp_path):
         if "overlay=" in seg:
             y_arg = seg.split(":y=")[1].split(":")[0].split("[")[0]
             assert y_arg.strip().lstrip("-").isdigit(), f"y is not constant: {y_arg}"
+
+
+def test_the_easing_overshoots_and_settles(tmp_path):
+    """Brian asked for momentum - "maybe even a rubberband bounce back to form".
+
+    Measured, not asserted structurally: the leftmost letter should travel PAST
+    its final position and come back, so the extreme is not the resting place.
+    """
+    import subprocess
+
+    from nostalgiabox.static_gen import (
+        DEFAULT_ASSETS_DIR, LOGO_GLYPH_PREFIX, LOGO_LAYER_CIRCLE,
+        LOGO_LAYER_LEAVES, _ident_command,
+    )
+
+    glyphs = sorted(DEFAULT_ASSETS_DIR.glob(f"{LOGO_GLYPH_PREFIX}*.png"))
+    out = tmp_path / "o.mp4"
+    subprocess.run(_ident_command(
+        out, glyphs, DEFAULT_ASSETS_DIR / LOGO_LAYER_CIRCLE,
+        DEFAULT_ASSETS_DIR / LOGO_LAYER_LEAVES,
+        width=960, height=540, fps=60, duration=5.0,
+    ), check=True)
+    raw = subprocess.run(
+        ["ffmpeg", "-v", "error", "-i", str(out), "-f", "rawvideo",
+         "-pix_fmt", "gray", "-s", "96x54", "-"],
+        capture_output=True, check=True,
+    ).stdout
+    n = 96 * 54
+    lefts = []
+    for i in range(0, len(raw), n):
+        f = raw[i:i + n]
+        xs = [j % 96 for j, v in enumerate(f) if v > 90]
+        if xs:
+            lefts.append(min(xs))
+    settled = lefts[-1]
+    furthest = min(lefts)
+    assert furthest < settled, (
+        f"no overshoot: furthest left {furthest}, settled at {settled}"
+    )

@@ -37,6 +37,10 @@ LOGO_IMAGE_FILENAME = "logo.png"
 # one layer per letter (logo-g0..g5) plus the fruit. The letters slide OUT FROM
 # BEHIND the fruit at constant size - they never scale and never fade.
 LOGO_GLYPH_PREFIX = "logo-g"
+LOGO_LAYER_CIRCLE = "logo-circle.png"
+# The leaves are their own layer so they can LAG behind the fruit as it
+# accelerates and catch up as it settles - momentum, as in Brian's original.
+LOGO_LAYER_LEAVES = "logo-leaves.png"
 LOGO_LAYER_FRUIT = "logo-fruit.png"
 POWER_ON_FILENAME = "power_on.mp4"
 POWER_OFF_FILENAME = "power_off.mp4"
@@ -165,7 +169,8 @@ def generate_color_bars(
 def _ident_command(
     out_path: Path,
     glyphs: list,
-    fruit: Path,
+    circle: Path,
+    leaves: Optional[Path],
     *,
     width: int,
     height: int,
@@ -174,70 +179,95 @@ def _ident_command(
 ) -> list:
     """Build the ffmpeg command for the ident.
 
-    ONE ffmpeg pass, not a frame at a time: the whole animation is pure
-    horizontal translation, and overlay's x accepts an expression in ``t``. That
-    makes it both far faster and far easier to retime than rendering frames.
+    ONE ffmpeg pass, not a frame at a time: the animation is pure horizontal
+    translation and overlay's x accepts an expression in ``t``. Far faster to
+    render and far easier to retime.
 
-    The motion: every letter starts hidden behind the fruit and slides out to
-    its place at CONSTANT SIZE - no scaling, no fading. The fruit itself drifts
-    right from dead centre into position as the letter o.
+    The motion:
+
+    * Every letter starts behind the fruit and slides out to its place at
+      CONSTANT SIZE - never scaling, never fading.
+    * Positions are relative to where the fruit is AT THAT INSTANT, so letters
+      keep emerging from behind it even while it is itself moving.
+    * A black bar the width of the fruit sits between the letters and the fruit.
+      It is invisible against the black background, and it is what actually
+      hides a letter until it has genuinely slid clear. Without it a tall letter
+      like the b pops into view while still centred on the fruit, because its
+      ascender is taller than the fruit is wide.
+    * The easing OVERSHOOTS slightly and settles back, so the letters carry
+      momentum rather than gliding to a dead stop.
+    * The leaves lag the fruit by a fraction of a second, so they trail as it
+      accelerates and catch up as it lands.
     """
-    raw_w, raw_h = _png_size(fruit)
-    # Scale the artwork to the FRAME rather than assuming its native size, so
-    # this renders correctly at any resolution. 0.76 of the frame width matches
-    # the proportions of Brian's original animation.
+    raw_w, raw_h = _png_size(circle)
     base = (width * 0.76) / raw_w
     lw, lh = max(2, int(raw_w * base)), max(2, int(raw_h * base))
     lock_x, lock_y = (width - lw) // 2, (height - lh) // 2
-    fruit_cx = _png_opaque_centre(fruit)[0] * base
+    cx0, _cy0 = _png_opaque_centre(circle)
+    fruit_cx = cx0 * base
+    fruit_dia = _png_opaque_width(circle) * base
     start_cx = width / 2
 
-    t_alone = duration * 0.12          # the fruit alone, before anything moves
-    t_end = duration * 0.64            # everything has arrived
+    t_alone = duration * 0.12
+    t_end = duration * 0.64
+    lag = duration * 0.035              # how far the leaves trail the fruit
 
     centres = [_png_opaque_centre(g)[0] * base for g in glyphs]
-    # Farthest-travelling letters leave first and they all arrive together, so
-    # the word settles as one piece rather than trickling into place.
     order = sorted(range(len(glyphs)), key=lambda i: -abs(centres[i] - fruit_cx))
     starts = {gi: t_alone + n * (duration * 0.022) for n, gi in enumerate(order)}
+
+    def ease(t_expr: str, t0: float, t1: float) -> str:
+        """easeOutBack: overshoots the target, then settles - the rubberband.
+
+        Written with explicit multiplication rather than pow(), because pow()
+        with a negative base is asking for trouble.
+        """
+        p = f"clip(({t_expr}-{t0:.3f})/{max(0.01, t1 - t0):.3f},0,1)"
+        u = f"({p}-1)"
+        return f"(1+2.70158*{u}*{u}*{u}+1.70158*{u}*{u})"
+
+    fruit_final_cx = lock_x + fruit_cx
+    ef = ease("t", t_alone, t_end)
+    fx_now = f"({start_cx:.1f}+({fruit_final_cx:.1f}-{start_cx:.1f})*{ef})"
+    ef_lag = ease("t", t_alone + lag, t_end + lag)
+    fx_lag = f"({start_cx:.1f}+({fruit_final_cx:.1f}-{start_cx:.1f})*{ef_lag})"
 
     inputs = ["-f", "lavfi", "-i", f"color=black:s={width}x{height}:r={fps}:d={duration}"]
     for g in glyphs:
         inputs += ["-loop", "1", "-t", str(duration), "-i", str(g)]
-    inputs += ["-loop", "1", "-t", str(duration), "-i", str(fruit)]
-
-    # The fruit's own journey: dead centre -> its place as the letter o.
-    pf = f"clip((t-{t_alone:.3f})/{t_end - t_alone:.3f},0,1)"
-    ef = f"(1-pow(1-{pf},3))"
-    fruit_final_cx = lock_x + fruit_cx
-    # Where the fruit's CENTRE is at time t, in frame coordinates.
-    fx_now = f"({start_cx:.1f}+({fruit_final_cx:.1f}-{start_cx:.1f})*{ef})"
+    inputs += ["-f", "lavfi", "-i",
+               f"color=black:s={max(2,int(fruit_dia))}x{height}:r={fps}:d={duration}"]
+    inputs += ["-loop", "1", "-t", str(duration), "-i", str(circle)]
+    if leaves is not None:
+        inputs += ["-loop", "1", "-t", str(duration), "-i", str(leaves)]
 
     steps = []
     prev = "0:v"
     for gi, _ in enumerate(glyphs):
-        s0 = starts[gi]
-        p = f"clip((t-{s0:.3f})/{max(0.01, t_end - s0):.3f},0,1)"
-        ease = f"(1-pow(1-{p},3))"       # smooth ease-out, settling into place
-        # Each letter is anchored to the fruit's CURRENT position, not to where
-        # the fruit started. So a letter still emerges from behind the fruit
-        # even while the fruit is itself sliding into place, instead of appearing
-        # from a spot the fruit has already left.
-        offset = centres[gi] - fruit_cx          # its final place, relative to the fruit
-        x = f"({fx_now}+({offset:.1f})*{ease}-{centres[gi]:.1f})"
+        e = ease("t", starts[gi], t_end)
+        offset = centres[gi] - fruit_cx
+        x = f"({fx_now}+({offset:.1f})*{e}-{centres[gi]:.1f})"
         lbl = f"s{gi}"
-        # enable= keeps a letter hidden until the instant it starts moving.
-        # Without it they sit stacked behind the fruit and poke out above and
-        # below it - the letters are taller than the fruit is wide.
         steps.append(
             f"[{gi+1}:v]scale={lw}:{lh}[g{gi}];"
-            f"[{prev}][g{gi}]overlay=x='{x}':y={lock_y}:enable='gte(t,{s0:.3f})'[{lbl}]"
+            f"[{prev}][g{gi}]overlay=x='{x}':y={lock_y}[{lbl}]"
         )
         prev = lbl
+
+    bar_i = len(glyphs) + 1
     steps.append(
-        f"[{len(glyphs)+1}:v]scale={lw}:{lh}[fr];"
-        f"[{prev}][fr]overlay=x='({fx_now}-{fruit_cx:.1f})':y={lock_y}"
+        f"[{prev}][{bar_i}:v]overlay=x='({fx_now}-{fruit_dia/2:.1f})':y=0[masked]"
     )
+    steps.append(
+        f"[{bar_i+1}:v]scale={lw}:{lh}[circ];"
+        f"[masked][circ]overlay=x='({fx_now}-{fruit_cx:.1f})':y={lock_y}"
+        + ("[withfruit]" if leaves is not None else "")
+    )
+    if leaves is not None:
+        steps.append(
+            f"[{bar_i+2}:v]scale={lw}:{lh}[lv];"
+            f"[withfruit][lv]overlay=x='({fx_lag}-{fruit_cx:.1f})':y={lock_y}"
+        )
 
     return (
         ["ffmpeg", "-y", "-v", "error"]
@@ -246,6 +276,20 @@ def _ident_command(
            "-c:v", "libx264", "-preset", "slow", "-crf", "16",
            "-pix_fmt", "yuv420p", "-an", str(out_path)]
     )
+
+
+def _png_opaque_width(path: Path) -> float:
+    """Width of a PNG's opaque pixels."""
+    import subprocess as sp
+
+    w, _h = _png_size(path)
+    raw = sp.run(
+        ["ffmpeg", "-v", "error", "-i", str(path),
+         "-vf", "alphaextract,format=gray", "-f", "rawvideo", "-"],
+        capture_output=True, check=True,
+    ).stdout
+    xs = [i % w for i, v in enumerate(raw) if v > 40]
+    return (max(xs) - min(xs) + 1) if xs else w
 
 
 def _png_size(path: Path) -> tuple:
@@ -290,7 +334,7 @@ def generate_logo(
     Three tiers, each falling back to the next, because this runs before any
     television happens and a missing file must never mean a black screen:
 
-      1. ``logo-g*.png`` + ``logo-fruit.png``    -> Brian's ANIMATED ident
+      1. ``logo-g*.png`` + ``logo-circle.png``   -> Brian's ANIMATED ident
       2. ``logo.png``                            -> the wordmark, fading up
       3. nothing                                 -> "TANGBOX" in phosphor green
 
@@ -303,13 +347,15 @@ def generate_logo(
     overwrite it, even under --force.
     """
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    fruit = out_path.parent / LOGO_LAYER_FRUIT
+    circle = out_path.parent / LOGO_LAYER_CIRCLE
+    leaves = out_path.parent / LOGO_LAYER_LEAVES
     glyphs = sorted(out_path.parent.glob(f"{LOGO_GLYPH_PREFIX}*.png"))
     fade_out_at = max(0.0, duration - 0.5)
 
-    if glyphs and fruit.is_file():
+    if glyphs and circle.is_file():
         _run(_ident_command(
-            out_path, glyphs, fruit,
+            out_path, glyphs, circle,
+            leaves if leaves.is_file() else None,
             width=width, height=height, fps=fps, duration=duration,
         ))
         return out_path
