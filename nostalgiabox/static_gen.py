@@ -279,9 +279,19 @@ def _ident_command(
         offset = centres[gi] - fruit_cx
         x = f"({fx_now}+({offset:.1f})*{e}-{centres[gi]:.1f})"
         lbl = f"s{gi}"
+        # enable= keeps a letter out of the picture entirely until the instant
+        # it starts moving. Without it all six sit stacked behind the fruit with
+        # their tops and tails fanned out around it, which looks like a mistake.
+        #
+        # The cost is that a letter appears rather than emerges - the b's upper
+        # arm in particular arrives from nowhere, since the rest of it is still
+        # centred behind the fruit. Brian saw both and chose this one: every
+        # mask that hid the stack cleanly clipped the letters along a hard edge
+        # somewhere, and a moving clipped edge reads worse than a brief pop.
         steps.append(
             f"[{gi+1}:v]scale={lw}:{lh}[g{gi}];"
-            f"[{prev}][g{gi}]overlay=x='{x}':y={lock_y}[{lbl}]"
+            f"[{prev}][g{gi}]overlay=x='{x}':y={lock_y}"
+            f":enable='gte(t,{starts[gi]:.3f})'[{lbl}]"
         )
         prev = lbl
 
