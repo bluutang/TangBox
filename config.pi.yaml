@@ -233,6 +233,33 @@ display_mode: "1920x1080@60"
 # Correct on the Pi; the Mac config sets this false so it can't shut down a Mac.
 power_off_on_min_volume: true
 
+# What the remote's POWER button does. "standby" just blanks the screen and
+# leaves the Pi running; "shutdown" plays the sign-off collapse, tells the
+# television to switch off, and halts the machine properly.
+#
+# Brian's decision, 2026-08-20: off should mean off. TangBox is a box you
+# switch on for a session, not an always-on appliance.
+#
+# ⚠️ Accepted trade: a halted Pi cuts power to its own USB ports, so the Flirc
+# receiver stops listening. The remote can switch the box OFF but NEVER back
+# on - that needs the Pi's onboard button or the inline switch, both of which
+# live behind the television.
+power_button: shutdown
+
+# Told to the television just before the Pi halts, after the collapse has
+# played. CEC is switched off for INPUT (the box ignores the TV's own remote,
+# which is deliberate) but sending is a separate direction, and the box already
+# proved it can talk this way - announcing itself as active source is the same
+# channel with a different command.
+#
+# Best-effort: if this fails or hangs, the Pi still halts. A telly that will
+# not switch off is worse than one whose screen stays on for a moment.
+#
+# ⚠️ UNVERIFIED ON THIS HARDWARE. Sending 'as' is proven on the Samsung;
+# 'standby 0' is the same mechanism but nobody has run it. Check it the first
+# time the box is shut down from the remote, and set this to [] if it misbehaves.
+tv_standby_command: ["sh", "-c", "echo 'standby 0' | cec-client -s -d 1"]
+
 # --- Commercial breaks --------------------------------------------------------
 # When an episode ends, the station goes to break before the next one starts.
 # Drop advert clips into the folder below - the leading underscore keeps it from

@@ -337,9 +337,12 @@ class TVApp:
 
         if action == Action.POWER:
             # Power still works while the guide is open rather than being
-            # swallowed by it: close the guide, then go to standby.
+            # swallowed by it: close the guide first either way.
             self._close_guide()
-            self._toggle_standby()
+            if self.config.power_button == "shutdown":
+                self._power_off()
+            else:
+                self._toggle_standby()
             return
 
         # While in standby, ignore everything except POWER/QUIT (handled above).
@@ -645,8 +648,27 @@ class TVApp:
             self.player.stop()
         except Exception:  # noqa: BLE001
             log.debug("sign-off did not play; halting anyway", exc_info=True)
+        # After the collapse, so it is actually seen, and before the halt, so
+        # the kernel's parting line lands on a television that is already off.
+        self._run_tv_standby_command()
         self._run_power_off_command()
         self._running = False  # exit the main loop
+
+    def _run_tv_standby_command(self) -> None:
+        """Ask the television to switch off as well, if configured.
+
+        Best-effort like everything else on this path. CEC is the flakiest
+        thing in the box and it must never be able to keep the Pi running - a
+        telly that will not switch off is worse than one whose screen stays on
+        for a moment.
+        """
+        command = list(self.config.tv_standby_command)
+        if not command:
+            return  # leave the television alone
+        try:
+            subprocess.Popen(command)
+        except Exception:  # noqa: BLE001
+            log.warning("tv standby command failed, halting anyway: %s", command)
 
     def _run_power_off_command(self) -> None:
         command = list(self.config.power_off_command)

@@ -206,6 +206,23 @@ class Config:
     # (so it's safe to unplug). The command run to shut down:
     power_off_on_min_volume: bool = True
     power_off_command: tuple[str, ...] = ("sudo", "poweroff")
+    # What the remote's POWER button means. "standby" blanks the screen and
+    # leaves the Pi running; "shutdown" plays the sign-off collapse and halts
+    # the machine properly.
+    #
+    # Defaults to "standby" so that no existing box changes what its power
+    # button does just by taking an update - the same reason the sign-on
+    # defaults off in code and is switched on in config.
+    #
+    # Worth knowing before choosing "shutdown": a halted Pi cuts power to its
+    # own USB ports, so an infrared receiver plugged into one stops listening.
+    # The remote can switch the box OFF but never back ON.
+    power_button: str = "standby"
+    # Run just before the machine halts, to tell the television to switch off
+    # too - e.g. ["sh", "-c", "echo standby 0 | cec-client -s -d 1"]. Empty
+    # means "leave the television alone". Best-effort: if it fails, the Pi
+    # still halts.
+    tv_standby_command: tuple[str, ...] = ()
 
     # Playback.
     scan_recursive: bool = True           # look in sub-folders for episodes
@@ -411,6 +428,22 @@ def config_from_dict(data: Dict[str, Any], *, base_dir: Optional[Path] = None) -
     else:
         raise ConfigError("'power_off_command' must be a string or list of strings")
 
+    power_button = str(data.get("power_button", "standby")).strip().lower()
+    if power_button not in ("standby", "shutdown"):
+        raise ConfigError(
+            f"'power_button' must be 'standby' or 'shutdown', got {power_button!r}"
+        )
+
+    tv_raw = data.get("tv_standby_command", [])
+    if isinstance(tv_raw, str):
+        tv_standby_command = tuple(tv_raw.split())
+    elif isinstance(tv_raw, list):
+        tv_standby_command = tuple(str(x) for x in tv_raw)
+    elif not tv_raw:
+        tv_standby_command = ()
+    else:
+        raise ConfigError("'tv_standby_command' must be a string or list of strings")
+
     return Config(
         channels=channels,
         video_extensions=extensions,
@@ -435,6 +468,8 @@ def config_from_dict(data: Dict[str, Any], *, base_dir: Optional[Path] = None) -
         display_mode=_valid_display_mode(data.get("display_mode")),
         power_off_on_min_volume=bool(data.get("power_off_on_min_volume", True)),
         power_off_command=power_off_command,
+        power_button=power_button,
+        tv_standby_command=tv_standby_command,
         scan_recursive=bool(data.get("scan_recursive", True)),
         shuffle_seed=(int(data["shuffle_seed"]) if data.get("shuffle_seed") is not None else None),
         commercials=_parse_commercials(data.get("commercials")),

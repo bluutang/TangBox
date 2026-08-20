@@ -240,3 +240,32 @@ def test_dimming_is_clamped_to_something_watchable(tmp_path):
 def test_a_guide_section_that_is_not_a_mapping_is_rejected(tmp_path):
     with pytest.raises(ConfigError):
         _cfg(tmp_path, guide="yes please")
+
+
+# --------------------------------------------------------------------------
+# The power button
+# --------------------------------------------------------------------------
+def test_the_power_button_means_standby_unless_told_otherwise(tmp_path):
+    cfg = _cfg(tmp_path)
+    assert cfg.power_button == "standby"
+    assert cfg.tv_standby_command == ()
+
+
+def test_the_power_button_can_be_set_to_shutdown(tmp_path):
+    assert _cfg(tmp_path, power_button="shutdown").power_button == "shutdown"
+
+
+def test_a_misspelled_power_button_setting_is_rejected(tmp_path):
+    # Silently falling back to standby would mean a box that quietly refuses to
+    # switch off, with nothing to say why.
+    with pytest.raises(ConfigError):
+        _cfg(tmp_path, power_button="poweroff")
+
+
+def test_the_tv_standby_command_accepts_a_list_or_a_string(tmp_path):
+    as_list = _cfg(tmp_path, tv_standby_command=["sh", "-c", "echo standby 0"])
+    assert as_list.tv_standby_command == ("sh", "-c", "echo standby 0")
+    assert _cfg(tmp_path, tv_standby_command="cec-client -s").tv_standby_command == (
+        "cec-client",
+        "-s",
+    )
