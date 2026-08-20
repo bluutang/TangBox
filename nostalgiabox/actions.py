@@ -28,6 +28,17 @@ class Action(Enum):
     LAST_CHANNEL = auto()   # jump back to the previously watched channel
     POWER = auto()          # toggle standby (blank screen)
     QUIT = auto()           # shut the application down entirely
+    # The d-pad. Kept separate from CHANNEL_*/VOLUME_* so the channel guide can
+    # tell "the arrow keys" apart from "the dedicated channel buttons": with the
+    # guide closed these do exactly what they always did (up/down change
+    # channel, left/right change volume), and with it open they move the cursor
+    # while the dedicated buttons carry on working.
+    NAV_UP = auto()
+    NAV_DOWN = auto()
+    NAV_LEFT = auto()
+    NAV_RIGHT = auto()
+    HOME = auto()           # open/close the channel guide
+    RANDOM = auto()         # tune to a random channel
 
 
 @dataclass(frozen=True)

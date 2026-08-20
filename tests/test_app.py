@@ -1,3 +1,5 @@
+import re
+
 import pytest
 
 from nostalgiabox.actions import Action, InputEvent
@@ -113,23 +115,89 @@ def test_mute_toggle_and_unmute_on_volume(tmp_path):
     assert not app.muted and not player.muted
 
 
+def build_double_digit_app(tmp_path, **overrides):
+    """A lineup where some numbers are prefixes of others: 1, 2, 12, 14.
+
+    Typing "1" here is genuinely ambiguous - it could still become 12 or 14 -
+    which is the only situation where the box should wait.
+    """
+    channels = []
+    for n in (1, 2, 12, 14):
+        make_show(tmp_path, f"show{n}", 3)
+        channels.append(
+            {"number": n, "name": f"Channel {n}", "path": str(tmp_path / f"show{n}")}
+        )
+    overrides.setdefault("channels", channels)
+    overrides.setdefault("start_channel", 2)
+    return build_app(tmp_path, **overrides)
+
+
 def test_direct_channel_entry_with_enter(tmp_path):
-    app, player, _ = build_app(tmp_path)
+    # OK confirms an entry that is still ambiguous, without waiting it out.
+    app, _, _ = build_double_digit_app(tmp_path)
     app.start()
-    send(app, Action.DIGIT, 4)
-    assert app.lineup.current.number == 2  # not committed yet
+    send(app, Action.DIGIT, 1)
+    assert app.lineup.current.number == 2  # could still become 12 or 14
     send(app, Action.ENTER)
-    assert app.lineup.current.number == 4
+    assert app.lineup.current.number == 1
 
 
 def test_direct_channel_entry_times_out(tmp_path):
-    app, player, clock = build_app(tmp_path)
+    # The timeout is the fallback for an entry that COULD have grown but
+    # didn't, which is the only case still waiting on the clock.
+    app, _, clock = build_double_digit_app(tmp_path)
     app.start()
-    send(app, Action.DIGIT, 3)
+    send(app, Action.DIGIT, 1)
     assert app.lineup.current.number == 2
     clock.advance(2.1)  # past the entry timeout
     app.step()
-    assert app.lineup.current.number == 3
+    assert app.lineup.current.number == 1
+
+
+# -- tuning by number, once the number pad is the main way around ------------
+def test_a_digit_that_can_only_mean_one_channel_tunes_immediately(tmp_path):
+    # No channel starts with 4 except 4 itself, so there is nothing to wait
+    # for. Waiting anyway is a two-second pause in front of a child who will
+    # assume it did not work and press it again.
+    app, _, _ = build_app(tmp_path)
+    app.start()
+    send(app, Action.DIGIT, 4)
+    assert app.lineup.current.number == 4
+
+
+def test_an_ambiguous_digit_still_waits_for_a_second_one(tmp_path):
+    app, _, _ = build_double_digit_app(tmp_path)
+    app.start()
+    send(app, Action.DIGIT, 1)
+    assert app.lineup.current.number == 2, "tuned to 1 before 12 was ruled out"
+
+
+def test_completing_a_double_digit_channel_tunes_immediately(tmp_path):
+    # "12" cannot grow into anything else, so it should not wait either.
+    app, _, _ = build_double_digit_app(tmp_path)
+    app.start()
+    send(app, Action.DIGIT, 1)
+    send(app, Action.DIGIT, 2)
+    assert app.lineup.current.number == 12
+
+
+def test_a_digit_matching_no_channel_at_all_says_so_immediately(tmp_path):
+    # Nothing starts with 9, so the answer is already known.
+    app, player, _ = build_app(tmp_path)
+    app.start()
+    send(app, Action.DIGIT, 9)
+    assert app.lineup.current.number == 2
+    assert "NO CHANNEL" in player.overlays.get(4, "")
+
+
+def test_a_single_digit_channel_that_is_a_prefix_still_waits(tmp_path):
+    # Channel 1 exists AND 12/14 exist. Tuning to 1 instantly would make
+    # channels 12 and 14 unreachable from the number pad.
+    app, _, clock = build_double_digit_app(tmp_path)
+    app.start()
+    send(app, Action.DIGIT, 1)
+    send(app, Action.DIGIT, 4)
+    assert app.lineup.current.number == 14
 
 
 def test_invalid_channel_entry_shows_message(tmp_path):
@@ -289,3 +357,288 @@ def test_resume_mode_restarts_where_left(tmp_path):
     send(app, Action.CHANNEL_DOWN)  # back to ch 2 -> resume at 42
     assert player.current == playing
     assert player.played[-1] == (playing, 42.0)
+
+
+# ==========================================================================
+# The channel guide
+# ==========================================================================
+# build_app gives three channels - 2, 3 and 4 - which grid_shape lays out as
+#     0 (ch2)  1 (ch3)
+#     2 (ch4)
+# and the box starts on channel 2, so the cursor starts at index 0.
+
+
+# -- with the guide CLOSED, nothing about the box has changed ---------------
+def test_the_dpad_still_changes_channel_when_the_guide_is_closed(tmp_path):
+    # The d-pad now emits NAV_UP instead of CHANNEL_UP. This asserts the two
+    # are indistinguishable to anyone watching television, which is the whole
+    # safety condition on splitting them.
+    a, _, _ = build_app(tmp_path)
+    a.start()
+    send(a, Action.NAV_UP)
+
+    b, _, _ = build_app(tmp_path)
+    b.start()
+    send(b, Action.CHANNEL_UP)
+
+    assert a.lineup.current.number == b.lineup.current.number
+
+
+def test_the_dpad_still_changes_channel_downwards_when_the_guide_is_closed(tmp_path):
+    a, _, _ = build_app(tmp_path)
+    a.start()
+    send(a, Action.NAV_DOWN)
+
+    b, _, _ = build_app(tmp_path)
+    b.start()
+    send(b, Action.CHANNEL_DOWN)
+
+    assert a.lineup.current.number == b.lineup.current.number
+
+
+def test_the_dpad_still_changes_volume_when_the_guide_is_closed(tmp_path):
+    a, _, _ = build_app(tmp_path)
+    a.start()
+    send(a, Action.NAV_RIGHT)
+    send(a, Action.NAV_LEFT)
+    send(a, Action.NAV_LEFT)
+
+    b, _, _ = build_app(tmp_path)
+    b.start()
+    send(b, Action.VOLUME_UP)
+    send(b, Action.VOLUME_DOWN)
+    send(b, Action.VOLUME_DOWN)
+
+    assert a.volume == b.volume
+
+
+# -- opening and closing ----------------------------------------------------
+def test_home_opens_the_guide_with_the_cursor_on_what_is_playing(tmp_path):
+    # Home then OK must always mean "never mind".
+    app, player, _ = build_app(tmp_path)
+    app.start()
+    send(app, Action.HOME)
+
+    assert app.guide.is_open
+    assert app.lineup.numbers[app.guide.cursor] == app.lineup.current.number
+    assert 5 in player.overlays, "the guide was not drawn"
+
+
+def test_home_again_closes_the_guide(tmp_path):
+    app, player, _ = build_app(tmp_path)
+    app.start()
+    send(app, Action.HOME)
+    send(app, Action.HOME)
+
+    assert not app.guide.is_open
+    assert 5 not in player.overlays
+
+
+def test_ok_opens_the_guide_too(tmp_path):
+    # So the box still works on a remote with no Home button at all.
+    app, _, _ = build_app(tmp_path)
+    app.start()
+    send(app, Action.ENTER)
+    assert app.guide.is_open
+
+
+def test_ok_confirms_a_pending_channel_entry_instead_of_opening_the_guide(tmp_path):
+    # Needs an entry that is actually still pending: an unambiguous digit now
+    # tunes on its own, so by the time OK arrived there would be nothing left
+    # to confirm and it would - correctly - open the guide.
+    app, _, _ = build_double_digit_app(tmp_path)
+    app.start()
+    send(app, Action.DIGIT, 1)
+    send(app, Action.ENTER)
+
+    assert app.lineup.current.number == 1
+    assert not app.guide.is_open
+
+
+def test_ok_opens_the_guide_once_a_typed_channel_has_already_tuned(tmp_path):
+    # The other half of the same rule: nothing pending, so OK means "guide".
+    app, _, _ = build_app(tmp_path)
+    app.start()
+    send(app, Action.DIGIT, 4)
+    assert app.lineup.current.number == 4
+    send(app, Action.ENTER)
+    assert app.guide.is_open
+
+
+def test_back_closes_the_guide_without_changing_channel(tmp_path):
+    app, _, _ = build_app(tmp_path)
+    app.start()
+    before = app.lineup.current.number
+    send(app, Action.HOME)
+    send(app, Action.NAV_RIGHT)
+    send(app, Action.LAST_CHANNEL)
+
+    assert not app.guide.is_open
+    assert app.lineup.current.number == before
+
+
+# -- moving around ----------------------------------------------------------
+def test_the_dpad_moves_the_cursor_instead_of_changing_channel_when_open(tmp_path):
+    app, _, _ = build_app(tmp_path)
+    app.start()
+    before = app.lineup.current.number
+    send(app, Action.HOME)
+    send(app, Action.NAV_RIGHT)
+
+    assert app.guide.cursor == 1
+    assert app.lineup.current.number == before, "the channel changed underneath"
+
+
+def test_moving_the_cursor_redraws_the_guide(tmp_path):
+    app, player, _ = build_app(tmp_path)
+    app.start()
+    send(app, Action.HOME)
+    first = player.overlays[5]
+    send(app, Action.NAV_RIGHT)
+
+    assert player.overlays[5] != first
+
+
+def test_the_dedicated_channel_buttons_still_change_channel_while_the_guide_is_open(tmp_path):
+    # This is what splitting the d-pad bought.
+    app, _, _ = build_app(tmp_path)
+    app.start()
+    before = app.lineup.current.number
+    send(app, Action.HOME)
+    send(app, Action.CHANNEL_UP)
+
+    assert app.lineup.current.number != before
+    assert app.guide.is_open, "changing channel should not close the guide"
+
+
+def test_the_dedicated_volume_buttons_still_work_while_the_guide_is_open(tmp_path):
+    app, _, _ = build_app(tmp_path)
+    app.start()
+    before = app.volume
+    send(app, Action.HOME)
+    send(app, Action.VOLUME_UP)
+
+    assert app.volume > before
+
+
+def _on_now_position(ass):
+    """Where the ON NOW marker is drawn, or None if it isn't."""
+    for line in ass.split("\n"):
+        if line.endswith("ON NOW"):
+            x, y = re.search(r"\\pos\((\d+),(\d+)\)", line).groups()
+            return (int(x), int(y))
+    return None
+
+
+def test_the_on_air_marker_follows_the_channel_while_the_guide_is_open(tmp_path):
+    # Changing channel with the dedicated buttons while browsing has to redraw
+    # the guide. Counting that ON NOW appears once is not enough - a stale
+    # drawing has exactly one too, just sitting on the wrong tile.
+    app, player, _ = build_app(tmp_path)
+    app.start()
+    send(app, Action.HOME)
+    before = _on_now_position(player.overlays[5])
+    send(app, Action.CHANNEL_UP)
+    after = _on_now_position(player.overlays[5])
+
+    assert before is not None and after is not None
+    assert after != before, "the ON NOW marker stayed on the old channel's tile"
+    assert player.overlays[5].count("ON NOW") == 1
+
+
+# -- choosing ---------------------------------------------------------------
+def test_ok_tunes_to_the_cursor_and_closes_the_guide(tmp_path):
+    app, _, _ = build_app(tmp_path)
+    app.start()
+    send(app, Action.HOME)
+    send(app, Action.NAV_RIGHT)
+    send(app, Action.ENTER)
+
+    assert app.lineup.current.number == 3
+    assert not app.guide.is_open
+
+
+def test_ok_on_the_channel_already_playing_does_not_restart_it(tmp_path):
+    # tune_in is random, so re-tuning would jump to a different episode.
+    # Pressing OK on what you are already watching must never interrupt it.
+    app, player, clock = build_app(tmp_path)
+    app.start()
+    send(app, Action.HOME)
+    before = len(player.played) + len(player.transitions)
+    playing_before = player.current
+
+    send(app, Action.ENTER)
+    # Let any deferred switch land. Tuning PRELOADS and cuts over a moment
+    # later, so counting straight after the press would miss a re-tune
+    # completely and this test would pass whatever the code did.
+    clock.advance(5)
+    app.step()
+
+    assert not app.guide.is_open
+    assert len(player.played) + len(player.transitions) == before
+    assert player.current == playing_before, "the episode restarted"
+
+
+# -- closing itself ---------------------------------------------------------
+def test_the_guide_closes_itself_after_the_timeout(tmp_path):
+    app, player, clock = build_app(tmp_path, guide={"timeout_seconds": 20})
+    app.start()
+    send(app, Action.HOME)
+
+    clock.advance(21)
+    app.step()
+
+    assert not app.guide.is_open
+    assert 5 not in player.overlays, "the guide closed but stayed on screen"
+
+
+def test_power_closes_the_guide_rather_than_being_swallowed_by_it(tmp_path):
+    app, player, _ = build_app(tmp_path)
+    app.start()
+    send(app, Action.HOME)
+    send(app, Action.POWER)
+
+    assert app.standby
+    assert not app.guide.is_open
+    assert 5 not in player.overlays
+
+
+# -- the random channel button ----------------------------------------------
+def test_random_never_picks_the_channel_already_playing(tmp_path):
+    # Without this the button sometimes appears to do nothing, or restarts the
+    # current channel on a different episode, which reads as a fault.
+    app, _, _ = build_app(tmp_path)
+    app.start()
+    for _ in range(40):
+        before = app.lineup.current.number
+        send(app, Action.RANDOM)
+        assert app.lineup.current.number != before
+
+
+def test_random_reaches_every_other_channel_eventually(tmp_path):
+    app, _, _ = build_app(tmp_path)
+    app.start()
+    seen = set()
+    for _ in range(60):
+        send(app, Action.RANDOM)
+        seen.add(app.lineup.current.number)
+    assert seen == {2, 3, 4}
+
+
+def test_random_on_a_one_channel_box_does_nothing_rather_than_crashing(tmp_path):
+    make_show(tmp_path, "only", 3)
+    app, _, _ = build_app(
+        tmp_path,
+        channels=[{"number": 2, "name": "Only", "path": str(tmp_path / "only")}],
+    )
+    app.start()
+    send(app, Action.RANDOM)
+    assert app.lineup.current.number == 2
+
+
+def test_random_closes_the_guide_if_it_is_open(tmp_path):
+    app, _, _ = build_app(tmp_path)
+    app.start()
+    send(app, Action.HOME)
+    send(app, Action.RANDOM)
+    assert not app.guide.is_open

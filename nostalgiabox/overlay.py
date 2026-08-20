@@ -47,6 +47,7 @@ _ID_CHANNEL = 1
 _ID_VOLUME = 2
 _ID_STANDBY = 3
 _ID_MESSAGE = 4
+_ID_GUIDE = 5
 
 _BLACK = "&H00000000"
 
@@ -98,6 +99,25 @@ class OverlayManager:
         self._player.set_overlay(_ID_MESSAGE, ass, CANVAS_W, CANVAS_H)
         self._arm(_ID_MESSAGE, dur)
 
+    def show_guide(self, ass: str) -> None:
+        """Show the channel guide, and leave it up until it is closed.
+
+        Takes an already-built ASS string rather than building one, so the
+        guide's drawing code can import this module's styling helpers without
+        this module having to import the guide back.
+
+        Deliberately never expires. The :class:`~nostalgiabox.guide.Guide`
+        owns the auto-close timer and closes deliberately; an overlay that
+        timed out on its own would leave the guide invisible but still
+        swallowing every button press.
+        """
+        self._player.set_overlay(_ID_GUIDE, ass, CANVAS_W, CANVAS_H)
+        self._expiry.pop(_ID_GUIDE, None)
+
+    def clear_guide(self) -> None:
+        self._player.clear_overlay(_ID_GUIDE)
+        self._expiry.pop(_ID_GUIDE, None)
+
     def show_standby(self) -> None:
         """Persistent 'standby' notice for when the box is 'off'."""
         ass = _standby_ass(self._ui)
@@ -117,7 +137,9 @@ class OverlayManager:
                 self._expiry.pop(overlay_id, None)
 
     def clear_all(self) -> None:
-        for overlay_id in (_ID_CHANNEL, _ID_VOLUME, _ID_STANDBY, _ID_MESSAGE):
+        for overlay_id in (
+            _ID_CHANNEL, _ID_VOLUME, _ID_STANDBY, _ID_MESSAGE, _ID_GUIDE,
+        ):
             self._player.clear_overlay(overlay_id)
         self._expiry.clear()
 
@@ -234,12 +256,21 @@ def _standby_ass(ui: UiConfig) -> str:
     return rf"{{\an5\pos({_FRAME_CX},{CANVAS_H // 2}){_style(ui, size=72)}}}STANDBY"
 
 
-def _filled_rect(*, x: float, y: float, w: float, h: float, fill: str) -> str:
-    """An ASS drawing (\\p1) filled rectangle at absolute canvas coordinates."""
+def _filled_rect(
+    *, x: float, y: float, w: float, h: float, fill: str, alpha: int = 0
+) -> str:
+    """An ASS drawing (\\p1) filled rectangle at absolute canvas coordinates.
+
+    ``alpha`` is ASS's inverted transparency: 0 is solid, 255 is invisible.
+    The channel guide uses a part-transparent black rectangle to dim the
+    picture behind it - the programme keeps playing underneath rather than
+    being covered over.
+    """
     x, y = round(x), round(y)
     w, h = round(w), round(h)
+    a = max(0, min(255, int(alpha)))
     draw = f"m 0 0 l {w} 0 l {w} {h} l 0 {h}"
-    return rf"{{\an7\pos({x},{y})\p1\c{fill}\1a&H00&\bord0\shad0}}{draw}{{\p0}}"
+    return rf"{{\an7\pos({x},{y})\p1\c{fill}\1a&H{a:02X}&\bord0\shad0}}{draw}{{\p0}}"
 
 
 def _dot(*, cx: float, cy: float, r: float, fill: str) -> str:

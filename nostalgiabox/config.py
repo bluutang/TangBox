@@ -71,6 +71,25 @@ class UiConfig:
 
 
 @dataclass(frozen=True)
+class GuideConfig:
+    """The channel guide - the grid you get by pressing Home.
+
+    Both numbers were chosen on paper and can only really be judged on a
+    television from across a room, which is why they are dials and not
+    constants in the drawing code.
+    """
+
+    # Seconds of no input before the guide closes itself. A child who wanders
+    # off should not leave the television dimmed under a menu all evening.
+    # Zero means "stay open until somebody closes it", the same convention the
+    # overlay durations use.
+    timeout_seconds: float = 20.0
+    # How far the picture behind the guide is dimmed, 0 (not at all) to 1
+    # (black). The programme keeps playing underneath either way.
+    dim: float = 0.66
+
+
+@dataclass(frozen=True)
 class SignOnConfig:
     """The station sign-on: colour bars, then a logo, then the first channel.
 
@@ -173,6 +192,7 @@ class Config:
     ui: UiConfig = field(default_factory=UiConfig)
     crt: CrtConfig = field(default_factory=CrtConfig)
     sign_on: SignOnConfig = field(default_factory=SignOnConfig)
+    guide: GuideConfig = field(default_factory=GuideConfig)
 
     # Audio.
     initial_volume: int = 70              # 0-100
@@ -408,6 +428,7 @@ def config_from_dict(data: Dict[str, Any], *, base_dir: Optional[Path] = None) -
         ui=_parse_ui(data.get("ui")),
         crt=_parse_crt(data.get("crt")),
         sign_on=_parse_sign_on(data.get("sign_on")),
+        guide=_parse_guide(data.get("guide")),
         initial_volume=initial_volume,
         volume_step=volume_step,
         audio_device=audio_device,
@@ -457,6 +478,22 @@ def _parse_ui(raw: Any) -> UiConfig:
         glow_blur=_clamp_float(
             raw.get("glow_blur", defaults.glow_blur), 0.0, 20.0, "ui.glow_blur"
         ),
+    )
+
+
+def _parse_guide(raw: Any) -> GuideConfig:
+    if raw is None:
+        return GuideConfig()
+    if not isinstance(raw, dict):
+        raise ConfigError("'guide' must be a mapping")
+    d = GuideConfig()
+    return GuideConfig(
+        # Capped at ten minutes: past that it is not really closing itself.
+        timeout_seconds=_clamp_float(
+            raw.get("timeout_seconds", d.timeout_seconds),
+            0.0, 600.0, "guide.timeout_seconds",
+        ),
+        dim=_clamp_float(raw.get("dim", d.dim), 0.0, 1.0, "guide.dim"),
     )
 
 
@@ -598,6 +635,7 @@ def _clamp_float(value: Any, lo: float, hi: float, name: str) -> float:
 __all__ = [
     "Config",
     "SignOnConfig",
+    "GuideConfig",
     "ChannelConfig",
     "UiConfig",
     "CrtConfig",

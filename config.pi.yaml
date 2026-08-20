@@ -129,6 +129,19 @@ sign_on:
                          # if you ever want the longer version back.
   logo: logo.mp4
 
+# --- The channel guide (press Home) -------------------------------------------
+# A grid of every channel over the dimmed picture. The programme keeps playing
+# underneath. Move with the d-pad, OK to tune, Back to leave without changing
+# anything. Both numbers below were chosen on paper and have never been seen on
+# a television - judge them from the sofa, not from a computer.
+guide:
+  timeout_seconds: 20    # closes itself after this long untouched, so a child
+                         # who wanders off doesn't leave the telly dimmed under
+                         # a menu all evening. 0 = stay open until closed.
+  dim: 0.66              # how far the picture behind it dims. 0 = not at all,
+                         # 1 = black. Lower it if the tiles get lost in a bright
+                         # cartoon; raise it if the picture is distracting.
+
 # --- The "feel" of the TV -----------------------------------------------------
 fullscreen: true         # true on the TV (this is the default)
 force_4_3: false         # let 4:3 shows pillarbox and 16:9 fill the screen

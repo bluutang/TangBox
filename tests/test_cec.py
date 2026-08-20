@@ -47,12 +47,12 @@ def feed(backend: CecBackend, lines) -> None:
 def test_one_press_emits_one_event():
     """libCEC prints two 'key pressed' lines per press; that is still one press.
 
-    Without suppression a single press of the channel-up button would move two
-    channels at once.
+    Without suppression a single press of the d-pad's up button would move
+    two channels at once.
     """
     backend = CecBackend(clock=FakeClock())
     feed(backend, REAL_UP_PRESS)
-    assert drain(backend) == [Action.CHANNEL_UP]
+    assert drain(backend) == [Action.NAV_UP]
 
 
 def test_different_keys_in_quick_succession_both_emit():
@@ -62,7 +62,7 @@ def test_different_keys_in_quick_succession_both_emit():
     feed(backend, REAL_UP_PRESS)
     clock.advance(0.01)
     feed(backend, REAL_DOWN_PRESS)
-    assert drain(backend) == [Action.CHANNEL_UP, Action.CHANNEL_DOWN]
+    assert drain(backend) == [Action.NAV_UP, Action.NAV_DOWN]
 
 
 def test_same_key_after_the_window_emits_again():
@@ -72,7 +72,7 @@ def test_same_key_after_the_window_emits_again():
     feed(backend, REAL_UP_PRESS)
     clock.advance(1.0)
     feed(backend, REAL_UP_PRESS)
-    assert drain(backend) == [Action.CHANNEL_UP, Action.CHANNEL_UP]
+    assert drain(backend) == [Action.NAV_UP, Action.NAV_UP]
 
 
 def test_unmapped_keys_are_ignored():
@@ -172,4 +172,4 @@ def test_keys_arriving_from_the_subprocess_are_emitted(monkeypatch):
 
     backend = CecBackend(clock=FakeClock())
     backend._run()
-    assert drain(backend) == [Action.CHANNEL_UP]
+    assert drain(backend) == [Action.NAV_UP]

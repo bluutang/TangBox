@@ -21,24 +21,34 @@ from ..actions import Action, InputEvent
 # Linux evdev key names -> InputEvent
 # --------------------------------------------------------------------------
 _EVDEV_ACTIONS: Dict[str, InputEvent] = {
-    # Channel changing. Dedicated channel keys, page keys, and the D-pad all
-    # work so almost any remote can drive it.
+    # Channel changing - the DEDICATED keys. These always change channel, even
+    # while the channel guide is open, which is why they are kept separate from
+    # the D-pad below.
     "KEY_CHANNELUP": InputEvent(Action.CHANNEL_UP),
     "KEY_PAGEUP": InputEvent(Action.CHANNEL_UP),
-    "KEY_UP": InputEvent(Action.CHANNEL_UP),
     "KEY_CHANNELDOWN": InputEvent(Action.CHANNEL_DOWN),
     "KEY_PAGEDOWN": InputEvent(Action.CHANNEL_DOWN),
-    "KEY_DOWN": InputEvent(Action.CHANNEL_DOWN),
-    # Volume.
+    # Volume - the DEDICATED keys, same reasoning.
     "KEY_VOLUMEUP": InputEvent(Action.VOLUME_UP),
-    "KEY_RIGHT": InputEvent(Action.VOLUME_UP),
     "KEY_EQUAL": InputEvent(Action.VOLUME_UP),
     "KEY_KPPLUS": InputEvent(Action.VOLUME_UP),
     "KEY_VOLUMEDOWN": InputEvent(Action.VOLUME_DOWN),
-    "KEY_LEFT": InputEvent(Action.VOLUME_DOWN),
     "KEY_MINUS": InputEvent(Action.VOLUME_DOWN),
     "KEY_KPMINUS": InputEvent(Action.VOLUME_DOWN),
     "KEY_MUTE": InputEvent(Action.MUTE),
+    # The D-pad. With the guide CLOSED these behave exactly as they always
+    # have - up/down change channel, left/right change volume - because
+    # app.py routes them there. With the guide open they move the cursor.
+    "KEY_UP": InputEvent(Action.NAV_UP),
+    "KEY_DOWN": InputEvent(Action.NAV_DOWN),
+    "KEY_LEFT": InputEvent(Action.NAV_LEFT),
+    "KEY_RIGHT": InputEvent(Action.NAV_RIGHT),
+    # The channel guide.
+    "KEY_HOME": InputEvent(Action.HOME),
+    "KEY_HOMEPAGE": InputEvent(Action.HOME),
+    "KEY_MENU": InputEvent(Action.HOME),
+    "KEY_KPDOT": InputEvent(Action.RANDOM),
+    "KEY_DOT": InputEvent(Action.RANDOM),
     "KEY_M": InputEvent(Action.MUTE),
     # Select / confirm a typed channel number.
     "KEY_ENTER": InputEvent(Action.ENTER),
@@ -77,6 +87,13 @@ def evdev_key_to_event(key_name: str) -> Optional[InputEvent]:
 # Named actions usable in config `key_overrides` (maps a key -> one of these).
 _ACTION_BY_NAME: Dict[str, InputEvent] = {
     "channel_up": InputEvent(Action.CHANNEL_UP),
+    "nav_up": InputEvent(Action.NAV_UP),
+    "nav_down": InputEvent(Action.NAV_DOWN),
+    "nav_left": InputEvent(Action.NAV_LEFT),
+    "nav_right": InputEvent(Action.NAV_RIGHT),
+    "home": InputEvent(Action.HOME),
+    "guide": InputEvent(Action.HOME),
+    "random": InputEvent(Action.RANDOM),
     "channel_down": InputEvent(Action.CHANNEL_DOWN),
     "volume_up": InputEvent(Action.VOLUME_UP),
     "volume_down": InputEvent(Action.VOLUME_DOWN),
@@ -139,6 +156,9 @@ _CHAR_TO_KEY: Dict[str, str] = {
     "M": "KEY_MUTE",
     "i": "KEY_INFO",
     "I": "KEY_INFO",
+    "h": "KEY_HOME",
+    "H": "KEY_HOME",
+    ".": "KEY_KPDOT",
     "l": "KEY_LAST",
     "L": "KEY_LAST",
     "p": "KEY_POWER",
@@ -177,14 +197,18 @@ def stdin_escape_to_event(seq: str) -> Optional[InputEvent]:
 # --------------------------------------------------------------------------
 # Names as emitted by libCEC / `cec-client` "key pressed:" lines.
 _CEC_ACTIONS: Dict[str, InputEvent] = {
-    "up": InputEvent(Action.CHANNEL_UP),
+    # Same split as the evdev map: the TV remote's d-pad navigates, its
+    # dedicated channel/volume keys always do channel and volume.
+    "up": InputEvent(Action.NAV_UP),
+    "down": InputEvent(Action.NAV_DOWN),
+    "right": InputEvent(Action.NAV_RIGHT),
+    "left": InputEvent(Action.NAV_LEFT),
     "channel up": InputEvent(Action.CHANNEL_UP),
-    "down": InputEvent(Action.CHANNEL_DOWN),
     "channel down": InputEvent(Action.CHANNEL_DOWN),
-    "right": InputEvent(Action.VOLUME_UP),
     "volume up": InputEvent(Action.VOLUME_UP),
-    "left": InputEvent(Action.VOLUME_DOWN),
     "volume down": InputEvent(Action.VOLUME_DOWN),
+    "root menu": InputEvent(Action.HOME),
+    "contents menu": InputEvent(Action.HOME),
     "mute": InputEvent(Action.MUTE),
     "select": InputEvent(Action.ENTER),
     "ok": InputEvent(Action.ENTER),

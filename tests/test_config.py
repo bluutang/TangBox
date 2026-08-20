@@ -200,3 +200,43 @@ def test_relative_paths_resolved_against_config_dir(tmp_path):
     cfg_file.write_text("channels:\n  - path: arthur\n    name: Arthur\n")
     cfg = load_config(cfg_file)
     assert cfg.channels[0].path == tmp_path / "arthur"
+
+
+# --------------------------------------------------------------------------
+# The channel guide
+# --------------------------------------------------------------------------
+def _cfg(tmp_path, **extra):
+    make_show(tmp_path, "dragon", 2)
+    data = {"channels": [{"number": 2, "name": "Dragon", "path": str(tmp_path / "dragon")}]}
+    data.update(extra)
+    return config_from_dict(data)
+
+
+def test_the_guide_has_sensible_defaults(tmp_path):
+    guide = _cfg(tmp_path).guide
+    assert guide.timeout_seconds == 20.0
+    assert guide.dim == 0.66
+
+
+def test_the_guide_timeout_and_dimming_can_be_set(tmp_path):
+    # Both were chosen on paper and can only really be judged on a television,
+    # so they are dials rather than constants.
+    guide = _cfg(tmp_path, guide={"timeout_seconds": 45, "dim": 0.5}).guide
+    assert guide.timeout_seconds == 45.0
+    assert guide.dim == 0.5
+
+
+def test_a_guide_timeout_of_zero_is_allowed_and_means_never(tmp_path):
+    assert _cfg(tmp_path, guide={"timeout_seconds": 0}).guide.timeout_seconds == 0.0
+
+
+def test_dimming_is_clamped_to_something_watchable(tmp_path):
+    # Fully opaque would hide the programme completely, which is not what the
+    # guide is for.
+    assert _cfg(tmp_path, guide={"dim": 5.0}).guide.dim == 1.0
+    assert _cfg(tmp_path, guide={"dim": -2.0}).guide.dim == 0.0
+
+
+def test_a_guide_section_that_is_not_a_mapping_is_rejected(tmp_path):
+    with pytest.raises(ConfigError):
+        _cfg(tmp_path, guide="yes please")

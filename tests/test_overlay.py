@@ -1,7 +1,7 @@
 import re
 
 from nostalgiabox.config import config_from_dict
-from nostalgiabox.overlay import OverlayManager
+from nostalgiabox.overlay import OverlayManager, _filled_rect
 from nostalgiabox.player import MockPlayer
 from tests.helpers import FakeClock, make_show
 
@@ -122,3 +122,66 @@ def test_overlay_uses_configured_font_and_color(tmp_path):
     ass = player.overlays[1]
     assert "\\fnVT323" in ass          # bundled retro font
     assert "&H005AFF4D" in ass         # #4DFF5A -> ASS BBGGRR
+
+
+# --------------------------------------------------------------------------
+# Transparency on the rectangle helper (the channel guide's dimming scrim)
+# --------------------------------------------------------------------------
+def test_a_rectangle_is_solid_by_default():
+    # ASS alpha is inverted: 00 is fully opaque.
+    ass = _filled_rect(x=0, y=0, w=10, h=10, fill="&H00FFFFFF")
+    assert r"\1a&H00&" in ass
+
+
+def test_a_rectangle_can_be_drawn_part_transparent():
+    # The guide dims the picture behind it rather than hiding it - the
+    # programme keeps playing underneath.
+    ass = _filled_rect(x=0, y=0, w=10, h=10, fill="&H00000000", alpha=87)
+    assert r"\1a&H57&" in ass
+
+
+# --------------------------------------------------------------------------
+# The channel guide's overlay slot
+# --------------------------------------------------------------------------
+def test_the_guide_is_drawn_in_its_own_slot(tmp_path):
+    # Its own id, so showing the guide never disturbs the channel banner or
+    # the volume bar and can be cleared on its own.
+    player = MockPlayer()
+    om = OverlayManager(player, _config(tmp_path), clock=FakeClock())
+
+    om.show_channel_bug(3, "Arthur")
+    om.show_guide("SOME GUIDE ASS")
+
+    assert player.overlays[5] == "SOME GUIDE ASS"
+    assert 1 in player.overlays, "showing the guide wiped the channel banner"
+
+
+def test_the_guide_does_not_time_itself_out_of_the_overlay(tmp_path):
+    # The Guide object owns the auto-close timer and closes deliberately. If
+    # the overlay expired on its own the guide would go invisible while still
+    # swallowing every button press - a properly stuck television.
+    clock = FakeClock()
+    player = MockPlayer()
+    om = OverlayManager(player, _config(tmp_path), clock=clock)
+
+    om.show_guide("SOME GUIDE ASS")
+    clock.advance(10_000)
+    om.tick()
+
+    assert 5 in player.overlays
+
+
+def test_clearing_the_guide_removes_it(tmp_path):
+    player = MockPlayer()
+    om = OverlayManager(player, _config(tmp_path), clock=FakeClock())
+    om.show_guide("SOME GUIDE ASS")
+    om.clear_guide()
+    assert 5 not in player.overlays
+
+
+def test_clear_all_takes_the_guide_with_it(tmp_path):
+    player = MockPlayer()
+    om = OverlayManager(player, _config(tmp_path), clock=FakeClock())
+    om.show_guide("SOME GUIDE ASS")
+    om.clear_all()
+    assert 5 not in player.overlays

@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import logging
 import queue
+import random
 import subprocess
 import time
 from pathlib import Path
@@ -31,6 +32,7 @@ from .channel import (
     show_name_for,
 )
 from .config import Config
+from .guide import Guide, guide_ass
 from .input.manager import InputManager, create_backends
 from .interstitial import CommercialPool
 from .overlay import OverlayManager
@@ -85,6 +87,15 @@ class TVApp:
         self._playing_path: Optional[Path] = None
         self._last_channel_number: Optional[int] = None
         self._running = False
+
+        # The channel guide. A LAYER, not a mode: while it is closed nothing
+        # else in here behaves any differently.
+        self.guide = Guide(
+            count=len(self.lineup),
+            timeout=config.guide.timeout_seconds,
+            clock=clock,
+        )
+        self._rng = random.Random(config.shuffle_seed)
 
         # Direct channel entry ("type 1 then 2 -> channel 12").
         self._digit_buffer = ""
@@ -288,6 +299,7 @@ class TVApp:
         """
         now = self._clock()
         self.overlay.tick()
+        self._tick_guide()
         self._maybe_advance_sign_on(now)
         self._maybe_commit_switch(now)
         self._maybe_commit_digits(now)
@@ -324,11 +336,21 @@ class TVApp:
             return
 
         if action == Action.POWER:
+            # Power still works while the guide is open rather than being
+            # swallowed by it: close the guide, then go to standby.
+            self._close_guide()
             self._toggle_standby()
             return
 
         # While in standby, ignore everything except POWER/QUIT (handled above).
         if self.standby:
+            return
+
+        # While the guide is open it gets first refusal on each press. What it
+        # does NOT take - the dedicated channel and volume keys - falls through
+        # and works exactly as it does with the guide closed. That is what
+        # splitting the d-pad off from those keys bought.
+        if self.guide.is_open and self._guide_consumes(action):
             return
 
         handlers = {
@@ -339,7 +361,15 @@ class TVApp:
             Action.MUTE: self._toggle_mute,
             Action.INFO: self._show_info,
             Action.LAST_CHANNEL: self._jump_last_channel,
-            Action.ENTER: self._confirm_digits,
+            Action.ENTER: self._enter_pressed,
+            # The d-pad with the guide CLOSED - unchanged behaviour: up/down
+            # change channel, left/right change volume.
+            Action.NAV_UP: self._channel_up,
+            Action.NAV_DOWN: self._channel_down,
+            Action.NAV_RIGHT: self._volume_up,
+            Action.NAV_LEFT: self._volume_down,
+            Action.HOME: self._open_guide,
+            Action.RANDOM: self._random_channel,
         }
         if action == Action.DIGIT:
             self._push_digit(event.value or 0)
@@ -347,6 +377,101 @@ class TVApp:
             handler = handlers.get(action)
             if handler is not None:
                 handler()
+
+        # Something that fell through may have changed what the guide should
+        # show - most obviously the ON NOW marker when the dedicated channel
+        # buttons are used while browsing - so redraw it.
+        if self.guide.is_open:
+            self._draw_guide()
+
+    # -- the channel guide --------------------------------------------------
+    def _guide_consumes(self, action: Action) -> bool:
+        """Offer a press to the open guide. True means it was used up."""
+        if action in (Action.HOME, Action.LAST_CHANNEL):
+            # Home toggles it shut; Back leaves without changing anything.
+            self._close_guide()
+            return True
+        if action == Action.ENTER:
+            self._tune_from_guide()
+            return True
+        moves = {
+            Action.NAV_UP: self.guide.up,
+            Action.NAV_DOWN: self.guide.down,
+            Action.NAV_LEFT: self.guide.left,
+            Action.NAV_RIGHT: self.guide.right,
+        }
+        move = moves.get(action)
+        if move is None:
+            return False
+        move()
+        self._draw_guide()
+        return True
+
+    def _open_guide(self) -> None:
+        index = self.lineup.index_of(self.lineup.current.number)
+        self.guide.open(cursor=0 if index is None else index)
+        self._draw_guide()
+
+    def _close_guide(self) -> None:
+        self.guide.close()
+        self.overlay.clear_guide()
+
+    def _draw_guide(self) -> None:
+        self.overlay.show_guide(
+            guide_ass(
+                [(c.number, c.name) for c in self.lineup],
+                self.guide.cursor,
+                self.config.ui,
+                on_now=self.lineup.index_of(self.lineup.current.number),
+                dim=self.config.guide.dim,
+            )
+        )
+
+    def _tick_guide(self) -> None:
+        """Let the guide close itself after sitting untouched."""
+        if not self.guide.is_open:
+            return
+        self.guide.tick()
+        if not self.guide.is_open:
+            self.overlay.clear_guide()
+
+    def _tune_from_guide(self) -> None:
+        numbers = self.lineup.numbers
+        target = numbers[self.guide.cursor] if numbers else None
+        self._close_guide()
+        if target is None:
+            return
+        # Selecting the channel already playing must not re-tune it: tune_in is
+        # random, so it would restart on a different episode. That rule lives in
+        # select_channel_number, which refuses to re-tune the current channel,
+        # so this hands every case to it rather than keeping a second copy.
+        self.select_channel_number(target)
+
+    def _enter_pressed(self) -> None:
+        """OK confirms a typed channel number, or opens the guide if none."""
+        if self._digit_buffer:
+            self._confirm_digits()
+            return
+        # Single digits tune instantly, so OK does almost nothing while
+        # watching. Making it open the guide means the box still works on a
+        # remote with no Home button at all.
+        self._open_guide()
+
+    def _random_channel(self) -> None:
+        """Tune somewhere else at random.
+
+        Excludes the channel already playing. Without that the button
+        sometimes appears to do nothing, or restarts the current channel on a
+        different episode, which reads as a fault.
+
+        For a pre-reader this may be the most valuable button on the remote:
+        it always does something good and requires no reading.
+        """
+        self._close_guide()
+        others = [n for n in self.lineup.numbers if n != self.lineup.current.number]
+        if not others:
+            return
+        self.select_channel_number(self._rng.choice(others))
 
     # -- channel changing ---------------------------------------------------
     def _channel_up(self) -> None:
@@ -579,8 +704,30 @@ class TVApp:
     # -- direct channel entry ----------------------------------------------
     def _push_digit(self, digit: int) -> None:
         self._digit_buffer = (self._digit_buffer + str(digit))[-3:]
+        # Tune the moment the entry cannot become a different channel. The box
+        # only ever waited in case a second digit was coming, so on a lineup of
+        # 2/4/6/8 it was pausing two seconds over a channel that could not
+        # exist. Once the number pad is the main way around the box that is a
+        # delay on nearly every press, in front of someone who will assume it
+        # did not work and press it again.
+        if not self._entry_could_grow():
+            self._confirm_digits()
+            return
         self._digit_deadline = self._clock() + self._digit_entry_timeout
         self.overlay.show_message(f"CH {self._digit_buffer}_", duration=self._digit_entry_timeout)
+
+    def _entry_could_grow(self) -> bool:
+        """Could another digit still turn this entry into a different channel?
+
+        True only while some LONGER channel number starts with what has been
+        typed - typing 1 where 12 and 14 exist. That is the one case worth
+        waiting through, and it is what keeps double-digit channels reachable.
+        """
+        typed = self._digit_buffer
+        return any(
+            len(str(number)) > len(typed) and str(number).startswith(typed)
+            for number in self.lineup.numbers
+        )
 
     def _confirm_digits(self) -> None:
         if not self._digit_buffer:
