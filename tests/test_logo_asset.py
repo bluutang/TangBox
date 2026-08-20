@@ -363,3 +363,82 @@ def test_the_off_zap_lingers_near_the_centre(tmp_path):
     small = [w for w in lit if w <= 20]
     assert len(small) >= 7, f"only {len(small)} frames spent near the centre"
     assert min(lit) <= 3, f"smallest it ever gets is {min(lit)} of 128 - not a point"
+
+
+# -- the animated ident ------------------------------------------------------
+#
+# Brian designed an animation and asked for the shimmer removed and the length
+# cut to 5s. Rather than trying to strip a baked-in effect out of finished
+# video, it is rebuilt from his vector artwork: flat brand colours, no effects
+# by construction, and the timing lives in code where it can be tuned.
+#
+# The motion, measured from his original: the orange sits alone dead centre at
+# constant size, then the WORDMARK scales up around it while the orange slides
+# right into place as the letter o.
+
+
+def test_the_ident_animates_when_the_layers_are_present(tmp_path):
+    import shutil
+    import subprocess
+
+    from nostalgiabox.static_gen import (
+        DEFAULT_ASSETS_DIR,
+        LOGO_LAYER_FRUIT,
+        LOGO_LAYER_WORD,
+        generate_logo,
+    )
+
+    for name in (LOGO_LAYER_WORD, LOGO_LAYER_FRUIT):
+        src = DEFAULT_ASSETS_DIR / name
+        assert src.is_file(), f"bundled {name} is missing"
+        shutil.copy(src, tmp_path / name)
+
+    out = generate_logo(tmp_path / "logo.mp4", width=640, height=360, duration=5.0)
+
+    def sample(at):
+        raw = subprocess.run(
+            ["ffmpeg", "-v", "error", "-ss", str(at), "-i", str(out), "-frames:v", "1",
+             "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", "64x36", "-"],
+            capture_output=True, check=True,
+        ).stdout
+        px = [(raw[i], raw[i + 1], raw[i + 2]) for i in range(0, len(raw), 3)]
+        whites = sum(1 for p in px if min(p) > 170)
+        oranges = sum(1 for p in px if p[0] > 150 and 60 < p[1] < 170 and p[2] < 90)
+        return whites, oranges
+
+    early_w, early_o = sample(0.2)
+    late_w, late_o = sample(4.5)
+
+    assert early_o > 0, "no orange at the start - it should open on the fruit alone"
+    assert early_w == 0, f"lettering visible at 0.2s ({early_w} px) - it should not be"
+    assert late_w > 0, "no lettering at the end"
+    assert late_o > 0, "the orange vanished"
+
+
+def test_the_ident_is_silent(tmp_path):
+    """Brian: "no sound, keep animation mute." It plays at every power-on."""
+    import shutil
+    import subprocess
+
+    from nostalgiabox.static_gen import (
+        DEFAULT_ASSETS_DIR, LOGO_LAYER_FRUIT, LOGO_LAYER_WORD, generate_logo,
+    )
+
+    for name in (LOGO_LAYER_WORD, LOGO_LAYER_FRUIT):
+        shutil.copy(DEFAULT_ASSETS_DIR / name, tmp_path / name)
+    out = generate_logo(tmp_path / "logo.mp4", width=640, height=360, duration=5.0)
+    streams = subprocess.run(
+        ["ffprobe", "-v", "error", "-show_entries", "stream=codec_type",
+         "-of", "csv=p=0", str(out)],
+        capture_output=True, text=True, check=True,
+    ).stdout.split()
+    assert "audio" not in streams, f"the ident has audio: {streams}"
+
+
+def test_the_ident_defaults_to_five_seconds():
+    """Brian: "5 seconds is fine to teach kids to wait"."""
+    import inspect
+
+    from nostalgiabox.static_gen import generate_logo
+
+    assert inspect.signature(generate_logo).parameters["duration"].default == 5.0

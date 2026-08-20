@@ -33,6 +33,10 @@ LOGO_FILENAME = "logo.mp4"
 # Brian's wordmark, white on transparent, rasterised from brand/. When this
 # is present the ident is built from it; otherwise a placeholder is drawn.
 LOGO_IMAGE_FILENAME = "logo.png"
+# The two halves of the wordmark, so the ident can ANIMATE them separately:
+# the fruit holds its size while the lettering grows around it.
+LOGO_LAYER_WORD = "logo-word.png"
+LOGO_LAYER_FRUIT = "logo-fruit.png"
 POWER_ON_FILENAME = "power_on.mp4"
 POWER_OFF_FILENAME = "power_off.mp4"
 GLITCH_FILENAME = "glitch.mp4"
@@ -157,11 +161,130 @@ def generate_color_bars(
     return out_path
 
 
+def _ident_frames(
+    out_dir: Path,
+    word: Path,
+    fruit: Path,
+    *,
+    width: int,
+    height: int,
+    fps: int,
+    duration: float,
+) -> int:
+    """Render the ident frame by frame with ffmpeg. Returns the frame count.
+
+    The motion is measured from Brian's own animation: the fruit sits alone,
+    dead centre, at CONSTANT size, then the lettering scales up around it while
+    the fruit slides right into place as the letter o. The fruit never resizes -
+    that is the whole trick of it.
+
+    Frames are composited by ffmpeg rather than in Python: a 1920x1080 alpha
+    blend per frame is far too slow in plain Python, and identical frames (the
+    opening hold and the closing hold) are copied rather than re-rendered.
+    """
+    import shutil
+    import subprocess as sp
+
+    raw_w, raw_h = _png_size(word)
+    raw_fx, raw_fy = _png_opaque_centre(fruit)
+    # Scale the artwork to the FRAME rather than assuming its native size, so
+    # this works at any resolution - the tests render small, the box renders
+    # 1080p. 0.76 of the frame width matches the proportions of Brian's own
+    # animation.
+    base = (width * 0.76) / raw_w
+    lw, lh = max(2, int(raw_w * base)), max(2, int(raw_h * base))
+    fx_in_layer, fy_in_layer = raw_fx * base, raw_fy * base
+    lock_x, lock_y = (width - lw) // 2, (height - lh) // 2
+    word_cx, word_cy = lock_x + lw / 2, lock_y + lh / 2
+    fruit_final_cx = lock_x + fx_in_layer
+    fruit_start_cx = width / 2
+    fruit_cy = lock_y + fy_in_layer
+
+    t_alone = duration * 0.12          # the fruit on its own
+    t_build = duration * 0.52          # the lettering arriving
+    s_min = 0.06
+
+    def params(t):
+        if t < t_alone:
+            return 0.0, fruit_start_cx, 0.0
+        p = min(1.0, (t - t_alone) / t_build)
+        # Strong ease-out, matching the original: most of the growth happens
+        # early and the last stretch is a long settle.
+        e = p ** 0.25
+        return (
+            s_min + (1.0 - s_min) * e,
+            fruit_start_cx + (fruit_final_cx - fruit_start_cx) * e,
+            min(1.0, (t - t_alone) / (duration * 0.05)),
+        )
+
+    total = int(duration * fps)
+    prev_key = prev_path = None
+    for i in range(total):
+        scale, fx, alpha = params(i / fps)
+        key = (round(scale, 4), round(fx, 1), round(alpha, 3))
+        out = out_dir / f"f{i:05d}.png"
+        if key == prev_key and prev_path is not None:
+            shutil.copy(prev_path, out)
+            continue
+        fx0, fy0 = int(fx - fx_in_layer), int(fruit_cy - fy_in_layer)
+        if scale <= 0.0 or alpha <= 0.0:
+            cmd = [
+                "ffmpeg", "-y", "-v", "error",
+                "-f", "lavfi", "-i", f"color=black:s={width}x{height}",
+                "-i", str(fruit),
+                "-filter_complex",
+                f"[1:v]scale={lw}:{lh}[f];[0:v][f]overlay={fx0}:{fy0}",
+                "-frames:v", "1", str(out),
+            ]
+        else:
+            ww, wh = max(2, int(lw * scale)), max(2, int(lh * scale))
+            wx, wy = int(word_cx - ww / 2), int(word_cy - wh / 2)
+            cmd = [
+                "ffmpeg", "-y", "-v", "error",
+                "-f", "lavfi", "-i", f"color=black:s={width}x{height}",
+                "-i", str(word), "-i", str(fruit),
+                "-filter_complex",
+                f"[1:v]scale={ww}:{wh},format=rgba,colorchannelmixer=aa={alpha:.3f}[w];"
+                f"[2:v]scale={lw}:{lh}[f];"
+                f"[0:v][w]overlay={wx}:{wy}[a];[a][f]overlay={fx0}:{fy0}",
+                "-frames:v", "1", str(out),
+            ]
+        sp.run(cmd, check=True)
+        prev_key, prev_path = key, out
+    return total
+
+
+def _png_size(path: Path) -> tuple:
+    """Width and height straight from the PNG header."""
+    import struct
+
+    data = path.read_bytes()[:33]
+    w, h = struct.unpack(">II", data[16:24])
+    return w, h
+
+
+def _png_opaque_centre(path: Path) -> tuple:
+    """Centre of a PNG's opaque pixels, via ffmpeg's cropdetect on its alpha."""
+    import subprocess as sp
+
+    w, h = _png_size(path)
+    raw = sp.run(
+        ["ffmpeg", "-v", "error", "-i", str(path),
+         "-vf", "alphaextract,format=gray", "-f", "rawvideo", "-"],
+        capture_output=True, check=True,
+    ).stdout
+    xs = [i % w for i, v in enumerate(raw) if v > 40]
+    ys = [i // w for i, v in enumerate(raw) if v > 40]
+    if not xs:
+        return w / 2, h / 2
+    return (min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2
+
+
 def generate_logo(
     out_path: Path,
     *,
     text: str = "TANGBOX",
-    duration: float = 2.5,
+    duration: float = 5.0,
     width: int = 1920,
     height: int = 1080,
     fps: int = 60,
@@ -170,27 +293,50 @@ def generate_logo(
 ) -> Path:
     """The station ident, played after the switch-on zap.
 
-    Uses ``logo.png`` (Brian's wordmark, white on transparent) when it is there,
-    and falls back to drawing the name in phosphor green when it is not. The
-    fallback matters: this runs before any television happens, and a missing
-    file must never mean a black screen.
+    Three tiers, each falling back to the next, because this runs before any
+    television happens and a missing file must never mean a black screen:
 
-    2.5 seconds on purpose. It plays EVERY time the box is switched on, in front
-    of small children who want cartoons, so it is kept short - and any button
-    press skips the whole sign-on anyway.
+      1. ``logo-word.png`` + ``logo-fruit.png``  -> Brian's ANIMATED ident
+      2. ``logo.png``                            -> the wordmark, fading up
+      3. nothing                                 -> "TANGBOX" in phosphor green
 
-    To replace it with an animation, drop your own ``logo.mp4`` into the assets
-    folder: generate_all() only fills in what is missing, and deliberately will
-    not overwrite it even under --force.
+    5 seconds by Brian's choice - "fine to teach kids to wait". Silent by his
+    choice too: it plays every single time the box is switched on. Any button
+    press skips the whole sign-on regardless.
+
+    To use a finished animation instead, drop your own ``logo.mp4`` into the
+    assets folder. generate_all() only fills in what is missing and will not
+    overwrite it, even under --force.
     """
+    import shutil
+    import tempfile
+
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    image = image if image is not None else out_path.parent / LOGO_IMAGE_FILENAME
+    word = out_path.parent / LOGO_LAYER_WORD
+    fruit = out_path.parent / LOGO_LAYER_FRUIT
     fade_out_at = max(0.0, duration - 0.5)
 
+    if word.is_file() and fruit.is_file():
+        tmp = Path(tempfile.mkdtemp(prefix="tangbox-ident-"))
+        try:
+            _ident_frames(
+                tmp, word, fruit,
+                width=width, height=height, fps=fps, duration=duration,
+            )
+            _run([
+                "ffmpeg", "-y", "-v", "error",
+                "-framerate", str(fps), "-i", str(tmp / "f%05d.png"),
+                "-c:v", "libx264", "-preset", "slow", "-crf", "16",
+                "-pix_fmt", "yuv420p", "-an", str(out_path),
+            ])
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+        return out_path
+
+    image = image if image is not None else out_path.parent / LOGO_IMAGE_FILENAME
     if image.is_file():
-        # Centre it at ~62% of the frame width, on black, fading up and out.
         overlay_w = int(width * 0.62)
-        cmd = [
+        _run([
             "ffmpeg", "-y", "-v", "error",
             "-f", "lavfi", "-i", f"color=c=black:s={width}x{height}:r={fps}:d={duration}",
             "-loop", "1", "-t", str(duration), "-i", str(image),
@@ -200,11 +346,10 @@ def generate_logo(
             f"fade=t=in:st=0:d=0.5,fade=t=out:st={fade_out_at:.2f}:d=0.5,format=yuv420p",
             "-c:v", "libx264", "-preset", "slow", "-crf", "16", "-an",
             str(out_path),
-        ]
-        _run(cmd)
+        ])
         return out_path
 
-    log.info("%s not found; drawing a placeholder ident", image)
+    log.info("no logo artwork found; drawing a placeholder ident")
     fade = f"fade=t=in:st=0:d=0.5,fade=t=out:st={fade_out_at:.2f}:d=0.5"
     if drawtext_available():
         font = FONTS_DIR / "VT323-Regular.ttf"
@@ -217,14 +362,10 @@ def generate_logo(
         vf = f"{draw},{fade}"
         source = f"color=c=black:s={width}x{height}:r={fps}:d={duration}"
     else:
-        log.info("ffmpeg has no drawtext filter; rendering a plain ident card")
         vf = fade
         source = f"color=c={color.replace('0x', '#')}:s={width}x{height}:r={fps}:d={duration}"
-
     _run([
-        "ffmpeg", "-y", "-v", "error",
-        "-f", "lavfi", "-i", source,
-        "-vf", vf,
+        "ffmpeg", "-y", "-v", "error", "-f", "lavfi", "-i", source, "-vf", vf,
         "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p", "-an",
         str(out_path),
     ])
