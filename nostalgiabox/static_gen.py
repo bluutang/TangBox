@@ -206,14 +206,25 @@ def _ident_command(
         inputs += ["-loop", "1", "-t", str(duration), "-i", str(g)]
     inputs += ["-loop", "1", "-t", str(duration), "-i", str(fruit)]
 
+    # The fruit's own journey: dead centre -> its place as the letter o.
+    pf = f"clip((t-{t_alone:.3f})/{t_end - t_alone:.3f},0,1)"
+    ef = f"(1-pow(1-{pf},3))"
+    fruit_final_cx = lock_x + fruit_cx
+    # Where the fruit's CENTRE is at time t, in frame coordinates.
+    fx_now = f"({start_cx:.1f}+({fruit_final_cx:.1f}-{start_cx:.1f})*{ef})"
+
     steps = []
     prev = "0:v"
     for gi, _ in enumerate(glyphs):
         s0 = starts[gi]
         p = f"clip((t-{s0:.3f})/{max(0.01, t_end - s0):.3f},0,1)"
         ease = f"(1-pow(1-{p},3))"       # smooth ease-out, settling into place
-        sx = start_cx - centres[gi]
-        x = f"({sx:.1f}+({lock_x}-({sx:.1f}))*{ease})"
+        # Each letter is anchored to the fruit's CURRENT position, not to where
+        # the fruit started. So a letter still emerges from behind the fruit
+        # even while the fruit is itself sliding into place, instead of appearing
+        # from a spot the fruit has already left.
+        offset = centres[gi] - fruit_cx          # its final place, relative to the fruit
+        x = f"({fx_now}+({offset:.1f})*{ease}-{centres[gi]:.1f})"
         lbl = f"s{gi}"
         # enable= keeps a letter hidden until the instant it starts moving.
         # Without it they sit stacked behind the fruit and poke out above and
@@ -223,13 +234,9 @@ def _ident_command(
             f"[{prev}][g{gi}]overlay=x='{x}':y={lock_y}:enable='gte(t,{s0:.3f})'[{lbl}]"
         )
         prev = lbl
-    pf = f"clip((t-{t_alone:.3f})/{t_end - t_alone:.3f},0,1)"
-    ef = f"(1-pow(1-{pf},3))"
-    sfx = start_cx - fruit_cx
-    xf = f"({sfx:.1f}+({lock_x}-({sfx:.1f}))*{ef})"
     steps.append(
         f"[{len(glyphs)+1}:v]scale={lw}:{lh}[fr];"
-        f"[{prev}][fr]overlay=x='{xf}':y={lock_y}"
+        f"[{prev}][fr]overlay=x='({fx_now}-{fruit_cx:.1f})':y={lock_y}"
     )
 
     return (
