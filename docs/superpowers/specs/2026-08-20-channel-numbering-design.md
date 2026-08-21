@@ -150,10 +150,16 @@ position is most of what they have, and it matters more once Phase 2 puts
 artwork on the tiles.
 
 **A page is four across and two down** - eight channels. Of the shapes that fit
-the canvas, it gives the largest tiles: 264x305 with the show name at 29px, half
-again as tall as the 5x4 grid seventeen channels would otherwise produce. Both
-numbers are dials (`guide.page_cols`, `guide.page_rows`) because tile size can
-only be judged on a television.
+the canvas, it gives the largest tiles: **264x288** with the show name at 43px,
+twice as tall as the 5x4 grid seventeen channels would otherwise produce. On a
+1080p television that arrives as 396x432 actual pixels; the canvas is 1280x720
+and mpv scales it. The tile is very slightly taller than square, ratio 0.92.
+
+The 17px between that and the 305 the margins alone would give is the strip
+reserved for the page dots.
+
+Both numbers are dials (`guide.page_cols`, `guide.page_rows`) because tile size
+can only be judged on a television. At 5x3 the tile is 206x184 instead.
 
 **A lineup that fits on one page is unaffected.** Paging switches on only when
 the lineup outgrows a page; below that the guide keeps the roughly-square

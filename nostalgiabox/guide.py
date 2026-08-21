@@ -44,10 +44,14 @@ MAX_COLS = 5
 
 # A page holds four channels across and two down. Both are dials rather than
 # constants because the only place the answer is visible is a television across
-# a room: on the 1280x720 canvas this makes each tile 264x305, with the show
-# name at 29px. Five across and three down fits half as much again on a page
-# and is a third shorter; four by two was chosen because neither child can read
-# yet, so the tile is doing the work a label cannot.
+# a room: on the 1280x720 canvas this makes each tile 264x288, with the show
+# name at 43px - 396x432 as it lands on a 1080p television. Five across and
+# three down fits half as much again on a page at 206x184; four by two was
+# chosen because neither child can read yet, so the tile is doing the work a
+# label cannot.
+#
+# The tile is 17px shorter than the margins alone would suggest, because the
+# page dots take a strip out of the bottom of the tile area.
 DEFAULT_PAGE_COLS = 4
 DEFAULT_PAGE_ROWS = 2
 
