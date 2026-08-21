@@ -63,6 +63,20 @@ class ShuffleBag(Generic[T]):
         self._last = item
         return item
 
+    def peek(self) -> T:
+        """The item :meth:`next` will hand out, without handing it out.
+
+        The channel guide uses this to show which programme a channel would
+        play if you tuned to it - so a tile can promise what you will actually
+        get. Refills an exhausted bag exactly as :meth:`next` would, so the
+        answer stays true at a cycle boundary rather than raising.
+        """
+        if not self._items:
+            raise IndexError("cannot draw from an empty ShuffleBag")
+        if not self._queue:
+            self._refill()
+        return self._queue[-1]
+
     def peek_remaining(self) -> int:
         """How many items are left before the next reshuffle (for debugging)."""
         return len(self._queue)

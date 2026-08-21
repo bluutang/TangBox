@@ -1,5 +1,7 @@
 import random
 
+import pytest
+
 from nostalgiabox.playlist import ShuffleBag
 
 
@@ -44,3 +46,26 @@ def test_deterministic_with_seed():
     a = ShuffleBag(list(range(8)), random.Random(42))
     b = ShuffleBag(list(range(8)), random.Random(42))
     assert [a.next() for _ in range(16)] == [b.next() for _ in range(16)]
+
+
+def test_peek_shows_the_next_item_without_handing_it_out():
+    bag = ShuffleBag(["a", "b", "c"], random.Random(1))
+    assert bag.peek() == bag.next()
+
+
+def test_peeking_twice_gives_the_same_answer():
+    bag = ShuffleBag(["a", "b", "c"], random.Random(1))
+    assert bag.peek() == bag.peek()
+
+
+def test_peek_refills_an_exhausted_bag_rather_than_failing():
+    bag = ShuffleBag(["a", "b"], random.Random(1))
+    bag.next()
+    bag.next()
+    assert bag.peek() in ("a", "b")
+
+
+def test_peeking_an_empty_bag_raises_rather_than_inventing_an_item():
+    bag = ShuffleBag([], random.Random(1))
+    with pytest.raises(IndexError):
+        bag.peek()

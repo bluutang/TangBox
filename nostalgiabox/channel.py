@@ -287,6 +287,27 @@ class Channel:
 
         return self._next_shuffled()
 
+    def peek_next(self) -> Optional[Path]:
+        """Which episode tuning to this channel would play, without playing it.
+
+        The channel guide asks every channel this, so a tile can show the
+        programme you would actually GET rather than guessing.
+
+        It must disturb nothing. No episode is drawn from the bag, no resume
+        position is spent, and **no broadcast schedule is built** - building one
+        probes every file with ffprobe, which is far too slow to do while
+        somebody is holding a remote. A broadcast channel that has not aired yet
+        falls back to the shuffle, which is what it would open with anyway.
+        """
+        if self.is_empty:
+            return None
+        if self.tune_in_mode == "resume" and self._resume_path is not None:
+            return self._resume_path
+        if self.tune_in_mode == "broadcast" and self._broadcast is not None:
+            return self._broadcast.at(time.time()).path
+        assert self._bag is not None
+        return self._bag.peek()
+
     def advance(self) -> Optional[PlayRequest]:
         """Decide what to play when the current episode ends naturally."""
         if self.is_empty:
