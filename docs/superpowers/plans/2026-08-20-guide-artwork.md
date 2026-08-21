@@ -1,6 +1,9 @@
 # Show Artwork on the Guide Tiles — Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
+
+> **ALL SEVEN TASKS COMPLETE**, branch `guide-artwork`, 448 tests passing.
+> Not yet seen on a television - see the spec's "Only a television can answer these".
 
 **Goal:** Put a picture of the show on each channel-guide tile, so a child who cannot read can choose a channel.
 
@@ -592,7 +595,7 @@ git commit -m "One source of truth for where a tile sits"
 
 ---
 
-### Task 4: Draw the tile that has a picture
+### Task 4: Draw the tile that has a picture ✅ DONE (`0b8b3c6`)
 
 **Files:**
 - Modify: `nostalgiabox/guide.py` (`guide_ass` gains `artwork`, add `_number_plate`)
@@ -605,7 +608,7 @@ git commit -m "One source of truth for where a tile sits"
 **Note:** `guide_ass` takes booleans, not paths. It draws no pictures; it only
 lays the text out differently where one will be. The picture itself is Task 6.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Append to `tests/test_guide.py`:
 
@@ -688,12 +691,12 @@ def _name_y(ass, name):
     raise AssertionError(f"{name!r} was not drawn")
 ```
 
-- [ ] **Step 2: Run them and watch them fail**
+- [x] **Step 2: Run them and watch them fail**
 
 Run: `.venv/bin/python -m pytest tests/test_guide.py -k "picture or plate or band" -v`
 Expected: FAIL, `TypeError: guide_ass() got an unexpected keyword argument 'artwork'`
 
-- [ ] **Step 3: Add the parameter and the two layouts**
+- [x] **Step 3: Add the parameter and the two layouts**
 
 In `guide_ass`, add to the keyword-only arguments:
 
@@ -752,7 +755,7 @@ lines with a branch:
 
 The `_tile_frame` call stays where it is, before this branch, unchanged.
 
-- [ ] **Step 4: Add the plate**
+- [x] **Step 4: Add the plate**
 
 In `nostalgiabox/guide.py`, beside `_tile_frame`:
 
@@ -783,17 +786,17 @@ def _number_plate(
     return plate + "\n" + numeral
 ```
 
-- [ ] **Step 5: Run them and watch them pass**
+- [x] **Step 5: Run them and watch them pass**
 
 Run: `.venv/bin/python -m pytest tests/test_guide.py -v`
 Expected: PASS
 
-- [ ] **Step 6: Run the whole suite**
+- [x] **Step 6: Run the whole suite**
 
 Run: `.venv/bin/python -m pytest -q`
 Expected: PASS, 421 tests
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add nostalgiabox/guide.py tests/test_guide.py
@@ -802,7 +805,7 @@ git commit -m "Lay a tile out around a picture, with the number on a plate"
 
 ---
 
-### Task 5: Teach the player to draw a picture
+### Task 5: Teach the player to draw a picture ✅ DONE (`f751b94`)
 
 **Files:**
 - Modify: `nostalgiabox/player.py` (`Player`, `MpvPlayer`, `MockPlayer`)
@@ -815,7 +818,7 @@ git commit -m "Lay a tile out around a picture, with the number on a plate"
 **Note:** these are concrete methods on `Player` with no-op defaults, NOT
 abstract ones. Making them abstract would break every existing Player.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `tests/test_player_images.py`:
 
@@ -873,12 +876,12 @@ def test_drawing_over_a_slot_replaces_what_was_there():
     assert player.images == {0: (Path("b.jpg"), 5, 5, 20, 20)}
 ```
 
-- [ ] **Step 2: Run them and watch them fail**
+- [x] **Step 2: Run them and watch them fail**
 
 Run: `.venv/bin/python -m pytest tests/test_player_images.py -v`
 Expected: FAIL, `AttributeError: 'MockPlayer' object has no attribute 'show_image'`
 
-- [ ] **Step 3: Add the default methods to `Player`**
+- [x] **Step 3: Add the default methods to `Player`**
 
 In `nostalgiabox/player.py`, inside `class Player`, after `clear_overlay`:
 
@@ -898,7 +901,7 @@ In `nostalgiabox/player.py`, inside `class Player`, after `clear_overlay`:
         """Remove every picture drawn by :meth:`show_image`."""
 ```
 
-- [ ] **Step 4: Implement it on `MockPlayer`**
+- [x] **Step 4: Implement it on `MockPlayer`**
 
 In `MockPlayer.__init__`, beside `self.overlays`:
 
@@ -918,12 +921,12 @@ and as methods:
         self._log("CLEAR IMAGES")
 ```
 
-- [ ] **Step 5: Run them and watch them pass**
+- [x] **Step 5: Run them and watch them pass**
 
 Run: `.venv/bin/python -m pytest tests/test_player_images.py -v`
 Expected: PASS, 4 tests
 
-- [ ] **Step 6: Implement it on `MpvPlayer`**
+- [x] **Step 6: Implement it on `MpvPlayer`**
 
 Pillow is imported inside the method, not at module scope: it is a Pi
 dependency and this module is imported by every test on a laptop without it.
@@ -973,7 +976,7 @@ and as methods:
 
 Add `from .artwork import crop_box` to the imports at the top of `player.py`.
 
-- [ ] **Step 7: Add Pillow to the Pi extras**
+- [x] **Step 7: Add Pillow to the Pi extras**
 
 In `requirements.txt`, under the Pi runtime section:
 
@@ -987,14 +990,14 @@ In `pyproject.toml`, in the `pi` extras list beside `python-mpv`:
     "Pillow>=10.0.0",
 ```
 
-- [ ] **Step 8: Run the whole suite**
+- [x] **Step 8: Run the whole suite**
 
 Run: `.venv/bin/python -m pytest -q`
 Expected: PASS, 425 tests. Pillow is NOT installed locally; if any test fails
 with `ModuleNotFoundError: PIL`, the import is at module scope and must move
 inside the method.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add nostalgiabox/player.py tests/test_player_images.py requirements.txt pyproject.toml
@@ -1003,7 +1006,7 @@ git commit -m "Give the player a layer for pictures"
 
 ---
 
-### Task 6: Put the two layers together
+### Task 6: Put the two layers together ✅ DONE (`e3ef3fe`)
 
 **Files:**
 - Modify: `nostalgiabox/app.py` (`_draw_guide`, `_close_guide`)
@@ -1013,7 +1016,7 @@ git commit -m "Give the player a layer for pictures"
 - Consumes: `Channel.peek_next` (Task 1), `tile_image_for` (Task 2), `page_tiles` / `art_rect` (Task 3), `guide_ass(artwork=...)` (Task 4), `Player.show_image` / `clear_images` (Task 5).
 - Produces: nothing further.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ⚠️ **`build_app` cannot be used as-is here.** Its `make_show` helper drops
 episodes LOOSE in the channel folder (`tmp_path/dragon/dragon_ep01.mp4`), so
@@ -1137,14 +1140,14 @@ test uses its own `tmp_path`, so no test can see another's answer. But a test
 that creates `tile.jpg` AFTER the guide has already drawn once would get the
 cached `None`. Create artwork before `app.start()`, as above.
 
-- [ ] **Step 2: Run them and watch them fail**
+- [x] **Step 2: Run them and watch them fail**
 
 Run: `.venv/bin/python -m pytest tests/test_app.py -k picture -v`
 Expected: FAIL. `player.images` stays empty because nothing in the app draws
 pictures yet, so the assertions on it fail. (It exists as an attribute already,
 from Task 5.)
 
-- [ ] **Step 3: Resolve artwork and draw both layers**
+- [x] **Step 3: Resolve artwork and draw both layers**
 
 In `nostalgiabox/app.py`, replace `_draw_guide` with:
 
@@ -1211,7 +1214,7 @@ from .guide import Guide, art_rect, guide_ass, page_tiles
 (replacing the existing `from .guide import Guide, guide_ass`), and add
 `Sequence` to the `typing` import.
 
-- [ ] **Step 4: Take the pictures away when the guide closes**
+- [x] **Step 4: Take the pictures away when the guide closes**
 
 In `_close_guide`, after `self.overlay.clear_guide()`:
 
@@ -1229,17 +1232,17 @@ follows `self.guide.tick()`, beside `self.overlay.clear_guide()`:
 Without this the pictures would stay on screen after the guide timed out,
 sitting over the programme with no way to remove them.
 
-- [ ] **Step 5: Run them and watch them pass**
+- [x] **Step 5: Run them and watch them pass**
 
 Run: `.venv/bin/python -m pytest tests/test_app.py -v`
 Expected: PASS
 
-- [ ] **Step 6: Run the whole suite**
+- [x] **Step 6: Run the whole suite**
 
 Run: `.venv/bin/python -m pytest -q`
 Expected: PASS, 430 tests
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add nostalgiabox/app.py tests/test_app.py
@@ -1248,13 +1251,13 @@ git commit -m "Draw the pictures under the guide, and take them away with it"
 
 ---
 
-### Task 7: Write down what only a television can answer
+### Task 7: Write down what only a television can answer ✅ DONE
 
 **Files:**
 - Modify: `docs/superpowers/specs/2026-08-20-guide-artwork-design.md`
 - Modify: `README.md`
 
-- [ ] **Step 1: Record the decisions taken during the build**
+- [x] **Step 1: Record the decisions taken during the build**
 
 In the spec, change the status line to:
 
@@ -1267,7 +1270,7 @@ and replace the **Open** section's resolved entries: artwork that is not 4:3 is
 imported lazily inside `MpvPlayer`; a page mixing tiles with and without
 pictures uses **per-tile fallback**.
 
-- [ ] **Step 2: Add the artwork convention to the README**
+- [x] **Step 2: Add the artwork convention to the README**
 
 In `README.md`, in the section describing how to lay out the USB drive, add:
 
@@ -1293,7 +1296,7 @@ A show with no picture keeps the old tile: a big channel number and the show's
 name. So pictures can be added one show at a time.
 ```
 
-- [ ] **Step 3: List what still needs the Pi**
+- [x] **Step 3: List what still needs the Pi**
 
 Add to the spec's Open section:
 
@@ -1309,7 +1312,7 @@ Add to the spec's Open section:
   tile.jpg appears to do nothing.
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add docs/superpowers/specs/2026-08-20-guide-artwork-design.md README.md

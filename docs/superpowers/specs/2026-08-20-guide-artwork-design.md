@@ -1,7 +1,7 @@
 # Show artwork on the guide tiles — design
 
 **Date:** 2026-08-20
-**Status:** Designed, not built. No code written.
+**Status:** **Built 2026-08-20**, on branch `guide-artwork`. Not yet seen on a television.
 **Companion:** `2026-08-17-channel-guide-design.md` (Phase 1, built),
 `2026-08-20-channel-numbering-design.md` (paging, built the same day).
 
@@ -165,24 +165,44 @@ composed by hand, not proof the runtime path works. This one needs the Pi.
 
 ---
 
+## Resolved during the build
+
+- **Artwork that is not 4:3 is cropped to fill**, centred (`artwork.crop_box`).
+  Letterbox bars inside a tile this small waste the only space a child can use.
+- **Scaling uses Pillow**, imported lazily inside `MpvPlayer` so the tests still
+  run on a Mac without it. It is in the `pi` extras.
+- **A mixed page uses per-tile fallback.** Checked by rendering one: three tiles
+  with pictures beside five without does not read as broken. It does put the
+  show names at two different heights across the page, because a plain tile
+  centres its name while a picture tile drops it into the band. Judge that on
+  the television.
+- **The picture is FITTED, not derived from the tile's width.** The first
+  attempt took its height from the width, which is right on a 264x288 tile and
+  wrong on the 552x305 tiles a one-page lineup produces - a 4:3 picture as wide
+  as that is 414 tall and bursts out of the bottom. `art_rect` now reserves the
+  band as a proportion of the tile and fits the largest 4:3 picture above it.
+
 ## Open
 
-- **Artwork that is not 4:3.** Crop to fill, letterbox to fit, or refuse it?
-  Crop-to-fill looks best and loses the edges; letterboxing keeps the whole
-  picture and puts bars inside a tile that is already small.
-- **A page mixing tiles with and without pictures.** Per-tile fallback is
-  simplest, but half a page of photographs beside half a page of numerals may
-  read as broken rather than as a work in progress.
 - **Whether 90px of band is enough** for two lines on a television.
-- **The `ON NOW` marker** may want to move onto the picture after all, once
-  there is a picture to judge it against. It would then need the same dark plate
-  as the number.
-- **Pillow or the ffmpeg cache.** Recommended above, not accepted.
+- **The `ON NOW` marker** may want to move onto the picture, once there is a
+  picture to judge it against. It would then need the same dark plate as the
+  number.
 - **Where the pictures come from.** Fifty shows is fifty images to find, crop
-  and name. Not a code problem, but it is the thing standing between this design
-  and a tile a child can use.
+  and name. Not a code problem, but it is the thing standing between this and a
+  tile a child can use.
 
----
+## Only a television can answer these
+
+- **Z-order has never been checked.** The pictures are a separate mpv overlay
+  layer from the ASS text. Nothing in the code guarantees the text lands on top
+  of them. If the tile frames or the show names vanish behind the pictures,
+  this is why.
+- **Pillow must be installed on the Pi.** Without it the box quietly draws no
+  pictures - by design, but worth knowing when the first `tile.jpg` appears to
+  do nothing.
+- **Whether the number's plate is dark enough** against real artwork rather
+  than the colour bars it was rendered over.
 
 ## Not in this design
 
