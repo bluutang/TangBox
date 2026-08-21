@@ -20,7 +20,7 @@ import random
 import subprocess
 import time
 from pathlib import Path
-from typing import Callable, List, Optional
+from typing import Callable, List, Optional, Sequence
 
 from .actions import Action, InputEvent
 from .channel import (
@@ -31,8 +31,9 @@ from .channel import (
     episode_label_for,
     show_name_for,
 )
+from .artwork import tile_image_for
 from .config import Config
-from .guide import Guide, guide_ass
+from .guide import Guide, art_rect, guide_ass, page_tiles
 from .input.manager import InputManager, create_backends
 from .interstitial import CommercialPool
 from .overlay import OverlayManager
@@ -420,19 +421,63 @@ class TVApp:
     def _close_guide(self) -> None:
         self.guide.close()
         self.overlay.clear_guide()
+        self.player.clear_images()
 
     def _draw_guide(self) -> None:
+        """Draw both layers of the guide: the pictures, then the text on top."""
+        channels = list(self.lineup)
+        artwork = [self._tile_picture(channel) for channel in channels]
+        self._draw_guide_pictures(artwork)
         self.overlay.show_guide(
             guide_ass(
-                [(c.number, c.name) for c in self.lineup],
+                [(c.number, c.name) for c in channels],
                 self.guide.cursor,
                 self.config.ui,
                 on_now=self.lineup.index_of(self.lineup.current.number),
                 dim=self.config.guide.dim,
                 page_cols=self.config.guide.page_cols,
                 page_rows=self.config.guide.page_rows,
+                artwork=[picture is not None for picture in artwork],
             )
         )
+
+    def _tile_picture(self, channel: Channel) -> Optional[Path]:
+        """The picture for whatever ``channel`` would put on screen, or None.
+
+        For the channel on air that is what is playing. For every other channel
+        it is what tuning there would start, which is why Channel.peek_next
+        exists - nothing is playing on a channel nobody is watching. Either way
+        the tile promises the programme you would actually get.
+        """
+        if channel.number == self.lineup.current.number and self._playing_path:
+            episode = self._playing_path
+        else:
+            episode = channel.peek_next()
+        if episode is None:
+            return None
+        return tile_image_for(episode, channel.config.path)
+
+    def _draw_guide_pictures(self, artwork: Sequence[Optional[Path]]) -> None:
+        """Put a picture in the picture area of every visible tile that has one.
+
+        Positioned from page_tiles, the same function the text layer draws
+        from, so a picture cannot land a few pixels off the name below it.
+        """
+        self.player.clear_images()
+        rects = page_tiles(
+            len(artwork),
+            self.guide.cursor,
+            self.config.guide.page_cols,
+            self.config.guide.page_rows,
+        )
+        for slot, rect in enumerate(rects):
+            picture = artwork[rect.index]
+            if picture is None:
+                continue
+            art_x, art_y, art_w, art_h = art_rect(rect)
+            self.player.show_image(
+                slot, picture, round(art_x), round(art_y), round(art_w), round(art_h)
+            )
 
     def _tick_guide(self) -> None:
         """Let the guide close itself after sitting untouched."""
@@ -440,7 +485,11 @@ class TVApp:
             return
         self.guide.tick()
         if not self.guide.is_open:
+            # Without this the pictures would stay on screen after the guide
+            # timed out, sitting over the programme with nothing left to
+            # remove them.
             self.overlay.clear_guide()
+            self.player.clear_images()
 
     def _tune_from_guide(self) -> None:
         numbers = self.lineup.numbers
