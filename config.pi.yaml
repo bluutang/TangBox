@@ -141,6 +141,15 @@ guide:
   dim: 0.66              # how far the picture behind it dims. 0 = not at all,
                          # 1 = black. Lower it if the tiles get lost in a bright
                          # cartoon; raise it if the picture is distracting.
+  page_cols: 4           # how many channels fit on ONE page, across and down.
+  page_rows: 2           # Four by two is eight a page, and the biggest tiles of
+                         # any shape that fits. Once the lineup outgrows a page
+                         # the guide turns pages instead of shrinking the tiles,
+                         # and a row of dots along the bottom shows which page
+                         # you are on. Raise these to fit more per page at the
+                         # cost of smaller names: 5 x 3 fits fifteen. A lineup
+                         # small enough for one page ignores both and lays
+                         # itself out square, as it always has.
 
 # --- The "feel" of the TV -----------------------------------------------------
 fullscreen: true         # true on the TV (this is the default)

@@ -237,6 +237,32 @@ def test_dimming_is_clamped_to_something_watchable(tmp_path):
     assert _cfg(tmp_path, guide={"dim": -2.0}).guide.dim == 0.0
 
 
+def test_a_page_of_the_guide_holds_four_channels_across_and_two_down(tmp_path):
+    guide = _cfg(tmp_path).guide
+    assert guide.page_cols == 4
+    assert guide.page_rows == 2
+
+
+def test_the_page_size_can_be_set(tmp_path):
+    # How many tiles fit before they stop being readable is a question only a
+    # television across a room can answer, so it is a dial like the others.
+    guide = _cfg(tmp_path, guide={"page_cols": 5, "page_rows": 3}).guide
+    assert guide.page_cols == 5
+    assert guide.page_rows == 3
+
+
+def test_a_page_cannot_be_made_wider_than_the_grid_allows(tmp_path):
+    # Past five columns the show names are too small to read from a sofa,
+    # which is the whole reason pages exist.
+    assert _cfg(tmp_path, guide={"page_cols": 99}).guide.page_cols == 5
+
+
+def test_a_page_must_hold_at_least_one_channel(tmp_path):
+    # Zero would be a guide that can draw nothing and a division by zero.
+    assert _cfg(tmp_path, guide={"page_cols": 0, "page_rows": 0}).guide.page_cols == 1
+    assert _cfg(tmp_path, guide={"page_rows": 0}).guide.page_rows == 1
+
+
 def test_a_guide_section_that_is_not_a_mapping_is_rejected(tmp_path):
     with pytest.raises(ConfigError):
         _cfg(tmp_path, guide="yes please")

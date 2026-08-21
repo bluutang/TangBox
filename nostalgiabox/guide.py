@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import math
 import time
-from typing import Callable, Optional, Sequence, Tuple
+from typing import Callable, List, Optional, Sequence, Tuple
 
 # The guide reuses the overlay module's styling helpers rather than growing a
 # second copy, so it comes out in the same phosphor green, the same VT323 and
@@ -29,6 +29,7 @@ from .config import UiConfig
 from .overlay import (
     CANVAS_H,
     CANVAS_W,
+    _dot,
     _escape,
     _filled_rect,
     _hex_to_ass,
@@ -37,9 +38,18 @@ from .overlay import (
 
 # Text has to be readable from a sofa, not a desk, so the grid never grows
 # wider than five columns however many channels there are - it grows down
-# instead. Past about twenty channels a grid stops being readable at all and
-# the answer is a scrolling list, which is a different design.
+# instead. Past about twenty channels a grid stops being readable at all,
+# which is what pages are for.
 MAX_COLS = 5
+
+# A page holds four channels across and two down. Both are dials rather than
+# constants because the only place the answer is visible is a television across
+# a room: on the 1280x720 canvas this makes each tile 264x305, with the show
+# name at 29px. Five across and three down fits half as much again on a page
+# and is a third shorter; four by two was chosen because neither child can read
+# yet, so the tile is doing the work a label cannot.
+DEFAULT_PAGE_COLS = 4
+DEFAULT_PAGE_ROWS = 2
 
 # Seconds of no input before the guide closes itself. A child who wanders off
 # should not leave the television dimmed under a menu all evening. This number
@@ -59,6 +69,42 @@ def grid_shape(count: int) -> Tuple[int, int]:
     cols = min(MAX_COLS, math.ceil(math.sqrt(count)))
     rows = math.ceil(count / cols)
     return (cols, rows)
+
+
+def page_shape(
+    count: int,
+    page_cols: int = DEFAULT_PAGE_COLS,
+    page_rows: int = DEFAULT_PAGE_ROWS,
+) -> Tuple[int, int]:
+    """How many (columns, rows) one page of ``count`` channels is laid out in.
+
+    A lineup that fits on a single page keeps the roughly-square layout of
+    :func:`grid_shape` - four channels stay a 2x2 of large tiles rather than
+    being squeezed into the corner of a fixed grid. Paging, and the fixed page
+    grid that comes with it, only switches on once the lineup outgrows a page.
+    """
+    if count <= 0:
+        return (0, 0)
+    if count <= page_cols * page_rows:
+        return grid_shape(count)
+    return (page_cols, page_rows)
+
+
+def page_count(
+    count: int,
+    page_cols: int = DEFAULT_PAGE_COLS,
+    page_rows: int = DEFAULT_PAGE_ROWS,
+) -> int:
+    """How many pages ``count`` channels need.
+
+    Rounds UP, for the same reason :func:`grid_shape` rounds its rows up: a
+    part-full last page still has to be reachable or its channels vanish from
+    the guide.
+    """
+    if count <= 0:
+        return 0
+    cols, rows = page_shape(count, page_cols, page_rows)
+    return math.ceil(count / (cols * rows))
 
 
 class Guide:
@@ -81,9 +127,13 @@ class Guide:
         cursor: int = 0,
         timeout: float = DEFAULT_TIMEOUT,
         clock: Callable[[], float] = time.monotonic,
+        page_cols: int = DEFAULT_PAGE_COLS,
+        page_rows: int = DEFAULT_PAGE_ROWS,
     ) -> None:
         self._count = max(0, int(count))
-        self._cols, self._rows = grid_shape(self._count)
+        self._cols, self._rows = page_shape(self._count, page_cols, page_rows)
+        self._per_page = self._cols * self._rows
+        self._pages = page_count(self._count, page_cols, page_rows)
         self._cursor = self._clamp(cursor)
         self._timeout = float(timeout)
         self._clock = clock
@@ -122,8 +172,20 @@ class Guide:
 
     @property
     def shape(self) -> Tuple[int, int]:
-        """(columns, rows) of the grid this guide draws."""
+        """(columns, rows) of the grid ONE PAGE of this guide draws."""
         return (self._cols, self._rows)
+
+    @property
+    def page(self) -> int:
+        """Which page the cursor is on, counting from zero."""
+        if self._per_page <= 0:
+            return 0
+        return self._cursor // self._per_page
+
+    @property
+    def page_count(self) -> int:
+        """How many pages the lineup fills. One means no paging at all."""
+        return self._pages
 
     # -- movement -----------------------------------------------------------
     def right(self) -> None:
@@ -139,36 +201,68 @@ class Guide:
             self._touch()
 
     def down(self) -> None:
-        """One row down, wrapping to the top of the same column.
+        """One row down, carrying onto the next PAGE from the bottom row.
 
-        Wraps early when the row below is ragged and has no tile in this
-        column, rather than selecting a cell that isn't there.
+        The column is kept as the page turns, so the cursor does not appear to
+        jump sideways. Past the last page it wraps round to the first.
         """
         if not self._count:
             return
         below = self._cursor + self._cols
-        self._cursor = below if below < self._count else self._cursor % self._cols
+        if below < self._count and below // self._per_page == self.page:
+            self._cursor = below
+        else:
+            self._cursor = self._land(
+                (self.page + 1) % self._pages, self._column, from_bottom=False
+            )
         self._touch()
 
     def up(self) -> None:
-        """One row up, wrapping to the LOWEST real tile in the same column."""
+        """One row up, carrying onto the previous PAGE from the top row.
+
+        Lands on the LOWEST real tile in the same column, because the last
+        page is usually part-full and the cell directly above may not exist.
+        """
         if not self._count:
             return
-        above = self._cursor - self._cols
-        if above >= 0:
-            self._cursor = above
-            self._touch()
-            return
-        # Walk up from the bottom of this column until we find a tile that
-        # exists - the last row may stop short.
-        column = self._cursor % self._cols
-        lowest = column + self._cols * (self._rows - 1)
-        while lowest >= self._count:
-            lowest -= self._cols
-        self._cursor = lowest
+        if self._row > 0:
+            self._cursor -= self._cols
+        else:
+            self._cursor = self._land(
+                (self.page - 1) % self._pages, self._column, from_bottom=True
+            )
         self._touch()
 
     # -- internals ----------------------------------------------------------
+    @property
+    def _column(self) -> int:
+        """Which column of its page the cursor is in."""
+        return (self._cursor % self._per_page) % self._cols
+
+    @property
+    def _row(self) -> int:
+        """Which row of its page the cursor is in."""
+        return (self._cursor % self._per_page) // self._cols
+
+    def _land(self, page: int, column: int, *, from_bottom: bool) -> int:
+        """The tile to land on arriving at ``page`` in ``column``.
+
+        Only the LAST page can be part-full, and arriving on it in a column
+        that has no tile is the case that would otherwise park the cursor on
+        an empty cell. Coming from above, take the first tile at or before the
+        one asked for; coming from below, walk up the column until a tile
+        exists, and settle for the last tile on the page if the column is
+        empty from top to bottom.
+        """
+        start = page * self._per_page
+        last = min(start + self._per_page, self._count) - 1
+        if not from_bottom:
+            return min(start + column, last)
+        candidate = start + (self._rows - 1) * self._cols + column
+        while candidate > last:
+            candidate -= self._cols
+        return candidate if candidate >= start else last
+
     def _touch(self) -> None:
         """Restart the auto-close countdown. Any input means someone is there."""
         # A timeout of zero means "leave it until it is closed deliberately",
@@ -200,6 +294,14 @@ DEFAULT_DIM = 0.66
 # screen. This is the part that does the work for a child who cannot read.
 DIM_ALPHA = 150
 
+# The page dots: one per page along the bottom, the current one bright. Neither
+# child can read "page 2 of 3", but one lit dot among dim ones is a picture.
+# The strip is reserved out of the tile area, so a name and a dot can never be
+# drawn on top of each other. Nothing is reserved on a single-page lineup.
+_DOT_R = 6
+_DOT_SPACING = 26
+_DOT_STRIP = 34
+
 _TRANSPARENT = "&HFF&"
 
 
@@ -210,8 +312,10 @@ def guide_ass(
     *,
     on_now: Optional[int] = None,
     dim: float = DEFAULT_DIM,
+    page_cols: int = DEFAULT_PAGE_COLS,
+    page_rows: int = DEFAULT_PAGE_ROWS,
 ) -> str:
-    """Draw the whole guide - scrim, tiles, cursor and labels - as one string.
+    """Draw ONE PAGE of the guide - scrim, tiles, cursor, labels and dots.
 
     A pure function of (channels, cursor, on_now), which is what lets all of
     this be tested with no player and no television.
@@ -221,16 +325,29 @@ def guide_ass(
     d-pad has got to, ``on_now`` is what is actually playing. They start out
     the same and diverge as soon as anyone moves.
 
-    The whole guide is one ASS string so it occupies a single overlay slot -
+    Which page is drawn follows from the cursor, so the cursor is never off the
+    page being looked at. A lineup that fits on one page draws exactly as it
+    always has, with no dots and no reserved strip.
+
+    The whole page is one ASS string so it occupies a single overlay slot -
     one draw call, one clear.
     """
     count = len(channels)
     if count == 0:
         return ""
 
-    cols, rows = grid_shape(count)
+    cols, rows = page_shape(count, page_cols, page_rows)
+    pages = page_count(count, page_cols, page_rows)
+    per_page = cols * rows
+    page = max(0, min(pages - 1, cursor // per_page))
+    first = page * per_page
+    visible = channels[first:first + per_page]
+
+    # The dots get room of their own, taken out of the tile area rather than
+    # shared with it.
+    strip = _DOT_STRIP if pages > 1 else 0
     tile_w = (CANVAS_W - 2 * _MARGIN_X - _GAP * (cols - 1)) / cols
-    tile_h = (CANVAS_H - 2 * _MARGIN_Y - _GAP * (rows - 1)) / rows
+    tile_h = (CANVAS_H - 2 * _MARGIN_Y - strip - _GAP * (rows - 1)) / rows
 
     # Text scales with the tile, so four big tiles and twenty small ones both
     # fill their space. The floors stop a crowded lineup shrinking to nothing.
@@ -249,8 +366,9 @@ def guide_ass(
                      alpha=round(255 * (1.0 - max(0.0, min(1.0, dim)))))
     ]
 
-    for index, (number, name) in enumerate(channels):
-        col, row = index % cols, index // cols
+    for local, (number, name) in enumerate(visible):
+        index = first + local
+        col, row = local % cols, local // cols
         x = _MARGIN_X + col * (tile_w + _GAP)
         y = _MARGIN_Y + row * (tile_h + _GAP)
         cx = x + tile_w / 2
@@ -274,7 +392,31 @@ def guide_ass(
                 rf"{_style(ui, size=tag_size, alpha=alpha)}}}ON NOW"
             )
 
+    parts.extend(_page_dots(pages, page, green))
     return "\n".join(parts)
+
+
+def _page_dots(pages: int, current: int, color: str) -> List[str]:
+    """One dot per page along the bottom, the current page's dot bright.
+
+    Nothing at all on a single-page lineup: there is nowhere else to go, so a
+    lone dot would be clutter that says nothing.
+    """
+    if pages <= 1:
+        return []
+    cy = CANVAS_H - _MARGIN_Y - _DOT_STRIP / 2
+    span = _DOT_SPACING * (pages - 1)
+    x0 = CANVAS_W / 2 - span / 2
+    return [
+        _dot(
+            cx=x0 + index * _DOT_SPACING,
+            cy=cy,
+            r=_DOT_R,
+            fill=color,
+            alpha=0 if index == current else DIM_ALPHA,
+        )
+        for index in range(pages)
+    ]
 
 
 def _tile_frame(
@@ -305,6 +447,10 @@ __all__ = [
     "Guide",
     "guide_ass",
     "grid_shape",
+    "page_shape",
+    "page_count",
+    "DEFAULT_PAGE_COLS",
+    "DEFAULT_PAGE_ROWS",
     "MAX_COLS",
     "DEFAULT_TIMEOUT",
     "DEFAULT_DIM",

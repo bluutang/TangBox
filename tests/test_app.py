@@ -546,6 +546,47 @@ def test_the_on_air_marker_follows_the_channel_while_the_guide_is_open(tmp_path)
     assert player.overlays[5].count("ON NOW") == 1
 
 
+# -- paging -----------------------------------------------------------------
+# build_app has three channels, so a page of two forces a second page without
+# needing a whole lineup. The real box uses 4x2; this is the same machinery.
+
+
+def test_the_guide_pages_at_the_size_the_config_asks_for(tmp_path):
+    app, _, _ = build_app(tmp_path, guide={"page_cols": 2, "page_rows": 1})
+    assert app.guide.shape == (2, 1)
+    assert app.guide.page_count == 2
+
+
+def test_the_guide_draws_only_the_page_the_cursor_is_on(tmp_path):
+    app, player, _ = build_app(tmp_path, guide={"page_cols": 2, "page_rows": 1})
+    app.start()
+    send(app, Action.HOME)
+    assert "Dragon Tales" in player.overlays[5]
+    assert "Rugrats" not in player.overlays[5]
+
+
+def test_moving_past_the_end_of_a_page_turns_it(tmp_path):
+    app, player, _ = build_app(tmp_path, guide={"page_cols": 2, "page_rows": 1})
+    app.start()
+    send(app, Action.HOME)
+    send(app, Action.NAV_RIGHT)
+    send(app, Action.NAV_RIGHT)
+    assert "Rugrats" in player.overlays[5]
+    assert "Dragon Tales" not in player.overlays[5]
+
+
+def test_tuning_from_the_second_page_picks_the_channel_the_cursor_is_on(tmp_path):
+    # The bug this guards against: drawing a page but tuning from the whole
+    # lineup, so OK plays a different channel from the bright tile.
+    app, _, _ = build_app(tmp_path, guide={"page_cols": 2, "page_rows": 1})
+    app.start()
+    send(app, Action.HOME)
+    send(app, Action.NAV_RIGHT)
+    send(app, Action.NAV_RIGHT)
+    send(app, Action.ENTER)
+    assert app.lineup.current.number == 4
+
+
 # -- choosing ---------------------------------------------------------------
 def test_ok_tunes_to_the_cursor_and_closes_the_guide(tmp_path):
     app, _, _ = build_app(tmp_path)

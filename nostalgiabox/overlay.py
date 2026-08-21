@@ -273,8 +273,13 @@ def _filled_rect(
     return rf"{{\an7\pos({x},{y})\p1\c{fill}\1a&H{a:02X}&\bord0\shad0}}{draw}{{\p0}}"
 
 
-def _dot(*, cx: float, cy: float, r: float, fill: str) -> str:
-    """A small filled circle centred at (cx, cy) using 4 bezier arcs."""
+def _dot(*, cx: float, cy: float, r: float, fill: str, alpha: int = 0) -> str:
+    """A small filled circle centred at (cx, cy) using 4 bezier arcs.
+
+    ``alpha`` is ASS's inverted transparency, as in :func:`_filled_rect`: 0 is
+    solid, 255 invisible. The guide's page dots use it to show the page you are
+    on as the only bright one.
+    """
     c = 0.5523 * r  # magic constant to approximate a circle with cubic beziers
     x, y = round(cx), round(cy)
     r = round(r, 2)
@@ -286,7 +291,11 @@ def _dot(*, cx: float, cy: float, r: float, fill: str) -> str:
         f"b {-c} {r} {-r} {c} {-r} 0 "
         f"b {-r} {-c} {-c} {-r} 0 {-r}"
     )
-    return rf"{{\an5\pos({x},{y})\p1\c{fill}\1a&H00&\bord0\shad0}}{path}{{\p0}}"
+    a = max(0, min(255, int(alpha)))
+    return (
+        rf"{{\an5\pos({x},{y})\p1\c{fill}\1a&H{a:02X}&\bord0\shad0}}"
+        rf"{path}{{\p0}}"
+    )
 
 
 def _escape(text: str) -> str:

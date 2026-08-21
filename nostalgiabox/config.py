@@ -87,6 +87,13 @@ class GuideConfig:
     # How far the picture behind the guide is dimmed, 0 (not at all) to 1
     # (black). The programme keeps playing underneath either way.
     dim: float = 0.66
+    # How many channels fit on one page of the guide, across and down. Once the
+    # lineup outgrows a page the guide pages rather than shrinking the tiles,
+    # because a name too small to read from a sofa helps nobody. Four by two
+    # gives the largest tiles of the shapes that fit, which matters while
+    # neither child can read and the picture is doing the work.
+    page_cols: int = 4
+    page_rows: int = 2
 
 
 @dataclass(frozen=True)
@@ -529,6 +536,12 @@ def _parse_guide(raw: Any) -> GuideConfig:
             0.0, 600.0, "guide.timeout_seconds",
         ),
         dim=_clamp_float(raw.get("dim", d.dim), 0.0, 1.0, "guide.dim"),
+        # Five is the ceiling the guide's own grid uses (guide.MAX_COLS) -
+        # past it the show names stop being readable across a room. One is the
+        # floor because a page has to be able to hold something, and zero would
+        # be a division by zero on the way to finding out.
+        page_cols=_clamp_int(raw.get("page_cols", d.page_cols), 1, 5, "guide.page_cols"),
+        page_rows=_clamp_int(raw.get("page_rows", d.page_rows), 1, 5, "guide.page_rows"),
     )
 
 

@@ -94,6 +94,8 @@ class TVApp:
             count=len(self.lineup),
             timeout=config.guide.timeout_seconds,
             clock=clock,
+            page_cols=config.guide.page_cols,
+            page_rows=config.guide.page_rows,
         )
         self._rng = random.Random(config.shuffle_seed)
 
@@ -427,6 +429,8 @@ class TVApp:
                 self.config.ui,
                 on_now=self.lineup.index_of(self.lineup.current.number),
                 dim=self.config.guide.dim,
+                page_cols=self.config.guide.page_cols,
+                page_rows=self.config.guide.page_rows,
             )
         )
 

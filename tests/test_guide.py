@@ -5,7 +5,13 @@ import re
 from nostalgiabox.config import UiConfig
 from nostalgiabox.overlay import CANVAS_H, CANVAS_W
 
-from nostalgiabox.guide import Guide, grid_shape, guide_ass
+from nostalgiabox.guide import (
+    Guide,
+    grid_shape,
+    guide_ass,
+    page_count,
+    page_shape,
+)
 from tests.helpers import FakeClock
 
 
@@ -284,3 +290,201 @@ def test_accented_channel_names_are_drawn_as_written():
 
 def test_an_empty_lineup_draws_nothing_rather_than_crashing():
     assert guide_ass([], cursor=0, ui=_ui()) == ""
+
+
+# --------------------------------------------------------------------------
+# Pages
+# --------------------------------------------------------------------------
+# A page holds 4 across and 2 down, so eight channels. Paging only switches on
+# when the lineup outgrows one page; a short lineup keeps the square-ish layout
+# it has always had, so the box on the television tonight is unaffected.
+#
+# Seventeen channels make three pages, indexed in reading order:
+#     page 0:  0  1  2  3      page 1:  8  9 10 11      page 2: 16
+#              4  5  6  7              12 13 14 15
+#
+# The last page is ragged on purpose - that is the case that breaks cursors.
+
+
+def test_a_lineup_that_fits_on_one_page_keeps_the_layout_it_has_today():
+    # The four-channel box on the television must not change under it.
+    assert page_shape(4) == grid_shape(4) == (2, 2)
+
+
+def test_a_lineup_that_fits_on_one_page_is_one_page():
+    assert page_count(4) == 1
+
+
+def test_a_lineup_too_big_for_one_page_uses_the_fixed_page_grid():
+    assert page_shape(17) == (4, 2)
+
+
+def test_seventeen_channels_make_three_pages():
+    assert page_count(17) == 3
+
+
+def test_a_part_full_last_page_still_gets_a_page():
+    # Nine channels: eight on the first page, one left over. Rounding down
+    # would lose that channel from the guide entirely.
+    assert page_count(9) == 2
+
+
+def test_exactly_one_full_page_does_not_spill_onto_a_second():
+    assert page_count(8) == 1
+
+
+def test_an_empty_lineup_has_no_pages():
+    assert page_count(0) == 0
+    assert page_shape(0) == (0, 0)
+
+
+def test_the_page_size_is_a_dial_not_a_constant():
+    # Judged from a sofa, so config.pi.yaml can retune it without new code.
+    assert page_shape(17, page_cols=5, page_rows=3) == (5, 3)
+    assert page_count(17, page_cols=5, page_rows=3) == 2
+
+
+# -- what the guide knows about pages --------------------------------------
+
+
+def test_the_guide_reports_which_page_the_cursor_is_on():
+    assert Guide(count=17, cursor=9).page == 1
+
+
+def test_the_guide_reports_how_many_pages_there_are():
+    assert Guide(count=17).page_count == 3
+
+
+def test_a_short_lineup_is_a_single_page():
+    assert Guide(count=4).page_count == 1
+
+
+# -- moving between pages ---------------------------------------------------
+
+
+def test_down_within_a_page_moves_one_row():
+    g = Guide(count=17, cursor=0)
+    g.down()
+    assert g.cursor == 4
+
+
+def test_down_from_the_bottom_row_lands_on_the_next_page_in_the_same_column():
+    # Column is kept, so the cursor does not jump sideways as the page turns.
+    g = Guide(count=17, cursor=4)
+    g.down()
+    assert g.cursor == 8
+
+
+def test_down_from_the_last_page_wraps_round_to_the_first():
+    g = Guide(count=17, cursor=16)
+    g.down()
+    assert g.cursor == 0
+
+
+def test_down_onto_a_ragged_last_page_still_lands_on_a_real_channel():
+    # Page 2 holds channel 16 alone, so column 3 does not exist there.
+    g = Guide(count=17, cursor=15)
+    g.down()
+    assert g.cursor == 16
+
+
+def test_up_from_the_top_row_lands_on_the_previous_page_bottom_row():
+    g = Guide(count=17, cursor=8)
+    g.up()
+    assert g.cursor == 4
+
+
+def test_up_from_the_first_page_wraps_round_to_the_last():
+    g = Guide(count=17, cursor=0)
+    g.up()
+    assert g.cursor == 16
+
+
+def test_right_off_the_edge_of_a_page_carries_onto_the_next_page():
+    # Reading order across the whole lineup, exactly as it always has been.
+    g = Guide(count=17, cursor=7)
+    g.right()
+    assert g.cursor == 8
+
+
+def test_left_off_the_start_of_a_page_carries_back_onto_the_previous_one():
+    g = Guide(count=17, cursor=8)
+    g.left()
+    assert g.cursor == 7
+
+
+def test_every_move_from_every_position_lands_on_a_real_channel():
+    # The property that matters more than any individual rule. The users are 2
+    # and 4: a cursor that parks on an empty cell in a ragged last page, or
+    # stops dead at an edge, reads as a broken television to someone who cannot
+    # read the screen to find out why.
+    for count in range(1, 31):
+        for start in range(count):
+            for move in ("up", "down", "left", "right"):
+                g = Guide(count=count, cursor=start)
+                getattr(g, move)()
+                assert 0 <= g.cursor < count, (count, start, move, g.cursor)
+
+
+# -- drawing a page ---------------------------------------------------------
+SEVENTEEN = [(n, f"Channel {n}") for n in range(11, 28)]
+
+
+def _dots(ass):
+    """Every part of the drawing that is a circle - the page dots."""
+    return [part for part in ass.split("\n") if " b " in part]
+
+
+def test_only_the_current_page_is_drawn():
+    ass = guide_ass(SEVENTEEN, cursor=0, ui=_ui())
+    assert "Channel 11" in ass       # first tile of page 0
+    assert "Channel 18" in ass       # last tile of page 0
+    assert "Channel 19" not in ass   # first tile of page 1
+
+
+def test_moving_onto_the_next_page_draws_that_page_instead():
+    ass = guide_ass(SEVENTEEN, cursor=8, ui=_ui())
+    assert "Channel 19" in ass
+    assert "Channel 11" not in ass
+
+
+def test_one_page_dot_is_drawn_for_each_page():
+    assert len(_dots(guide_ass(SEVENTEEN, cursor=0, ui=_ui()))) == 3
+
+
+def test_exactly_one_page_dot_is_lit():
+    # Neither child can read "page 2 of 3". One bright dot among dim ones is a
+    # picture, and needs no explanation.
+    dots = _dots(guide_ass(SEVENTEEN, cursor=8, ui=_ui()))
+    lit = [d for d in dots if r"\1a&H00&" in d]
+    assert len(lit) == 1
+
+
+def test_the_lit_dot_is_the_page_the_cursor_is_on():
+    dots = _dots(guide_ass(SEVENTEEN, cursor=8, ui=_ui()))
+    assert r"\1a&H00&" in dots[1]
+
+
+def test_a_single_page_lineup_draws_no_dots():
+    # Nothing to page between, so the dots would be clutter.
+    assert _dots(guide_ass(FOUR, cursor=0, ui=_ui())) == []
+
+
+def test_the_page_dots_sit_inside_the_canvas():
+    for x, y in _positions(guide_ass(SEVENTEEN, cursor=0, ui=_ui())):
+        assert 0 <= x <= CANVAS_W
+        assert 0 <= y <= CANVAS_H
+
+
+def test_tiles_leave_room_for_the_dots_rather_than_drawing_over_them():
+    # The dots live in a strip at the bottom that the tiles must not enter,
+    # or a channel name and a dot would be drawn on top of each other.
+    ass = guide_ass(SEVENTEEN, cursor=0, ui=_ui())
+    dot_ys = [y for part in _dots(ass) for _, y in _positions(part)]
+    tile_ys = [
+        y
+        for part in ass.split("\n")
+        if " b " not in part
+        for _, y in _positions(part)
+    ]
+    assert min(dot_ys) > max(tile_ys)
