@@ -7,10 +7,12 @@ from nostalgiabox.overlay import CANVAS_H, CANVAS_W
 
 from nostalgiabox.guide import (
     Guide,
+    art_rect,
     grid_shape,
     guide_ass,
     page_count,
     page_shape,
+    page_tiles,
 )
 from tests.helpers import FakeClock
 
@@ -488,3 +490,90 @@ def test_tiles_leave_room_for_the_dots_rather_than_drawing_over_them():
         for _, y in _positions(part)
     ]
     assert min(dot_ys) > max(tile_ys)
+
+
+# --------------------------------------------------------------------------
+# Tile geometry
+# --------------------------------------------------------------------------
+# The picture layer and the text layer both position themselves from this, so
+# a picture cannot end up a few pixels away from the name underneath it.
+
+
+def test_page_tiles_returns_one_rect_per_visible_tile():
+    assert len(page_tiles(17, cursor=0)) == 8
+
+
+def test_page_tiles_returns_only_the_ragged_last_pages_tiles():
+    assert len(page_tiles(17, cursor=16)) == 1
+
+
+def test_page_tiles_carries_the_lineup_index_not_the_position_on_the_page():
+    # Page two's first tile is channel index 8, not 0. The caller uses this to
+    # look up the right channel without repeating the paging arithmetic.
+    assert page_tiles(17, cursor=8)[0].index == 8
+
+
+def test_a_tile_is_264_by_288_on_a_four_by_two_page():
+    tile = page_tiles(17, cursor=0)[0]
+    assert (round(tile.w), round(tile.h)) == (264, 288)
+
+
+def test_an_empty_lineup_has_no_tiles():
+    assert page_tiles(0, cursor=0) == []
+
+
+def test_tiles_do_not_overlap():
+    rects = page_tiles(17, cursor=0)
+    for a in rects:
+        for b in rects:
+            if a.index >= b.index:
+                continue
+            apart = (
+                a.x + a.w <= b.x or b.x + b.w <= a.x
+                or a.y + a.h <= b.y or b.y + b.h <= a.y
+            )
+            assert apart, (a, b)
+
+
+def test_every_tile_is_inside_the_canvas():
+    for count in (1, 4, 8, 9, 17, 30):
+        for rect in page_tiles(count, cursor=0):
+            assert rect.x >= 0 and rect.x + rect.w <= CANVAS_W, count
+            assert rect.y >= 0 and rect.y + rect.h <= CANVAS_H, count
+
+
+def test_the_picture_is_four_three_whatever_the_page_shape():
+    for count, cols, rows in ((17, 4, 2), (17, 5, 3), (30, 3, 2), (4, 4, 2)):
+        tile = page_tiles(count, cursor=0, page_cols=cols, page_rows=rows)[0]
+        _, _, w, h = art_rect(tile)
+        assert abs(w / h - 4 / 3) < 0.001, (count, cols, rows)
+
+
+def test_the_picture_is_264_by_198_on_the_real_box():
+    tile = page_tiles(17, cursor=0)[0]
+    _, _, w, h = art_rect(tile)
+    assert (round(w), round(h)) == (264, 198)
+
+
+def test_the_picture_always_fits_inside_the_tile_that_holds_it():
+    # A lineup small enough for one page gets very wide tiles - 552x305 for
+    # four channels - and a 4:3 picture as wide as that would be 414 tall.
+    for count, cols, rows in ((17, 4, 2), (17, 5, 3), (30, 3, 2), (4, 4, 2), (1, 4, 2)):
+        tile = page_tiles(count, cursor=0, page_cols=cols, page_rows=rows)[0]
+        x, y, w, h = art_rect(tile)
+        assert x >= tile.x and x + w <= tile.x + tile.w + 0.001, (count, cols, rows)
+        assert y >= tile.y and y + h <= tile.y + tile.h + 0.001, (count, cols, rows)
+
+
+def test_the_picture_leaves_a_band_for_the_text_underneath():
+    for count, cols, rows in ((17, 4, 2), (17, 5, 3), (4, 4, 2)):
+        tile = page_tiles(count, cursor=0, page_cols=cols, page_rows=rows)[0]
+        _, y, _, h = art_rect(tile)
+        assert tile.y + tile.h - (y + h) > 20, (count, cols, rows)
+
+
+def test_a_wide_tile_centres_its_picture_rather_than_stretching_it():
+    tile = page_tiles(4, cursor=0)[0]          # 552 x 305, very wide
+    x, _, w, _ = art_rect(tile)
+    assert w < tile.w
+    assert abs((x - tile.x) - (tile.x + tile.w - (x + w))) < 0.001

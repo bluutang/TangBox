@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import math
 import time
-from typing import Callable, List, Optional, Sequence, Tuple
+from typing import Callable, List, NamedTuple, Optional, Sequence, Tuple
 
 # The guide reuses the overlay module's styling helpers rather than growing a
 # second copy, so it comes out in the same phosphor green, the same VT323 and
@@ -109,6 +109,85 @@ def page_count(
         return 0
     cols, rows = page_shape(count, page_cols, page_rows)
     return math.ceil(count / (cols * rows))
+
+
+class TileRect(NamedTuple):
+    """Where one tile sits on the canvas, and which channel it is.
+
+    ``index`` is into the WHOLE lineup, not into the page, so a caller can look
+    up the channel without repeating the paging arithmetic.
+    """
+
+    index: int
+    x: float
+    y: float
+    w: float
+    h: float
+
+
+# How much of a tile's height is the band under the picture. 0.3125 of a 288px
+# tile is 90px, which holds the show name at 43px and ON NOW at 31px with a
+# little air. Proportional rather than fixed so it survives a change of page
+# size - the text scales with the tile too.
+_BAND_RATIO = 0.3125
+
+# The picture is 4:3, the shape the programmes themselves are.
+_ART_RATIO = 4 / 3
+
+
+def art_rect(tile: "TileRect") -> Tuple[float, float, float, float]:
+    """``(x, y, w, h)`` of the picture area inside ``tile``.
+
+    The largest 4:3 rectangle that fits above the text band, centred across the
+    tile. On the real box - a 264x288 tile - that is exactly 264x198 with a
+    90px band, which is what the artwork is cut to.
+
+    It has to be fitted rather than simply derived from the tile's width: a
+    lineup small enough for one page gets very wide tiles (552x305 for four
+    channels), and a 4:3 picture as wide as that would be 414 tall and burst
+    out of the bottom of the tile.
+    """
+    h = tile.h * (1 - _BAND_RATIO)
+    w = h * _ART_RATIO
+    if w > tile.w:
+        w = tile.w
+        h = w / _ART_RATIO
+    return (tile.x + (tile.w - w) / 2, tile.y, w, h)
+
+
+def page_tiles(
+    count: int,
+    cursor: int,
+    page_cols: int = DEFAULT_PAGE_COLS,
+    page_rows: int = DEFAULT_PAGE_ROWS,
+) -> List[TileRect]:
+    """Where every tile on the cursor's page sits.
+
+    The single source of truth for tile geometry. The text layer draws from
+    this and the picture layer is positioned from it, so a picture cannot end
+    up a few pixels away from the name that belongs to it - and a change to a
+    margin moves both together or neither.
+    """
+    if count <= 0:
+        return []
+    cols, rows = page_shape(count, page_cols, page_rows)
+    pages = page_count(count, page_cols, page_rows)
+    per_page = cols * rows
+    page = max(0, min(pages - 1, cursor // per_page))
+    first = page * per_page
+    strip = _DOT_STRIP if pages > 1 else 0
+    tile_w = (CANVAS_W - 2 * _MARGIN_X - _GAP * (cols - 1)) / cols
+    tile_h = (CANVAS_H - 2 * _MARGIN_Y - strip - _GAP * (rows - 1)) / rows
+    return [
+        TileRect(
+            index=first + local,
+            x=_MARGIN_X + (local % cols) * (tile_w + _GAP),
+            y=_MARGIN_Y + (local // cols) * (tile_h + _GAP),
+            w=tile_w,
+            h=tile_h,
+        )
+        for local in range(min(per_page, count - first))
+    ]
 
 
 class Guide:
@@ -344,14 +423,11 @@ def guide_ass(
     pages = page_count(count, page_cols, page_rows)
     per_page = cols * rows
     page = max(0, min(pages - 1, cursor // per_page))
-    first = page * per_page
-    visible = channels[first:first + per_page]
 
-    # The dots get room of their own, taken out of the tile area rather than
-    # shared with it.
-    strip = _DOT_STRIP if pages > 1 else 0
-    tile_w = (CANVAS_W - 2 * _MARGIN_X - _GAP * (cols - 1)) / cols
-    tile_h = (CANVAS_H - 2 * _MARGIN_Y - strip - _GAP * (rows - 1)) / rows
+    # Tile positions come from page_tiles, which the PICTURE layer also uses -
+    # so a picture cannot end up a few pixels away from the name below it.
+    rects = page_tiles(count, cursor, page_cols, page_rows)
+    tile_w, tile_h = rects[0].w, rects[0].h
 
     # Text scales with the tile, so four big tiles and twenty small ones both
     # fill their space. The floors stop a crowded lineup shrinking to nothing.
@@ -370,11 +446,10 @@ def guide_ass(
                      alpha=round(255 * (1.0 - max(0.0, min(1.0, dim)))))
     ]
 
-    for local, (number, name) in enumerate(visible):
-        index = first + local
-        col, row = local % cols, local // cols
-        x = _MARGIN_X + col * (tile_w + _GAP)
-        y = _MARGIN_Y + row * (tile_h + _GAP)
+    for rect in rects:
+        number, name = channels[rect.index]
+        index = rect.index
+        x, y = rect.x, rect.y
         cx = x + tile_w / 2
         focused = index == cursor
         alpha = 0 if focused else DIM_ALPHA
@@ -449,8 +524,11 @@ def _tile_frame(
 
 __all__ = [
     "Guide",
+    "TileRect",
     "guide_ass",
     "grid_shape",
+    "page_tiles",
+    "art_rect",
     "page_shape",
     "page_count",
     "DEFAULT_PAGE_COLS",
