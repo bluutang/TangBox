@@ -14,7 +14,8 @@
 
 - **Canvas is 1280x720.** All geometry is in canvas pixels; mpv scales to the TV.
 - **A tile is 264x288** on a 4x2 page. The picture is the top **264x198** (exactly 4:3), the text band is the remaining **90px**.
-- **Picture height is derived from tile WIDTH** (`art_h = tile_w * 3 / 4`), never from tile height. This keeps the picture 4:3 at any page size; the band absorbs the remainder.
+- **The picture is the largest 4:3 rectangle that fits above the text band**, centred (`art_rect`). The band is `0.3125` of the tile's height. On the real 264x288 tile that gives exactly 264x198 with a 90px band.
+  > Deriving the height from the tile's WIDTH was the first attempt and is WRONG: a one-page lineup gets 552x305 tiles, where a picture as wide as the tile would be 414 tall and overflow.
 - **Artwork lives at `<channel>/<show>/tile.jpg`**, with `tile.png` also accepted. `<channel>/<show>/` is the layout `show_name_for()` already assumes.
 - **A tile with no artwork draws exactly as it does today.** No visual change to a box with no pictures.
 - **Only the channel number sits on the picture**, on a solid dark plate so contrast never depends on the artwork. Show name and `ON NOW` stay in the band below.
@@ -385,7 +386,7 @@ git commit -m "Find a show's picture, and work out which part of it fits"
 
 **Interfaces:**
 - Consumes: `page_shape`, `page_count`, `_MARGIN_X`, `_MARGIN_Y`, `_GAP`, `_DOT_STRIP` — all already in `guide.py`.
-- Produces: `TileRect` (NamedTuple with fields `index, x, y, w, h`), `page_tiles(count: int, cursor: int, page_cols: int = DEFAULT_PAGE_COLS, page_rows: int = DEFAULT_PAGE_ROWS) -> List[TileRect]`, `art_height(tile_w: float) -> float`.
+- Produces: `TileRect` (NamedTuple with fields `index, x, y, w, h`), `page_tiles(count: int, cursor: int, page_cols: int = DEFAULT_PAGE_COLS, page_rows: int = DEFAULT_PAGE_ROWS) -> List[TileRect]`, `art_rect(tile: TileRect) -> Tuple[float, float, float, float]` returning `(x, y, w, h)`.
 
 **Why this task exists:** the picture layer and the text layer must agree on
 where a tile is, to the pixel. Two copies of that arithmetic would drift the
@@ -651,7 +652,7 @@ def test_the_plate_sits_inside_the_picture_area():
     plate = [p for p in arty.split("\n") if r"\c&H00000000" in p and r"\p1" in p][1]
     (px, py), = _positions(plate)
     assert tile.x <= px <= tile.x + tile.w
-    assert tile.y <= py <= tile.y + art_height(tile.w)
+    assert tile.y <= py <= tile.y + art_rect(tile)[3]
 
 
 def test_on_now_stays_in_the_band_with_the_name():
@@ -659,7 +660,7 @@ def test_on_now_stays_in_the_band_with_the_name():
     tile = page_tiles(len(FOUR), cursor=0)[0]
     on_now_y = [y for line in arty.split("\n") if "ON NOW" in line
                 for _, y in _positions(line)][0]
-    assert on_now_y > tile.y + art_height(tile.w)
+    assert on_now_y > tile.y + art_rect(tile)[3]
 ```
 
 Add this helper beside `_positions` in the same file:
@@ -701,12 +702,14 @@ lines with a branch:
 ```python
         has_art = bool(artwork) and rect.index < len(artwork) and artwork[rect.index]
         if has_art:
-            picture_h = art_height(tile_w)
-            band_y = y + picture_h
-            band_h = tile_h - picture_h
-            plate_size = max(18, int(picture_h * 0.16))
+            art_x, art_y, art_w, art_h = art_rect(rect)
+            band_y = art_y + art_h
+            band_h = tile_h - art_h
+            plate_size = max(18, int(art_h * 0.16))
             parts.append(
-                _number_plate(x + 8, y + 8, plate_size, number, green, ui, alpha=alpha)
+                _number_plate(
+                    art_x + 8, art_y + 8, plate_size, number, green, ui, alpha=alpha
+                )
             )
             parts.append(
                 rf"{{\an5\pos({round(cx)},{round(band_y + band_h * 0.40)})"
@@ -993,7 +996,7 @@ git commit -m "Give the player a layer for pictures"
 - Test: `tests/test_app.py`
 
 **Interfaces:**
-- Consumes: `Channel.peek_next` (Task 1), `tile_image_for` (Task 2), `page_tiles` / `art_height` (Task 3), `guide_ass(artwork=...)` (Task 4), `Player.show_image` / `clear_images` (Task 5).
+- Consumes: `Channel.peek_next` (Task 1), `tile_image_for` (Task 2), `page_tiles` / `art_rect` (Task 3), `guide_ass(artwork=...)` (Task 4), `Player.show_image` / `clear_images` (Task 5).
 - Produces: nothing further.
 
 - [ ] **Step 1: Write the failing tests**
@@ -1077,8 +1080,9 @@ def test_the_picture_sits_in_the_top_of_its_own_tile(tmp_path):
     rect = [r for r in page_tiles(len(app.lineup), app.guide.cursor)
             if r.index == index][0]
     _, x, y, w, h = [e for e in player.images.values() if e[0] == art][0]
-    assert (x, y) == (round(rect.x), round(rect.y))
-    assert (w, h) == (round(rect.w), round(art_height(rect.w)))
+    art_x, art_y, art_w, art_h = art_rect(rect)
+    assert (x, y) == (round(art_x), round(art_y))
+    assert (w, h) == (round(art_w), round(art_h))
 
 
 def test_closing_the_guide_takes_the_pictures_away(tmp_path):
@@ -1109,7 +1113,7 @@ def test_the_guide_timing_out_takes_the_pictures_away(tmp_path):
     assert player.images == {}
 ```
 
-Import `page_tiles` and `art_height` from `nostalgiabox.guide` at the top of
+Import `page_tiles` and `art_rect` from `nostalgiabox.guide` at the top of
 `tests/test_app.py`. Check how `FakeClock` is advanced and how `app.tick()` is
 called in the existing `test_the_guide_closes_itself_after_the_timeout`, and
 match it exactly — the last test above is that one with pictures added.
@@ -1177,13 +1181,9 @@ In `nostalgiabox/app.py`, replace `_draw_guide` with:
             picture = artwork[rect.index]
             if picture is None:
                 continue
+            art_x, art_y, art_w, art_h = art_rect(rect)
             self.player.show_image(
-                slot,
-                picture,
-                round(rect.x),
-                round(rect.y),
-                round(rect.w),
-                round(art_height(rect.w)),
+                slot, picture, round(art_x), round(art_y), round(art_w), round(art_h)
             )
 ```
 
@@ -1191,7 +1191,7 @@ Add to the imports at the top of `app.py`:
 
 ```python
 from .artwork import tile_image_for
-from .guide import Guide, art_height, guide_ass, page_tiles
+from .guide import Guide, art_rect, guide_ass, page_tiles
 ```
 
 (replacing the existing `from .guide import Guide, guide_ass`), and add
