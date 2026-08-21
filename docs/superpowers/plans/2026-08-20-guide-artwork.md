@@ -26,7 +26,7 @@
 
 ---
 
-### Task 1: Ask a channel what it will play next, without playing it
+### Task 1: Ask a channel what it will play next, without playing it ✅ DONE (`4f3eadf`)
 
 **Files:**
 - Modify: `nostalgiabox/playlist.py` (add `ShuffleBag.peek`)
@@ -37,7 +37,7 @@
 - Consumes: nothing.
 - Produces: `ShuffleBag.peek() -> T`, `Channel.peek_next() -> Optional[Path]`.
 
-- [ ] **Step 1: Write the failing test for the bag**
+- [x] **Step 1: Write the failing test for the bag**
 
 In `tests/test_playlist.py`:
 
@@ -59,12 +59,12 @@ def test_peek_refills_an_exhausted_bag_rather_than_failing():
     assert bag.peek() in ("a", "b")
 ```
 
-- [ ] **Step 2: Run it and watch it fail**
+- [x] **Step 2: Run it and watch it fail**
 
 Run: `.venv/bin/python -m pytest tests/test_playlist.py -k peek -v`
 Expected: FAIL, `AttributeError: 'ShuffleBag' object has no attribute 'peek'`
 
-- [ ] **Step 3: Implement `peek`**
+- [x] **Step 3: Implement `peek`**
 
 In `nostalgiabox/playlist.py`, after `next()`:
 
@@ -83,12 +83,12 @@ In `nostalgiabox/playlist.py`, after `next()`:
         return self._queue[-1]
 ```
 
-- [ ] **Step 4: Run it and watch it pass**
+- [x] **Step 4: Run it and watch it pass**
 
 Run: `.venv/bin/python -m pytest tests/test_playlist.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Write the failing test for the channel**
+- [x] **Step 5: Write the failing test for the channel**
 
 In `tests/test_channel.py`:
 
@@ -125,12 +125,12 @@ Match the existing helpers in `tests/test_channel.py` for `make_show` / channel
 construction; if that file builds channels inline rather than with a helper,
 build them the same way inline.
 
-- [ ] **Step 6: Run it and watch it fail**
+- [x] **Step 6: Run it and watch it fail**
 
 Run: `.venv/bin/python -m pytest tests/test_channel.py -k peek_next -v`
 Expected: FAIL, `AttributeError: 'Channel' object has no attribute 'peek_next'`
 
-- [ ] **Step 7: Implement `peek_next`**
+- [x] **Step 7: Implement `peek_next`**
 
 In `nostalgiabox/channel.py`, directly after `tune_in`:
 
@@ -154,12 +154,12 @@ In `nostalgiabox/channel.py`, directly after `tune_in`:
         return self._bag.peek()
 ```
 
-- [ ] **Step 8: Run the whole suite**
+- [x] **Step 8: Run the whole suite**
 
 Run: `.venv/bin/python -m pytest -q`
 Expected: PASS, 395 tests
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add nostalgiabox/playlist.py nostalgiabox/channel.py tests/test_playlist.py tests/test_channel.py
@@ -168,7 +168,7 @@ git commit -m "A channel can say what it would play, without playing it"
 
 ---
 
-### Task 2: Find a show's picture on disk
+### Task 2: Find a show's picture on disk ✅ DONE (`bcb3e6f`)
 
 **Files:**
 - Create: `nostalgiabox/artwork.py`
@@ -178,7 +178,7 @@ git commit -m "A channel can say what it would play, without playing it"
 - Consumes: `show_name_for` from `nostalgiabox.channel`.
 - Produces: `tile_image_for(episode: Path, channel_root: Path) -> Optional[Path]`, `crop_box(src_w: int, src_h: int, dst_w: int, dst_h: int) -> Tuple[int, int, int, int]`, `TILE_FILENAMES: Tuple[str, ...]`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `tests/test_artwork.py`:
 
@@ -267,12 +267,12 @@ def test_the_crop_is_never_bigger_than_the_picture():
         assert 0 <= top < bottom <= src_h
 ```
 
-- [ ] **Step 2: Run them and watch them fail**
+- [x] **Step 2: Run them and watch them fail**
 
 Run: `.venv/bin/python -m pytest tests/test_artwork.py -v`
 Expected: FAIL, `ModuleNotFoundError: No module named 'nostalgiabox.artwork'`
 
-- [ ] **Step 3: Write the module**
+- [x] **Step 3: Write the module**
 
 Create `nostalgiabox/artwork.py`:
 
@@ -359,17 +359,17 @@ def crop_box(
     return (0, top, src_w, top + keep_h)
 ```
 
-- [ ] **Step 4: Run them and watch them pass**
+- [x] **Step 4: Run them and watch them pass**
 
 Run: `.venv/bin/python -m pytest tests/test_artwork.py -v`
 Expected: PASS, 11 tests
 
-- [ ] **Step 5: Run the whole suite**
+- [x] **Step 5: Run the whole suite**
 
 Run: `.venv/bin/python -m pytest -q`
 Expected: PASS, 406 tests
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add nostalgiabox/artwork.py tests/test_artwork.py
@@ -378,7 +378,7 @@ git commit -m "Find a show's picture, and work out which part of it fits"
 
 ---
 
-### Task 3: One source of truth for where a tile sits
+### Task 3: One source of truth for where a tile sits ✅ DONE (`029c941`)
 
 **Files:**
 - Modify: `nostalgiabox/guide.py` (extract `page_tiles`, use it in `guide_ass`)
@@ -393,7 +393,7 @@ where a tile is, to the pixel. Two copies of that arithmetic would drift the
 first time anyone changed a margin. This task adds no behaviour: it moves
 existing geometry into a function and proves the drawing is unchanged.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Append to `tests/test_guide.py`:
 
@@ -437,22 +437,23 @@ def test_tiles_do_not_overlap():
 def test_the_picture_is_four_three_whatever_the_tile_is():
     for count, cols, rows in ((17, 4, 2), (17, 5, 3), (30, 3, 2)):
         tile = page_tiles(count, cursor=0, page_cols=cols, page_rows=rows)[0]
-        assert abs(tile.w / art_height(tile.w) - 4 / 3) < 0.001
+        assert abs(_w_over_h(art_rect(tile)) - 4 / 3) < 0.001
 
 
 def test_the_picture_is_198_tall_on_the_real_box():
-    assert round(art_height(264)) == 198
+    assert (round(art_rect(page_tiles(17, 0)[0])[2]),
+            round(art_rect(page_tiles(17, 0)[0])[3])) == (264, 198)
 ```
 
-Add `TileRect`, `page_tiles` and `art_height` to the import block at the top of
+Add `TileRect`, `page_tiles` and `art_rect` to the import block at the top of
 `tests/test_guide.py`.
 
-- [ ] **Step 2: Run them and watch them fail**
+- [x] **Step 2: Run them and watch them fail**
 
-Run: `.venv/bin/python -m pytest tests/test_guide.py -k "page_tiles or art_height or picture_is" -v`
+Run: `.venv/bin/python -m pytest tests/test_guide.py -k "page_tiles or art_rect or picture_is" -v`
 Expected: FAIL, `ImportError: cannot import name 'page_tiles'`
 
-- [ ] **Step 3: Add the geometry**
+- [x] **Step 3: Add the geometry**
 
 In `nostalgiabox/guide.py`, after `page_count` and before `class Guide`:
 
@@ -471,14 +472,27 @@ class TileRect(NamedTuple):
     h: float
 
 
-def art_height(tile_w: float) -> float:
-    """How tall the picture part of a tile is, given its width.
+_BAND_RATIO = 0.3125   # 90px of a 288px tile
+_ART_RATIO = 4 / 3
 
-    Derived from the WIDTH so the picture is 4:3 at any page size - the shape
-    the programmes themselves are. Whatever height is left over becomes the
-    band that carries the show name.
+
+def art_rect(tile: "TileRect") -> Tuple[float, float, float, float]:
+    """``(x, y, w, h)`` of the picture area inside ``tile``.
+
+    The largest 4:3 rectangle that fits above the text band, centred across the
+    tile. On the real box - a 264x288 tile - that is exactly 264x198 with a
+    90px band, which is what the artwork is cut to.
+
+    It has to be FITTED, not derived from the tile's width: a lineup small
+    enough for one page gets 552x305 tiles, and a 4:3 picture as wide as that
+    would be 414 tall and burst out of the bottom of the tile.
     """
-    return tile_w * 3 / 4
+    h = tile.h * (1 - _BAND_RATIO)
+    w = h * _ART_RATIO
+    if w > tile.w:
+        w = tile.w
+        h = w / _ART_RATIO
+    return (tile.x + (tile.w - w) / 2, tile.y, w, h)
 
 
 def page_tiles(
@@ -519,14 +533,14 @@ def page_tiles(
 ```
 
 Add `NamedTuple` to the `typing` import at the top of the file, and add
-`"TileRect"`, `"page_tiles"` and `"art_height"` to `__all__`.
+`"TileRect"`, `"page_tiles"` and `"art_rect"` to `__all__`.
 
-- [ ] **Step 4: Run them and watch them pass**
+- [x] **Step 4: Run them and watch them pass**
 
 Run: `.venv/bin/python -m pytest tests/test_guide.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Make `guide_ass` use it, changing nothing**
+- [x] **Step 5: Make `guide_ass` use it, changing nothing**
 
 In `guide_ass`, replace the geometry block and the `for local, (number, name) in
 enumerate(visible):` loop header. Delete these lines:
@@ -561,7 +575,7 @@ and:
 
 replacing every later use of `first + local` with `rect.index`.
 
-- [ ] **Step 6: Prove the drawing did not change**
+- [x] **Step 6: Prove the drawing did not change**
 
 This task must be invisible. Run the whole suite:
 
@@ -569,7 +583,7 @@ Run: `.venv/bin/python -m pytest -q`
 Expected: PASS, 413 tests. Every existing drawing test passing unchanged IS the
 proof — they assert exact positions.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add nostalgiabox/guide.py tests/test_guide.py
@@ -585,7 +599,7 @@ git commit -m "One source of truth for where a tile sits"
 - Test: `tests/test_guide.py`
 
 **Interfaces:**
-- Consumes: `TileRect`, `page_tiles`, `art_height` from Task 3.
+- Consumes: `TileRect`, `page_tiles`, `art_rect` from Task 3.
 - Produces: `guide_ass(..., artwork: Optional[Sequence[bool]] = None)` — one flag per channel in lineup order, True where that channel's tile has a picture behind it.
 
 **Note:** `guide_ass` takes booleans, not paths. It draws no pictures; it only
