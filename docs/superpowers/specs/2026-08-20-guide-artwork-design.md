@@ -1,7 +1,7 @@
 # Show artwork on the guide tiles — design
 
 **Date:** 2026-08-20
-**Status:** **Built 2026-08-20**, on branch `guide-artwork`. Not yet seen on a television.
+**Status:** **Built and merged 2026-08-20** (`d69c5ba`). Not yet seen on a television.
 **Companion:** `2026-08-17-channel-guide-design.md` (Phase 1, built),
 `2026-08-20-channel-numbering-design.md` (paging, built the same day).
 
@@ -133,7 +133,7 @@ one show at a time rather than all fifty before anything works. Brian has 50
 shows and no artwork today, so every tile takes this path on day one.
 
 A page mixing tiles with and without pictures must look deliberate rather than
-broken. Not yet resolved — see Open.
+broken. Checked by rendering one — see Resolved, below.
 
 ---
 
@@ -157,7 +157,9 @@ Pictures must be scaled to tile size before mpv will take them. Two routes:
   is already required, and makes drawing instant. But it adds a cache that has
   to be invalidated when artwork changes.
 
-Recommended: Pillow, for the much simpler code. Not yet accepted.
+**Pillow was chosen**, for the much simpler code. It is imported lazily inside
+`MpvPlayer` so the tests still run on a Mac without it, and it is in the `pi`
+extras. Without it the box quietly draws no pictures.
 
 ---
 
