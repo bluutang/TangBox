@@ -385,6 +385,9 @@ _DOT_R = 6
 _DOT_SPACING = 26
 _DOT_STRIP = 34
 
+# How far the number's plate sits in from the corner of the picture.
+_PLATE_INSET = 8
+
 _TRANSPARENT = "&HFF&"
 
 
@@ -397,6 +400,7 @@ def guide_ass(
     dim: float = DEFAULT_DIM,
     page_cols: int = DEFAULT_PAGE_COLS,
     page_rows: int = DEFAULT_PAGE_ROWS,
+    artwork: Optional[Sequence[bool]] = None,
 ) -> str:
     """Draw ONE PAGE of the guide - scrim, tiles, cursor, labels and dots.
 
@@ -411,6 +415,14 @@ def guide_ass(
     Which page is drawn follows from the cursor, so the cursor is never off the
     page being looked at. A lineup that fits on one page draws exactly as it
     always has, with no dots and no reserved strip.
+
+    ``artwork`` is one flag per channel, True where a picture will be drawn
+    behind that tile. This function draws NO pictures - it is told where one
+    will be and moves the text out of its way: the name drops into the band
+    under the picture, and the channel number shrinks onto a dark plate in the
+    corner so it stays readable over whatever the artwork contains. A tile
+    whose flag is False draws exactly as it always has, which is what lets
+    pictures be added one show at a time.
 
     The whole page is one ASS string so it occupies a single overlay slot -
     one draw call, one clear.
@@ -455,19 +467,38 @@ def guide_ass(
         alpha = 0 if focused else DIM_ALPHA
 
         parts.append(_tile_frame(x, y, tile_w, tile_h, green, ui, focused=focused))
+
+        has_art = bool(artwork) and index < len(artwork) and artwork[index]
+        if has_art:
+            # The picture takes the middle of the tile, so the number moves to
+            # a plate in its corner and everything else drops below it.
+            art_x, art_y, art_w, art_h = art_rect(rect)
+            band_y, band_h = art_y + art_h, tile_h - art_h
+            parts.append(
+                _number_plate(
+                    art_x + _PLATE_INSET, art_y + _PLATE_INSET,
+                    max(18, int(art_h * 0.16)), number, green, ui, alpha=alpha,
+                )
+            )
+            name_y = band_y + band_h * 0.40
+            on_now_y = band_y + band_h * 0.80
+        else:
+            parts.append(
+                rf"{{\an5\pos({round(cx)},{round(y + tile_h * 0.34)})"
+                rf"{_style(ui, size=num_size, alpha=alpha)}}}{number:02d}"
+            )
+            name_y = y + tile_h * 0.66
+            on_now_y = y + tile_h * 0.90
+
         parts.append(
-            rf"{{\an5\pos({round(cx)},{round(y + tile_h * 0.34)})"
-            rf"{_style(ui, size=num_size, alpha=alpha)}}}{number:02d}"
-        )
-        parts.append(
-            rf"{{\an5\pos({round(cx)},{round(y + tile_h * 0.66)})"
+            rf"{{\an5\pos({round(cx)},{round(name_y)})"
             rf"{_style(ui, size=name_size, alpha=alpha)}}}{_escape(name)}"
         )
         if on_now is not None and index == on_now:
             # Home then OK always means "never mind", so the guide has to say
             # which one you are already watching.
             parts.append(
-                rf"{{\an5\pos({round(cx)},{round(y + tile_h * 0.90)})"
+                rf"{{\an5\pos({round(cx)},{round(on_now_y)})"
                 rf"{_style(ui, size=tag_size, alpha=alpha)}}}ON NOW"
             )
 
@@ -496,6 +527,32 @@ def _page_dots(pages: int, current: int, color: str) -> List[str]:
         )
         for index in range(pages)
     ]
+
+
+def _number_plate(
+    x: float, y: float, size: int, number: int, color: str, ui: UiConfig,
+    *, alpha: int,
+) -> str:
+    """The channel number on a solid dark block, over the picture.
+
+    A green numeral on a bright cartoon frame is unreadable, and the OSD's
+    usual defence - a dark outline and a phosphor glow - only ever helps. The
+    plate guarantees it: whatever the artwork contains, the number is on black.
+
+    Printed television guides solve it the same way, which is a reasonable
+    thing for a box pretending to be a television to copy.
+    """
+    plate_w = round(size * 2.1)
+    plate_h = round(size * 1.35)
+    plate = _filled_rect(
+        x=x, y=y, w=plate_w, h=plate_h, fill="&H00000000",
+        alpha=min(255, alpha + 30),
+    )
+    numeral = (
+        rf"{{\an5\pos({round(x + plate_w / 2)},{round(y + plate_h / 2)})"
+        rf"{_style(ui, size=size, alpha=alpha)}}}{number:02d}"
+    )
+    return plate + "\n" + numeral
 
 
 def _tile_frame(

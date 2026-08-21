@@ -432,6 +432,19 @@ def test_every_move_from_every_position_lands_on_a_real_channel():
 SEVENTEEN = [(n, f"Channel {n}") for n in range(11, 28)]
 
 
+def _name_y(ass, name):
+    """The y of the line that draws ``name``."""
+    for line in ass.split("\n"):
+        if line.endswith(name):
+            return _positions(line)[0][1]
+    raise AssertionError(f"{name!r} was not drawn")
+
+
+def _plates(ass):
+    """Filled dark rectangles: the scrim, plus one behind each channel number."""
+    return [p for p in ass.split("\n") if r"\c&H00000000" in p and r"\p1" in p]
+
+
 def _dots(ass):
     """Every part of the drawing that is a circle - the page dots."""
     return [part for part in ass.split("\n") if " b " in part]
@@ -577,3 +590,94 @@ def test_a_wide_tile_centres_its_picture_rather_than_stretching_it():
     x, _, w, _ = art_rect(tile)
     assert w < tile.w
     assert abs((x - tile.x) - (tile.x + tile.w - (x + w))) < 0.001
+
+
+# --------------------------------------------------------------------------
+# The tile with a picture
+# --------------------------------------------------------------------------
+# guide_ass never draws a picture. It is TOLD where one will be and moves the
+# text out of the way: the name drops into the band underneath, and the channel
+# number shrinks onto a dark plate in the corner.
+
+FOUR_WITH_ART = [True, False, False, False]
+
+
+def test_a_tile_with_a_picture_puts_its_name_below_the_picture():
+    plain = guide_ass(FOUR, cursor=0, ui=_ui())
+    arty = guide_ass(FOUR, cursor=0, ui=_ui(), artwork=FOUR_WITH_ART)
+    assert _name_y(plain, "Los Pequenos") < _name_y(arty, "Los Pequenos")
+
+
+def test_the_name_stays_inside_its_own_tile():
+    arty = guide_ass(FOUR, cursor=0, ui=_ui(), artwork=FOUR_WITH_ART)
+    tile = page_tiles(len(FOUR), cursor=0)[0]
+    assert _name_y(arty, "Los Pequenos") < tile.y + tile.h
+
+
+def test_the_name_sits_below_the_picture_not_on_it():
+    arty = guide_ass(FOUR, cursor=0, ui=_ui(), artwork=FOUR_WITH_ART)
+    tile = page_tiles(len(FOUR), cursor=0)[0]
+    _, art_y, _, art_h = art_rect(tile)
+    assert _name_y(arty, "Los Pequenos") > art_y + art_h
+
+
+def test_a_tile_with_no_picture_is_drawn_exactly_as_before():
+    # The whole reason this is safe to ship before any artwork exists.
+    none = [False, False, False, False]
+    assert guide_ass(FOUR, cursor=0, ui=_ui(), artwork=none) == guide_ass(
+        FOUR, cursor=0, ui=_ui()
+    )
+
+
+def test_omitting_artwork_altogether_is_the_same_as_none_of_it():
+    assert guide_ass(FOUR, cursor=0, ui=_ui(), artwork=None) == guide_ass(
+        FOUR, cursor=0, ui=_ui()
+    )
+
+
+def test_the_channel_number_gets_a_plate_so_it_cannot_be_lost_in_the_picture():
+    # A green numeral on a bright cartoon frame is unreadable, and the glow
+    # alone does not fix it. One plate for the one tile with a picture, plus
+    # the guide's own scrim.
+    assert len(_plates(guide_ass(FOUR, cursor=0, ui=_ui(), artwork=FOUR_WITH_ART))) == 2
+
+
+def test_a_plain_tile_gets_no_plate():
+    assert len(_plates(guide_ass(FOUR, cursor=0, ui=_ui()))) == 1  # the scrim only
+
+
+def test_the_plate_sits_inside_the_picture_area():
+    arty = guide_ass(FOUR, cursor=0, ui=_ui(), artwork=FOUR_WITH_ART)
+    tile = page_tiles(len(FOUR), cursor=0)[0]
+    art_x, art_y, art_w, art_h = art_rect(tile)
+    (px, py), = _positions(_plates(arty)[1])
+    assert art_x <= px <= art_x + art_w
+    assert art_y <= py <= art_y + art_h
+
+
+def test_on_now_stays_in_the_band_with_the_name():
+    arty = guide_ass(FOUR, cursor=0, ui=_ui(), on_now=0, artwork=FOUR_WITH_ART)
+    tile = page_tiles(len(FOUR), cursor=0)[0]
+    _, art_y, _, art_h = art_rect(tile)
+    on_now_y = [y for line in arty.split("\n") if "ON NOW" in line
+                for _, y in _positions(line)][0]
+    assert on_now_y > art_y + art_h
+
+
+def test_the_number_is_still_drawn_when_there_is_a_picture():
+    arty = guide_ass(FOUR, cursor=0, ui=_ui(), artwork=FOUR_WITH_ART)
+    assert "02" in arty
+
+
+def test_a_page_can_mix_tiles_with_and_without_pictures():
+    # Half a page of photographs beside half a page of numerals. Both layouts
+    # have to survive being drawn side by side.
+    mixed = guide_ass(FOUR, cursor=0, ui=_ui(), artwork=[True, False, True, False])
+    for _, name in FOUR:
+        assert name in mixed
+    assert len(_plates(mixed)) == 3  # scrim + two pictures
+
+
+def test_artwork_shorter_than_the_lineup_does_not_crash():
+    # Defensive: a caller that builds the flags from a stale lineup.
+    assert guide_ass(FOUR, cursor=0, ui=_ui(), artwork=[True]) != ""
