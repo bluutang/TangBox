@@ -320,11 +320,34 @@ Nick Jr/                 <- the channel
 Keeping it inside the show folder means it travels with the media: copy a show
 to a new drive and its picture goes too. `tile.png` works as well.
 
-**Supply 4:3 images, 1024x768.** A tile's picture area is 264x198 on the box's
-1280x720 canvas, which is exactly 4:3 — the same shape as the programmes
-themselves. That is 396x432 on a 1080p television, so 1024x768 has room to
-spare and scales down cleanly. Artwork that is not 4:3 is cropped to fill,
-centred, rather than letterboxed.
+#### What size to make them
+
+**1024 × 768.** That is the short answer, and any 4:3 image of about that size
+is fine.
+
+The longer answer, if you want to know why. A tile's picture area is **264 × 198**
+on the box's 1280x720 canvas, which is exactly 4:3 — the same shape as the
+programmes themselves. The television scales that canvas up, so what a screen
+actually uses is:
+
+| Television | Pixels actually used |
+|---|---|
+| 720p | 264 × 198 |
+| **1080p** (yours) | **396 × 297** |
+| 4K | 792 × 594 |
+
+So **792 × 594 is the most any television can use**, and 1024 × 768 covers it
+with room to spare while being a size you can actually find artwork in.
+
+**Bigger is not better here.** The box decodes and resizes each picture every
+time the guide opens or turns a page. A 4000-pixel-wide image gets decoded in
+full and then thrown away down to 396 pixels, which makes the guide slower to
+appear and buys nothing you can see. Somewhere between 800 and 1500 pixels wide
+is the sweet spot.
+
+Artwork that is not 4:3 is cropped to fill, centred, rather than letterboxed —
+so a widescreen image loses its sides and a tall one loses its top and bottom.
+Crop it yourself if you care which part survives.
 
 **A show with no picture keeps the old tile**: a large channel number with the
 show's name under it. So pictures can be added one show at a time, and a box

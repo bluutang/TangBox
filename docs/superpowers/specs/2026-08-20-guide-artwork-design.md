@@ -105,9 +105,17 @@ canvas is 1280x720 and mpv scales it).
 | Text band | 264 x 90 | show name at 43px, `ON NOW` at 31px beneath it |
 | Number plate | on the picture | top-left, dark plate, green numeral |
 
-**Artwork to supply: 4:3, at least 800px wide.** 1024x768 is a good standard to
-keep them all at — it covers a 4K television with room spare and scales down
-cleanly. Anything not 4:3 will be cropped or letterboxed (see Open).
+**Artwork to supply: 4:3, 1024x768.**
+
+The picture area is 264x198 on the canvas, so what a screen actually uses is
+264x198 at 720p, **396x297 at 1080p** (Brian's television) and 792x594 at 4K.
+792x594 is therefore the most any screen can use; 1024x768 covers it with room
+to spare and is a size artwork can actually be found in.
+
+Bigger is actively worse: `MpvPlayer.show_image` decodes and LANCZOS-resizes
+every picture each time the guide opens or turns a page, so a 4000px image is
+decoded in full and then thrown away down to 396px. 800-1500px wide is the
+range. Anything not 4:3 is cropped to fill, centred.
 
 The 90px band is arithmetic, not observation: 43 + 31 = 74, leaving 16px of air
 across two lines. It may prove tight on a television.
