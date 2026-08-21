@@ -8,4 +8,5 @@ PyYAML>=6.0
 # `pip install .[pi]` on the device.
 #
 # python-mpv>=1.0.5   # bindings to libmpv for hardware-accelerated playback
+# Pillow>=10.0.0      # scales show artwork for the channel guide's tile pictures
 # evdev>=1.6.1        # reads USB/IR remotes exposed as Linux input devices
