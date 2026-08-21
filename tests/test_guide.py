@@ -7,10 +7,12 @@ from nostalgiabox.overlay import CANVAS_H, CANVAS_W
 
 from nostalgiabox.guide import (
     Guide,
+    art_rect,
     grid_shape,
     guide_ass,
     page_count,
     page_shape,
+    page_tiles,
 )
 from tests.helpers import FakeClock
 
@@ -430,6 +432,19 @@ def test_every_move_from_every_position_lands_on_a_real_channel():
 SEVENTEEN = [(n, f"Channel {n}") for n in range(11, 28)]
 
 
+def _name_y(ass, name):
+    """The y of the line that draws ``name``."""
+    for line in ass.split("\n"):
+        if line.endswith(name):
+            return _positions(line)[0][1]
+    raise AssertionError(f"{name!r} was not drawn")
+
+
+def _plates(ass):
+    """Filled dark rectangles: the scrim, plus one behind each channel number."""
+    return [p for p in ass.split("\n") if r"\c&H00000000" in p and r"\p1" in p]
+
+
 def _dots(ass):
     """Every part of the drawing that is a circle - the page dots."""
     return [part for part in ass.split("\n") if " b " in part]
@@ -488,3 +503,181 @@ def test_tiles_leave_room_for_the_dots_rather_than_drawing_over_them():
         for _, y in _positions(part)
     ]
     assert min(dot_ys) > max(tile_ys)
+
+
+# --------------------------------------------------------------------------
+# Tile geometry
+# --------------------------------------------------------------------------
+# The picture layer and the text layer both position themselves from this, so
+# a picture cannot end up a few pixels away from the name underneath it.
+
+
+def test_page_tiles_returns_one_rect_per_visible_tile():
+    assert len(page_tiles(17, cursor=0)) == 8
+
+
+def test_page_tiles_returns_only_the_ragged_last_pages_tiles():
+    assert len(page_tiles(17, cursor=16)) == 1
+
+
+def test_page_tiles_carries_the_lineup_index_not_the_position_on_the_page():
+    # Page two's first tile is channel index 8, not 0. The caller uses this to
+    # look up the right channel without repeating the paging arithmetic.
+    assert page_tiles(17, cursor=8)[0].index == 8
+
+
+def test_a_tile_is_264_by_288_on_a_four_by_two_page():
+    tile = page_tiles(17, cursor=0)[0]
+    assert (round(tile.w), round(tile.h)) == (264, 288)
+
+
+def test_an_empty_lineup_has_no_tiles():
+    assert page_tiles(0, cursor=0) == []
+
+
+def test_tiles_do_not_overlap():
+    rects = page_tiles(17, cursor=0)
+    for a in rects:
+        for b in rects:
+            if a.index >= b.index:
+                continue
+            apart = (
+                a.x + a.w <= b.x or b.x + b.w <= a.x
+                or a.y + a.h <= b.y or b.y + b.h <= a.y
+            )
+            assert apart, (a, b)
+
+
+def test_every_tile_is_inside_the_canvas():
+    for count in (1, 4, 8, 9, 17, 30):
+        for rect in page_tiles(count, cursor=0):
+            assert rect.x >= 0 and rect.x + rect.w <= CANVAS_W, count
+            assert rect.y >= 0 and rect.y + rect.h <= CANVAS_H, count
+
+
+def test_the_picture_is_four_three_whatever_the_page_shape():
+    for count, cols, rows in ((17, 4, 2), (17, 5, 3), (30, 3, 2), (4, 4, 2)):
+        tile = page_tiles(count, cursor=0, page_cols=cols, page_rows=rows)[0]
+        _, _, w, h = art_rect(tile)
+        assert abs(w / h - 4 / 3) < 0.001, (count, cols, rows)
+
+
+def test_the_picture_is_264_by_198_on_the_real_box():
+    tile = page_tiles(17, cursor=0)[0]
+    _, _, w, h = art_rect(tile)
+    assert (round(w), round(h)) == (264, 198)
+
+
+def test_the_picture_always_fits_inside_the_tile_that_holds_it():
+    # A lineup small enough for one page gets very wide tiles - 552x305 for
+    # four channels - and a 4:3 picture as wide as that would be 414 tall.
+    for count, cols, rows in ((17, 4, 2), (17, 5, 3), (30, 3, 2), (4, 4, 2), (1, 4, 2)):
+        tile = page_tiles(count, cursor=0, page_cols=cols, page_rows=rows)[0]
+        x, y, w, h = art_rect(tile)
+        assert x >= tile.x and x + w <= tile.x + tile.w + 0.001, (count, cols, rows)
+        assert y >= tile.y and y + h <= tile.y + tile.h + 0.001, (count, cols, rows)
+
+
+def test_the_picture_leaves_a_band_for_the_text_underneath():
+    for count, cols, rows in ((17, 4, 2), (17, 5, 3), (4, 4, 2)):
+        tile = page_tiles(count, cursor=0, page_cols=cols, page_rows=rows)[0]
+        _, y, _, h = art_rect(tile)
+        assert tile.y + tile.h - (y + h) > 20, (count, cols, rows)
+
+
+def test_a_wide_tile_centres_its_picture_rather_than_stretching_it():
+    tile = page_tiles(4, cursor=0)[0]          # 552 x 305, very wide
+    x, _, w, _ = art_rect(tile)
+    assert w < tile.w
+    assert abs((x - tile.x) - (tile.x + tile.w - (x + w))) < 0.001
+
+
+# --------------------------------------------------------------------------
+# The tile with a picture
+# --------------------------------------------------------------------------
+# guide_ass never draws a picture. It is TOLD where one will be and moves the
+# text out of the way: the name drops into the band underneath, and the channel
+# number shrinks onto a dark plate in the corner.
+
+FOUR_WITH_ART = [True, False, False, False]
+
+
+def test_a_tile_with_a_picture_puts_its_name_below_the_picture():
+    plain = guide_ass(FOUR, cursor=0, ui=_ui())
+    arty = guide_ass(FOUR, cursor=0, ui=_ui(), artwork=FOUR_WITH_ART)
+    assert _name_y(plain, "Los Pequenos") < _name_y(arty, "Los Pequenos")
+
+
+def test_the_name_stays_inside_its_own_tile():
+    arty = guide_ass(FOUR, cursor=0, ui=_ui(), artwork=FOUR_WITH_ART)
+    tile = page_tiles(len(FOUR), cursor=0)[0]
+    assert _name_y(arty, "Los Pequenos") < tile.y + tile.h
+
+
+def test_the_name_sits_below_the_picture_not_on_it():
+    arty = guide_ass(FOUR, cursor=0, ui=_ui(), artwork=FOUR_WITH_ART)
+    tile = page_tiles(len(FOUR), cursor=0)[0]
+    _, art_y, _, art_h = art_rect(tile)
+    assert _name_y(arty, "Los Pequenos") > art_y + art_h
+
+
+def test_a_tile_with_no_picture_is_drawn_exactly_as_before():
+    # The whole reason this is safe to ship before any artwork exists.
+    none = [False, False, False, False]
+    assert guide_ass(FOUR, cursor=0, ui=_ui(), artwork=none) == guide_ass(
+        FOUR, cursor=0, ui=_ui()
+    )
+
+
+def test_omitting_artwork_altogether_is_the_same_as_none_of_it():
+    assert guide_ass(FOUR, cursor=0, ui=_ui(), artwork=None) == guide_ass(
+        FOUR, cursor=0, ui=_ui()
+    )
+
+
+def test_the_channel_number_gets_a_plate_so_it_cannot_be_lost_in_the_picture():
+    # A green numeral on a bright cartoon frame is unreadable, and the glow
+    # alone does not fix it. One plate for the one tile with a picture, plus
+    # the guide's own scrim.
+    assert len(_plates(guide_ass(FOUR, cursor=0, ui=_ui(), artwork=FOUR_WITH_ART))) == 2
+
+
+def test_a_plain_tile_gets_no_plate():
+    assert len(_plates(guide_ass(FOUR, cursor=0, ui=_ui()))) == 1  # the scrim only
+
+
+def test_the_plate_sits_inside_the_picture_area():
+    arty = guide_ass(FOUR, cursor=0, ui=_ui(), artwork=FOUR_WITH_ART)
+    tile = page_tiles(len(FOUR), cursor=0)[0]
+    art_x, art_y, art_w, art_h = art_rect(tile)
+    (px, py), = _positions(_plates(arty)[1])
+    assert art_x <= px <= art_x + art_w
+    assert art_y <= py <= art_y + art_h
+
+
+def test_on_now_stays_in_the_band_with_the_name():
+    arty = guide_ass(FOUR, cursor=0, ui=_ui(), on_now=0, artwork=FOUR_WITH_ART)
+    tile = page_tiles(len(FOUR), cursor=0)[0]
+    _, art_y, _, art_h = art_rect(tile)
+    on_now_y = [y for line in arty.split("\n") if "ON NOW" in line
+                for _, y in _positions(line)][0]
+    assert on_now_y > art_y + art_h
+
+
+def test_the_number_is_still_drawn_when_there_is_a_picture():
+    arty = guide_ass(FOUR, cursor=0, ui=_ui(), artwork=FOUR_WITH_ART)
+    assert "02" in arty
+
+
+def test_a_page_can_mix_tiles_with_and_without_pictures():
+    # Half a page of photographs beside half a page of numerals. Both layouts
+    # have to survive being drawn side by side.
+    mixed = guide_ass(FOUR, cursor=0, ui=_ui(), artwork=[True, False, True, False])
+    for _, name in FOUR:
+        assert name in mixed
+    assert len(_plates(mixed)) == 3  # scrim + two pictures
+
+
+def test_artwork_shorter_than_the_lineup_does_not_crash():
+    # Defensive: a caller that builds the flags from a stale lineup.
+    assert guide_ass(FOUR, cursor=0, ui=_ui(), artwork=[True]) != ""

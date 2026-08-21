@@ -299,6 +299,44 @@ Three details in that line worth understanding:
 unplug the drive, drag episodes on from your Mac in Finder, plug it back in. No
 SSH, no turning Part J's protection off, no reboot.
 
+### Giving a show a picture
+
+Neither of the children this box was built for can read yet, so the channel
+guide's tiles carry a picture of each show as well as its name.
+
+Put a **`tile.jpg`** in the show's own folder, beside its seasons:
+
+```
+Nick Jr/                 <- the channel
+├─ Rugrats/              <- the show
+│  ├─ tile.jpg           <- the picture
+│  ├─ Season 01/
+│  └─ Season 02/
+└─ Blue's Clues/
+   ├─ tile.jpg
+   └─ Season 01/
+```
+
+Keeping it inside the show folder means it travels with the media: copy a show
+to a new drive and its picture goes too. `tile.png` works as well.
+
+**Supply 4:3 images, 1024x768.** A tile's picture area is 264x198 on the box's
+1280x720 canvas, which is exactly 4:3 — the same shape as the programmes
+themselves. That is 396x432 on a 1080p television, so 1024x768 has room to
+spare and scales down cleanly. Artwork that is not 4:3 is cropped to fill,
+centred, rather than letterboxed.
+
+**A show with no picture keeps the old tile**: a large channel number with the
+show's name under it. So pictures can be added one show at a time, and a box
+with none looks exactly as it always has.
+
+The picture shown is for the programme that channel would play **if you tuned
+to it** — which is what you get if you then press OK.
+
+> The Pi needs Pillow for this: `pip install Pillow` (or `pip install .[pi]`,
+> which now includes it). Without it the box quietly draws no pictures at all,
+> which is worth knowing if your first `tile.jpg` appears to do nothing.
+
 ### Part F — Set up your channels
 
 Your channel lineup is already written, in `config.pi.yaml`, and came down with

@@ -17,7 +17,9 @@ from __future__ import annotations
 import logging
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Callable, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
+
+from .artwork import crop_box
 
 log = logging.getLogger(__name__)
 
@@ -96,6 +98,21 @@ class Player(ABC):
     @abstractmethod
     def clear_overlay(self, overlay_id: int) -> None:
         """Remove a previously drawn overlay."""
+
+    def show_image(
+        self, slot: int, path: Path, x: int, y: int, w: int, h: int
+    ) -> None:
+        """Draw the picture at ``path`` scaled into ``w`` x ``h`` at ``x, y``.
+
+        A second overlay layer underneath the ASS one: the channel guide's tile
+        pictures. Concrete rather than abstract, and a no-op by default, so a
+        player that cannot draw pictures simply does not draw them - the guide
+        already has to handle a tile with no picture, because most shows have
+        none.
+        """
+
+    def clear_images(self) -> None:
+        """Remove every picture drawn by :meth:`show_image`."""
 
     @abstractmethod
     def close(self) -> None:
@@ -189,6 +206,9 @@ class MpvPlayer(Player):
 
         self._mpv = mpv.MPV(**options)
         self._closed = False
+        # The guide's tile pictures, keyed by slot. Kept so a redraw can
+        # replace one in place and closing can take them all away.
+        self._image_overlays: Dict[int, object] = {}
         # True while a looping filler clip (static / colour bars) is showing, so
         # its (non-)ending never advances the channel.
         self._suppress = True
@@ -340,6 +360,49 @@ class MpvPlayer(Player):
             log.debug("osd-overlay failed, falling back to show-text", exc_info=True)
             self.show_text(_strip_ass(ass), 3.0)
 
+    def show_image(self, slot: int, path: Path, x: int, y: int, w: int, h: int) -> None:
+        """Scale ``path`` into the tile and hand the pixels to mpv.
+
+        libass draws text and shapes but not photographs, so this is a second
+        overlay layer rather than more ASS. Pillow is imported HERE rather than
+        at the top of the module: it is a Pi-only dependency, and every test on
+        a laptop imports this file.
+
+        Every failure is survivable and quiet. A box without Pillow, or with a
+        half-copied JPEG on the drive, draws the tile's text and no picture -
+        which is exactly what a show with no artwork does anyway.
+        """
+        try:
+            from PIL import Image  # Pi-only; see requirements.txt
+        except ImportError:
+            log.debug("Pillow is not installed, so tile pictures are skipped")
+            return
+        try:
+            with Image.open(path) as src:
+                picture = src.convert("RGBA")
+                picture = picture.crop(
+                    crop_box(picture.width, picture.height, w, h)
+                ).resize((w, h), Image.LANCZOS)
+        except (OSError, ValueError):
+            log.warning("could not read tile picture %s", path, exc_info=True)
+            return
+        overlay = self._image_overlays.get(slot)
+        try:
+            if overlay is None:
+                overlay = self._mpv.create_image_overlay()
+                self._image_overlays[slot] = overlay
+            overlay.update(picture, pos=(x, y))
+        except Exception:  # pragma: no cover - libmpv specific
+            log.debug("drawing a tile picture failed", exc_info=True)
+
+    def clear_images(self) -> None:
+        for overlay in self._image_overlays.values():
+            try:
+                overlay.remove()
+            except Exception:  # pragma: no cover - libmpv specific
+                log.debug("removing a tile picture failed", exc_info=True)
+        self._image_overlays.clear()
+
     def clear_overlay(self, overlay_id: int) -> None:
         try:
             self._mpv.command("osd-overlay", overlay_id, "none", "")
@@ -373,6 +436,7 @@ class MockPlayer(Player):
         self.preloaded: Optional[Tuple[Path, float]] = None
         self.messages: List[Tuple[str, float]] = []
         self.overlays: dict[int, str] = {}
+        self.images: dict[int, Tuple[Path, int, int, int, int]] = {}
         self.stops = 0
 
     def _log(self, msg: str) -> None:
@@ -452,6 +516,14 @@ class MockPlayer(Player):
     def clear_overlay(self, overlay_id: int) -> None:
         self.overlays.pop(overlay_id, None)
         self._log(f"CLEAR OVERLAY {overlay_id}")
+
+    def show_image(self, slot: int, path: Path, x: int, y: int, w: int, h: int) -> None:
+        self.images[slot] = (path, x, y, w, h)
+        self._log(f"IMAGE {slot} {path.name} {w}x{h}+{x}+{y}")
+
+    def clear_images(self) -> None:
+        self.images.clear()
+        self._log("CLEAR IMAGES")
 
     def close(self) -> None:
         self.closed = True

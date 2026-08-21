@@ -1,6 +1,9 @@
 # Show Artwork on the Guide Tiles — Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
+
+> **ALL SEVEN TASKS COMPLETE**, branch `guide-artwork`, 448 tests passing.
+> Not yet seen on a television - see the spec's "Only a television can answer these".
 
 **Goal:** Put a picture of the show on each channel-guide tile, so a child who cannot read can choose a channel.
 
@@ -14,7 +17,8 @@
 
 - **Canvas is 1280x720.** All geometry is in canvas pixels; mpv scales to the TV.
 - **A tile is 264x288** on a 4x2 page. The picture is the top **264x198** (exactly 4:3), the text band is the remaining **90px**.
-- **Picture height is derived from tile WIDTH** (`art_h = tile_w * 3 / 4`), never from tile height. This keeps the picture 4:3 at any page size; the band absorbs the remainder.
+- **The picture is the largest 4:3 rectangle that fits above the text band**, centred (`art_rect`). The band is `0.3125` of the tile's height. On the real 264x288 tile that gives exactly 264x198 with a 90px band.
+  > Deriving the height from the tile's WIDTH was the first attempt and is WRONG: a one-page lineup gets 552x305 tiles, where a picture as wide as the tile would be 414 tall and overflow.
 - **Artwork lives at `<channel>/<show>/tile.jpg`**, with `tile.png` also accepted. `<channel>/<show>/` is the layout `show_name_for()` already assumes.
 - **A tile with no artwork draws exactly as it does today.** No visual change to a box with no pictures.
 - **Only the channel number sits on the picture**, on a solid dark plate so contrast never depends on the artwork. Show name and `ON NOW` stay in the band below.
@@ -25,7 +29,7 @@
 
 ---
 
-### Task 1: Ask a channel what it will play next, without playing it
+### Task 1: Ask a channel what it will play next, without playing it ✅ DONE (`4f3eadf`)
 
 **Files:**
 - Modify: `nostalgiabox/playlist.py` (add `ShuffleBag.peek`)
@@ -36,7 +40,7 @@
 - Consumes: nothing.
 - Produces: `ShuffleBag.peek() -> T`, `Channel.peek_next() -> Optional[Path]`.
 
-- [ ] **Step 1: Write the failing test for the bag**
+- [x] **Step 1: Write the failing test for the bag**
 
 In `tests/test_playlist.py`:
 
@@ -58,12 +62,12 @@ def test_peek_refills_an_exhausted_bag_rather_than_failing():
     assert bag.peek() in ("a", "b")
 ```
 
-- [ ] **Step 2: Run it and watch it fail**
+- [x] **Step 2: Run it and watch it fail**
 
 Run: `.venv/bin/python -m pytest tests/test_playlist.py -k peek -v`
 Expected: FAIL, `AttributeError: 'ShuffleBag' object has no attribute 'peek'`
 
-- [ ] **Step 3: Implement `peek`**
+- [x] **Step 3: Implement `peek`**
 
 In `nostalgiabox/playlist.py`, after `next()`:
 
@@ -82,12 +86,12 @@ In `nostalgiabox/playlist.py`, after `next()`:
         return self._queue[-1]
 ```
 
-- [ ] **Step 4: Run it and watch it pass**
+- [x] **Step 4: Run it and watch it pass**
 
 Run: `.venv/bin/python -m pytest tests/test_playlist.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Write the failing test for the channel**
+- [x] **Step 5: Write the failing test for the channel**
 
 In `tests/test_channel.py`:
 
@@ -124,12 +128,12 @@ Match the existing helpers in `tests/test_channel.py` for `make_show` / channel
 construction; if that file builds channels inline rather than with a helper,
 build them the same way inline.
 
-- [ ] **Step 6: Run it and watch it fail**
+- [x] **Step 6: Run it and watch it fail**
 
 Run: `.venv/bin/python -m pytest tests/test_channel.py -k peek_next -v`
 Expected: FAIL, `AttributeError: 'Channel' object has no attribute 'peek_next'`
 
-- [ ] **Step 7: Implement `peek_next`**
+- [x] **Step 7: Implement `peek_next`**
 
 In `nostalgiabox/channel.py`, directly after `tune_in`:
 
@@ -153,12 +157,12 @@ In `nostalgiabox/channel.py`, directly after `tune_in`:
         return self._bag.peek()
 ```
 
-- [ ] **Step 8: Run the whole suite**
+- [x] **Step 8: Run the whole suite**
 
 Run: `.venv/bin/python -m pytest -q`
 Expected: PASS, 395 tests
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add nostalgiabox/playlist.py nostalgiabox/channel.py tests/test_playlist.py tests/test_channel.py
@@ -167,7 +171,7 @@ git commit -m "A channel can say what it would play, without playing it"
 
 ---
 
-### Task 2: Find a show's picture on disk
+### Task 2: Find a show's picture on disk ✅ DONE (`bcb3e6f`)
 
 **Files:**
 - Create: `nostalgiabox/artwork.py`
@@ -177,7 +181,7 @@ git commit -m "A channel can say what it would play, without playing it"
 - Consumes: `show_name_for` from `nostalgiabox.channel`.
 - Produces: `tile_image_for(episode: Path, channel_root: Path) -> Optional[Path]`, `crop_box(src_w: int, src_h: int, dst_w: int, dst_h: int) -> Tuple[int, int, int, int]`, `TILE_FILENAMES: Tuple[str, ...]`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `tests/test_artwork.py`:
 
@@ -266,12 +270,12 @@ def test_the_crop_is_never_bigger_than_the_picture():
         assert 0 <= top < bottom <= src_h
 ```
 
-- [ ] **Step 2: Run them and watch them fail**
+- [x] **Step 2: Run them and watch them fail**
 
 Run: `.venv/bin/python -m pytest tests/test_artwork.py -v`
 Expected: FAIL, `ModuleNotFoundError: No module named 'nostalgiabox.artwork'`
 
-- [ ] **Step 3: Write the module**
+- [x] **Step 3: Write the module**
 
 Create `nostalgiabox/artwork.py`:
 
@@ -358,17 +362,17 @@ def crop_box(
     return (0, top, src_w, top + keep_h)
 ```
 
-- [ ] **Step 4: Run them and watch them pass**
+- [x] **Step 4: Run them and watch them pass**
 
 Run: `.venv/bin/python -m pytest tests/test_artwork.py -v`
 Expected: PASS, 11 tests
 
-- [ ] **Step 5: Run the whole suite**
+- [x] **Step 5: Run the whole suite**
 
 Run: `.venv/bin/python -m pytest -q`
 Expected: PASS, 406 tests
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add nostalgiabox/artwork.py tests/test_artwork.py
@@ -377,7 +381,7 @@ git commit -m "Find a show's picture, and work out which part of it fits"
 
 ---
 
-### Task 3: One source of truth for where a tile sits
+### Task 3: One source of truth for where a tile sits ✅ DONE (`029c941`)
 
 **Files:**
 - Modify: `nostalgiabox/guide.py` (extract `page_tiles`, use it in `guide_ass`)
@@ -385,14 +389,14 @@ git commit -m "Find a show's picture, and work out which part of it fits"
 
 **Interfaces:**
 - Consumes: `page_shape`, `page_count`, `_MARGIN_X`, `_MARGIN_Y`, `_GAP`, `_DOT_STRIP` — all already in `guide.py`.
-- Produces: `TileRect` (NamedTuple with fields `index, x, y, w, h`), `page_tiles(count: int, cursor: int, page_cols: int = DEFAULT_PAGE_COLS, page_rows: int = DEFAULT_PAGE_ROWS) -> List[TileRect]`, `art_height(tile_w: float) -> float`.
+- Produces: `TileRect` (NamedTuple with fields `index, x, y, w, h`), `page_tiles(count: int, cursor: int, page_cols: int = DEFAULT_PAGE_COLS, page_rows: int = DEFAULT_PAGE_ROWS) -> List[TileRect]`, `art_rect(tile: TileRect) -> Tuple[float, float, float, float]` returning `(x, y, w, h)`.
 
 **Why this task exists:** the picture layer and the text layer must agree on
 where a tile is, to the pixel. Two copies of that arithmetic would drift the
 first time anyone changed a margin. This task adds no behaviour: it moves
 existing geometry into a function and proves the drawing is unchanged.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Append to `tests/test_guide.py`:
 
@@ -436,22 +440,23 @@ def test_tiles_do_not_overlap():
 def test_the_picture_is_four_three_whatever_the_tile_is():
     for count, cols, rows in ((17, 4, 2), (17, 5, 3), (30, 3, 2)):
         tile = page_tiles(count, cursor=0, page_cols=cols, page_rows=rows)[0]
-        assert abs(tile.w / art_height(tile.w) - 4 / 3) < 0.001
+        assert abs(_w_over_h(art_rect(tile)) - 4 / 3) < 0.001
 
 
 def test_the_picture_is_198_tall_on_the_real_box():
-    assert round(art_height(264)) == 198
+    assert (round(art_rect(page_tiles(17, 0)[0])[2]),
+            round(art_rect(page_tiles(17, 0)[0])[3])) == (264, 198)
 ```
 
-Add `TileRect`, `page_tiles` and `art_height` to the import block at the top of
+Add `TileRect`, `page_tiles` and `art_rect` to the import block at the top of
 `tests/test_guide.py`.
 
-- [ ] **Step 2: Run them and watch them fail**
+- [x] **Step 2: Run them and watch them fail**
 
-Run: `.venv/bin/python -m pytest tests/test_guide.py -k "page_tiles or art_height or picture_is" -v`
+Run: `.venv/bin/python -m pytest tests/test_guide.py -k "page_tiles or art_rect or picture_is" -v`
 Expected: FAIL, `ImportError: cannot import name 'page_tiles'`
 
-- [ ] **Step 3: Add the geometry**
+- [x] **Step 3: Add the geometry**
 
 In `nostalgiabox/guide.py`, after `page_count` and before `class Guide`:
 
@@ -470,14 +475,27 @@ class TileRect(NamedTuple):
     h: float
 
 
-def art_height(tile_w: float) -> float:
-    """How tall the picture part of a tile is, given its width.
+_BAND_RATIO = 0.3125   # 90px of a 288px tile
+_ART_RATIO = 4 / 3
 
-    Derived from the WIDTH so the picture is 4:3 at any page size - the shape
-    the programmes themselves are. Whatever height is left over becomes the
-    band that carries the show name.
+
+def art_rect(tile: "TileRect") -> Tuple[float, float, float, float]:
+    """``(x, y, w, h)`` of the picture area inside ``tile``.
+
+    The largest 4:3 rectangle that fits above the text band, centred across the
+    tile. On the real box - a 264x288 tile - that is exactly 264x198 with a
+    90px band, which is what the artwork is cut to.
+
+    It has to be FITTED, not derived from the tile's width: a lineup small
+    enough for one page gets 552x305 tiles, and a 4:3 picture as wide as that
+    would be 414 tall and burst out of the bottom of the tile.
     """
-    return tile_w * 3 / 4
+    h = tile.h * (1 - _BAND_RATIO)
+    w = h * _ART_RATIO
+    if w > tile.w:
+        w = tile.w
+        h = w / _ART_RATIO
+    return (tile.x + (tile.w - w) / 2, tile.y, w, h)
 
 
 def page_tiles(
@@ -518,14 +536,14 @@ def page_tiles(
 ```
 
 Add `NamedTuple` to the `typing` import at the top of the file, and add
-`"TileRect"`, `"page_tiles"` and `"art_height"` to `__all__`.
+`"TileRect"`, `"page_tiles"` and `"art_rect"` to `__all__`.
 
-- [ ] **Step 4: Run them and watch them pass**
+- [x] **Step 4: Run them and watch them pass**
 
 Run: `.venv/bin/python -m pytest tests/test_guide.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Make `guide_ass` use it, changing nothing**
+- [x] **Step 5: Make `guide_ass` use it, changing nothing**
 
 In `guide_ass`, replace the geometry block and the `for local, (number, name) in
 enumerate(visible):` loop header. Delete these lines:
@@ -560,7 +578,7 @@ and:
 
 replacing every later use of `first + local` with `rect.index`.
 
-- [ ] **Step 6: Prove the drawing did not change**
+- [x] **Step 6: Prove the drawing did not change**
 
 This task must be invisible. Run the whole suite:
 
@@ -568,7 +586,7 @@ Run: `.venv/bin/python -m pytest -q`
 Expected: PASS, 413 tests. Every existing drawing test passing unchanged IS the
 proof — they assert exact positions.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add nostalgiabox/guide.py tests/test_guide.py
@@ -577,20 +595,20 @@ git commit -m "One source of truth for where a tile sits"
 
 ---
 
-### Task 4: Draw the tile that has a picture
+### Task 4: Draw the tile that has a picture ✅ DONE (`0b8b3c6`)
 
 **Files:**
 - Modify: `nostalgiabox/guide.py` (`guide_ass` gains `artwork`, add `_number_plate`)
 - Test: `tests/test_guide.py`
 
 **Interfaces:**
-- Consumes: `TileRect`, `page_tiles`, `art_height` from Task 3.
+- Consumes: `TileRect`, `page_tiles`, `art_rect` from Task 3.
 - Produces: `guide_ass(..., artwork: Optional[Sequence[bool]] = None)` — one flag per channel in lineup order, True where that channel's tile has a picture behind it.
 
 **Note:** `guide_ass` takes booleans, not paths. It draws no pictures; it only
 lays the text out differently where one will be. The picture itself is Task 6.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Append to `tests/test_guide.py`:
 
@@ -651,7 +669,7 @@ def test_the_plate_sits_inside_the_picture_area():
     plate = [p for p in arty.split("\n") if r"\c&H00000000" in p and r"\p1" in p][1]
     (px, py), = _positions(plate)
     assert tile.x <= px <= tile.x + tile.w
-    assert tile.y <= py <= tile.y + art_height(tile.w)
+    assert tile.y <= py <= tile.y + art_rect(tile)[3]
 
 
 def test_on_now_stays_in_the_band_with_the_name():
@@ -659,7 +677,7 @@ def test_on_now_stays_in_the_band_with_the_name():
     tile = page_tiles(len(FOUR), cursor=0)[0]
     on_now_y = [y for line in arty.split("\n") if "ON NOW" in line
                 for _, y in _positions(line)][0]
-    assert on_now_y > tile.y + art_height(tile.w)
+    assert on_now_y > tile.y + art_rect(tile)[3]
 ```
 
 Add this helper beside `_positions` in the same file:
@@ -673,12 +691,12 @@ def _name_y(ass, name):
     raise AssertionError(f"{name!r} was not drawn")
 ```
 
-- [ ] **Step 2: Run them and watch them fail**
+- [x] **Step 2: Run them and watch them fail**
 
 Run: `.venv/bin/python -m pytest tests/test_guide.py -k "picture or plate or band" -v`
 Expected: FAIL, `TypeError: guide_ass() got an unexpected keyword argument 'artwork'`
 
-- [ ] **Step 3: Add the parameter and the two layouts**
+- [x] **Step 3: Add the parameter and the two layouts**
 
 In `guide_ass`, add to the keyword-only arguments:
 
@@ -701,12 +719,14 @@ lines with a branch:
 ```python
         has_art = bool(artwork) and rect.index < len(artwork) and artwork[rect.index]
         if has_art:
-            picture_h = art_height(tile_w)
-            band_y = y + picture_h
-            band_h = tile_h - picture_h
-            plate_size = max(18, int(picture_h * 0.16))
+            art_x, art_y, art_w, art_h = art_rect(rect)
+            band_y = art_y + art_h
+            band_h = tile_h - art_h
+            plate_size = max(18, int(art_h * 0.16))
             parts.append(
-                _number_plate(x + 8, y + 8, plate_size, number, green, ui, alpha=alpha)
+                _number_plate(
+                    art_x + 8, art_y + 8, plate_size, number, green, ui, alpha=alpha
+                )
             )
             parts.append(
                 rf"{{\an5\pos({round(cx)},{round(band_y + band_h * 0.40)})"
@@ -735,7 +755,7 @@ lines with a branch:
 
 The `_tile_frame` call stays where it is, before this branch, unchanged.
 
-- [ ] **Step 4: Add the plate**
+- [x] **Step 4: Add the plate**
 
 In `nostalgiabox/guide.py`, beside `_tile_frame`:
 
@@ -766,17 +786,17 @@ def _number_plate(
     return plate + "\n" + numeral
 ```
 
-- [ ] **Step 5: Run them and watch them pass**
+- [x] **Step 5: Run them and watch them pass**
 
 Run: `.venv/bin/python -m pytest tests/test_guide.py -v`
 Expected: PASS
 
-- [ ] **Step 6: Run the whole suite**
+- [x] **Step 6: Run the whole suite**
 
 Run: `.venv/bin/python -m pytest -q`
 Expected: PASS, 421 tests
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add nostalgiabox/guide.py tests/test_guide.py
@@ -785,7 +805,7 @@ git commit -m "Lay a tile out around a picture, with the number on a plate"
 
 ---
 
-### Task 5: Teach the player to draw a picture
+### Task 5: Teach the player to draw a picture ✅ DONE (`f751b94`)
 
 **Files:**
 - Modify: `nostalgiabox/player.py` (`Player`, `MpvPlayer`, `MockPlayer`)
@@ -798,7 +818,7 @@ git commit -m "Lay a tile out around a picture, with the number on a plate"
 **Note:** these are concrete methods on `Player` with no-op defaults, NOT
 abstract ones. Making them abstract would break every existing Player.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `tests/test_player_images.py`:
 
@@ -856,12 +876,12 @@ def test_drawing_over_a_slot_replaces_what_was_there():
     assert player.images == {0: (Path("b.jpg"), 5, 5, 20, 20)}
 ```
 
-- [ ] **Step 2: Run them and watch them fail**
+- [x] **Step 2: Run them and watch them fail**
 
 Run: `.venv/bin/python -m pytest tests/test_player_images.py -v`
 Expected: FAIL, `AttributeError: 'MockPlayer' object has no attribute 'show_image'`
 
-- [ ] **Step 3: Add the default methods to `Player`**
+- [x] **Step 3: Add the default methods to `Player`**
 
 In `nostalgiabox/player.py`, inside `class Player`, after `clear_overlay`:
 
@@ -881,7 +901,7 @@ In `nostalgiabox/player.py`, inside `class Player`, after `clear_overlay`:
         """Remove every picture drawn by :meth:`show_image`."""
 ```
 
-- [ ] **Step 4: Implement it on `MockPlayer`**
+- [x] **Step 4: Implement it on `MockPlayer`**
 
 In `MockPlayer.__init__`, beside `self.overlays`:
 
@@ -901,12 +921,12 @@ and as methods:
         self._log("CLEAR IMAGES")
 ```
 
-- [ ] **Step 5: Run them and watch them pass**
+- [x] **Step 5: Run them and watch them pass**
 
 Run: `.venv/bin/python -m pytest tests/test_player_images.py -v`
 Expected: PASS, 4 tests
 
-- [ ] **Step 6: Implement it on `MpvPlayer`**
+- [x] **Step 6: Implement it on `MpvPlayer`**
 
 Pillow is imported inside the method, not at module scope: it is a Pi
 dependency and this module is imported by every test on a laptop without it.
@@ -956,7 +976,7 @@ and as methods:
 
 Add `from .artwork import crop_box` to the imports at the top of `player.py`.
 
-- [ ] **Step 7: Add Pillow to the Pi extras**
+- [x] **Step 7: Add Pillow to the Pi extras**
 
 In `requirements.txt`, under the Pi runtime section:
 
@@ -970,14 +990,14 @@ In `pyproject.toml`, in the `pi` extras list beside `python-mpv`:
     "Pillow>=10.0.0",
 ```
 
-- [ ] **Step 8: Run the whole suite**
+- [x] **Step 8: Run the whole suite**
 
 Run: `.venv/bin/python -m pytest -q`
 Expected: PASS, 425 tests. Pillow is NOT installed locally; if any test fails
 with `ModuleNotFoundError: PIL`, the import is at module scope and must move
 inside the method.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add nostalgiabox/player.py tests/test_player_images.py requirements.txt pyproject.toml
@@ -986,17 +1006,17 @@ git commit -m "Give the player a layer for pictures"
 
 ---
 
-### Task 6: Put the two layers together
+### Task 6: Put the two layers together ✅ DONE (`e3ef3fe`)
 
 **Files:**
 - Modify: `nostalgiabox/app.py` (`_draw_guide`, `_close_guide`)
 - Test: `tests/test_app.py`
 
 **Interfaces:**
-- Consumes: `Channel.peek_next` (Task 1), `tile_image_for` (Task 2), `page_tiles` / `art_height` (Task 3), `guide_ass(artwork=...)` (Task 4), `Player.show_image` / `clear_images` (Task 5).
+- Consumes: `Channel.peek_next` (Task 1), `tile_image_for` (Task 2), `page_tiles` / `art_rect` (Task 3), `guide_ass(artwork=...)` (Task 4), `Player.show_image` / `clear_images` (Task 5).
 - Produces: nothing further.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ⚠️ **`build_app` cannot be used as-is here.** Its `make_show` helper drops
 episodes LOOSE in the channel folder (`tmp_path/dragon/dragon_ep01.mp4`), so
@@ -1077,8 +1097,9 @@ def test_the_picture_sits_in_the_top_of_its_own_tile(tmp_path):
     rect = [r for r in page_tiles(len(app.lineup), app.guide.cursor)
             if r.index == index][0]
     _, x, y, w, h = [e for e in player.images.values() if e[0] == art][0]
-    assert (x, y) == (round(rect.x), round(rect.y))
-    assert (w, h) == (round(rect.w), round(art_height(rect.w)))
+    art_x, art_y, art_w, art_h = art_rect(rect)
+    assert (x, y) == (round(art_x), round(art_y))
+    assert (w, h) == (round(art_w), round(art_h))
 
 
 def test_closing_the_guide_takes_the_pictures_away(tmp_path):
@@ -1109,7 +1130,7 @@ def test_the_guide_timing_out_takes_the_pictures_away(tmp_path):
     assert player.images == {}
 ```
 
-Import `page_tiles` and `art_height` from `nostalgiabox.guide` at the top of
+Import `page_tiles` and `art_rect` from `nostalgiabox.guide` at the top of
 `tests/test_app.py`. Check how `FakeClock` is advanced and how `app.tick()` is
 called in the existing `test_the_guide_closes_itself_after_the_timeout`, and
 match it exactly — the last test above is that one with pictures added.
@@ -1119,14 +1140,14 @@ test uses its own `tmp_path`, so no test can see another's answer. But a test
 that creates `tile.jpg` AFTER the guide has already drawn once would get the
 cached `None`. Create artwork before `app.start()`, as above.
 
-- [ ] **Step 2: Run them and watch them fail**
+- [x] **Step 2: Run them and watch them fail**
 
 Run: `.venv/bin/python -m pytest tests/test_app.py -k picture -v`
 Expected: FAIL. `player.images` stays empty because nothing in the app draws
 pictures yet, so the assertions on it fail. (It exists as an attribute already,
 from Task 5.)
 
-- [ ] **Step 3: Resolve artwork and draw both layers**
+- [x] **Step 3: Resolve artwork and draw both layers**
 
 In `nostalgiabox/app.py`, replace `_draw_guide` with:
 
@@ -1177,13 +1198,9 @@ In `nostalgiabox/app.py`, replace `_draw_guide` with:
             picture = artwork[rect.index]
             if picture is None:
                 continue
+            art_x, art_y, art_w, art_h = art_rect(rect)
             self.player.show_image(
-                slot,
-                picture,
-                round(rect.x),
-                round(rect.y),
-                round(rect.w),
-                round(art_height(rect.w)),
+                slot, picture, round(art_x), round(art_y), round(art_w), round(art_h)
             )
 ```
 
@@ -1191,13 +1208,13 @@ Add to the imports at the top of `app.py`:
 
 ```python
 from .artwork import tile_image_for
-from .guide import Guide, art_height, guide_ass, page_tiles
+from .guide import Guide, art_rect, guide_ass, page_tiles
 ```
 
 (replacing the existing `from .guide import Guide, guide_ass`), and add
 `Sequence` to the `typing` import.
 
-- [ ] **Step 4: Take the pictures away when the guide closes**
+- [x] **Step 4: Take the pictures away when the guide closes**
 
 In `_close_guide`, after `self.overlay.clear_guide()`:
 
@@ -1215,17 +1232,17 @@ follows `self.guide.tick()`, beside `self.overlay.clear_guide()`:
 Without this the pictures would stay on screen after the guide timed out,
 sitting over the programme with no way to remove them.
 
-- [ ] **Step 5: Run them and watch them pass**
+- [x] **Step 5: Run them and watch them pass**
 
 Run: `.venv/bin/python -m pytest tests/test_app.py -v`
 Expected: PASS
 
-- [ ] **Step 6: Run the whole suite**
+- [x] **Step 6: Run the whole suite**
 
 Run: `.venv/bin/python -m pytest -q`
 Expected: PASS, 430 tests
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add nostalgiabox/app.py tests/test_app.py
@@ -1234,13 +1251,13 @@ git commit -m "Draw the pictures under the guide, and take them away with it"
 
 ---
 
-### Task 7: Write down what only a television can answer
+### Task 7: Write down what only a television can answer ✅ DONE
 
 **Files:**
 - Modify: `docs/superpowers/specs/2026-08-20-guide-artwork-design.md`
 - Modify: `README.md`
 
-- [ ] **Step 1: Record the decisions taken during the build**
+- [x] **Step 1: Record the decisions taken during the build**
 
 In the spec, change the status line to:
 
@@ -1253,7 +1270,7 @@ and replace the **Open** section's resolved entries: artwork that is not 4:3 is
 imported lazily inside `MpvPlayer`; a page mixing tiles with and without
 pictures uses **per-tile fallback**.
 
-- [ ] **Step 2: Add the artwork convention to the README**
+- [x] **Step 2: Add the artwork convention to the README**
 
 In `README.md`, in the section describing how to lay out the USB drive, add:
 
@@ -1279,7 +1296,7 @@ A show with no picture keeps the old tile: a big channel number and the show's
 name. So pictures can be added one show at a time.
 ```
 
-- [ ] **Step 3: List what still needs the Pi**
+- [x] **Step 3: List what still needs the Pi**
 
 Add to the spec's Open section:
 
@@ -1295,7 +1312,7 @@ Add to the spec's Open section:
   tile.jpg appears to do nothing.
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add docs/superpowers/specs/2026-08-20-guide-artwork-design.md README.md

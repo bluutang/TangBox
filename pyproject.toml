@@ -23,6 +23,7 @@ dependencies = [
 # Everything needed to actually run on the Raspberry Pi against a TV.
 pi = [
     "python-mpv>=1.0.5",
+    "Pillow>=10.0.0",
     "evdev>=1.6.1",
 ]
 dev = [

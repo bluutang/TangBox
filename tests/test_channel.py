@@ -260,3 +260,52 @@ def test_bad_per_channel_tune_in_is_rejected(tmp_path):
             "channels": [{"number": 2, "path": str(tmp_path / "dragon"),
                           "tune_in": "sideways"}],
         })
+
+
+# --------------------------------------------------------------------------
+# Asking a channel what it would play, without playing it
+# --------------------------------------------------------------------------
+# The guide asks every channel this so a tile can show the programme you would
+# actually GET. It must disturb nothing: no episode drawn from the bag, no
+# resume position spent, no broadcast schedule built.
+
+
+def test_peek_next_names_what_tuning_in_would_play(tmp_path):
+    channel = _channel(tmp_path, tune_in="random")
+    assert channel.peek_next() == channel.tune_in().path
+
+
+def test_peek_next_does_not_consume_the_episode(tmp_path):
+    channel = _channel(tmp_path, tune_in="random")
+    channel.peek_next()
+    channel.peek_next()
+    assert channel.peek_next() == channel.tune_in().path
+
+
+def test_peek_next_on_a_resume_channel_names_where_you_left_off(tmp_path):
+    channel = _channel(tmp_path, tune_in="resume")
+    episode = channel.episodes[2]
+    channel.remember(episode, 90.0)
+    assert channel.peek_next() == episode
+
+
+def test_peek_next_on_a_resume_channel_with_nothing_remembered_falls_back(tmp_path):
+    channel = _channel(tmp_path, tune_in="resume")
+    assert channel.peek_next() in channel.episodes
+
+
+def test_peek_next_on_an_empty_channel_is_none(tmp_path):
+    from nostalgiabox.config import ChannelConfig
+
+    folder = tmp_path / "empty"
+    folder.mkdir()
+    channel = Channel(ChannelConfig(number=9, name="Empty", path=folder), [])
+    assert channel.peek_next() is None
+
+
+def test_peek_next_does_not_build_a_broadcast_schedule(tmp_path):
+    # Building one probes every file with ffprobe, which is far too slow to do
+    # while somebody is holding a remote.
+    channel = _channel(tmp_path, tune_in="broadcast")
+    channel.peek_next()
+    assert channel._broadcast is None

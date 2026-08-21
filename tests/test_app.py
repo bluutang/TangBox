@@ -5,6 +5,7 @@ import pytest
 from nostalgiabox.actions import Action, InputEvent
 from nostalgiabox.app import TVApp
 from nostalgiabox.config import config_from_dict
+from nostalgiabox.guide import art_rect, page_tiles
 from nostalgiabox.input.manager import InputManager
 from nostalgiabox.player import END_EOF, MockPlayer
 from tests.helpers import FakeClock, make_show
@@ -521,6 +522,15 @@ def test_the_dedicated_volume_buttons_still_work_while_the_guide_is_open(tmp_pat
     assert app.volume > before
 
 
+def _drawn_at(ass, text):
+    """Where ``text`` is drawn on the canvas."""
+    for line in ass.split("\n"):
+        if line.endswith(text):
+            x, y = re.search(r"\\pos\((\d+),(\d+)\)", line).groups()
+            return (int(x), int(y))
+    raise AssertionError(f"{text!r} was not drawn")
+
+
 def _on_now_position(ass):
     """Where the ON NOW marker is drawn, or None if it isn't."""
     for line in ass.split("\n"):
@@ -683,3 +693,127 @@ def test_random_closes_the_guide_if_it_is_open(tmp_path):
     send(app, Action.HOME)
     send(app, Action.RANDOM)
     assert not app.guide.is_open
+
+
+# ==========================================================================
+# Tile pictures
+# ==========================================================================
+# build_app's make_show drops episodes LOOSE in the channel folder, so
+# show_name_for finds no show and no picture can ever apply. A real channel is
+# <channel>/<show>/<episode>, so these build that.
+
+
+def build_arty_app(tmp_path, **overrides):
+    """An app whose channel 3 holds a show WITH a picture.
+
+    Channel 2 keeps build_app's loose episodes - no show, so no picture - and
+    is where the box starts. The artwork is on channel 3, deliberately NOT the
+    channel on air: only the channel on air has anything playing, so a picture
+    on any other tile can only have come from asking it what it WOULD play.
+    """
+    show = tmp_path / "nickjr" / "Rugrats"
+    show.mkdir(parents=True)
+    for i in range(1, 4):
+        (show / f"ep{i:02d}.mp4").write_bytes(b"\x00")
+    art = show / "tile.jpg"
+    art.write_bytes(b"not really a jpeg - the box only needs the path")
+
+    app, player, clock = build_app(
+        tmp_path,
+        channels=[
+            {"number": 2, "name": "Dragon Tales", "path": str(tmp_path / "dragon")},
+            {"number": 3, "name": "Nick Jr", "path": str(tmp_path / "nickjr")},
+        ],
+        **overrides,
+    )
+    return app, player, clock, art
+
+
+def test_a_show_with_a_picture_gets_one_drawn_on_its_tile(tmp_path):
+    app, player, _, art = build_arty_app(tmp_path)
+    app.start()
+    send(app, Action.HOME)
+    assert art in [entry[0] for entry in player.images.values()]
+
+
+def test_a_channel_you_are_not_watching_still_gets_a_picture(tmp_path):
+    # The picture is on channel 3; the box is on channel 2. Nothing is playing
+    # on channel 3, so this can only have come from peek_next.
+    app, player, _, art = build_arty_app(tmp_path)
+    app.start()
+    assert app.lineup.current.number == 2
+    send(app, Action.HOME)
+    assert art in [entry[0] for entry in player.images.values()]
+
+
+def test_a_show_with_no_picture_gets_no_picture(tmp_path):
+    app, player, _, _ = build_arty_app(tmp_path)
+    app.start()
+    send(app, Action.HOME)
+    # Channel 2's episodes sit loose with no show folder around them, so there
+    # is nothing to find. One picture drawn, not two.
+    assert len(player.images) == 1
+
+
+def test_a_box_with_no_artwork_at_all_draws_no_pictures(tmp_path):
+    app, player, _ = build_app(tmp_path)
+    app.start()
+    send(app, Action.HOME)
+    assert player.images == {}
+
+
+def test_the_picture_sits_in_the_picture_area_of_its_own_tile(tmp_path):
+    app, player, _, art = build_arty_app(tmp_path)
+    app.start()
+    send(app, Action.HOME)
+    index = app.lineup.index_of(3)
+    rect = [r for r in page_tiles(len(app.lineup), app.guide.cursor)
+            if r.index == index][0]
+    _, x, y, w, h = [e for e in player.images.values() if e[0] == art][0]
+    art_x, art_y, art_w, art_h = art_rect(rect)
+    assert (x, y) == (round(art_x), round(art_y))
+    assert (w, h) == (round(art_w), round(art_h))
+
+
+def test_closing_the_guide_takes_the_pictures_away(tmp_path):
+    app, player, _, _ = build_arty_app(tmp_path)
+    app.start()
+    send(app, Action.HOME)
+    assert player.images
+    send(app, Action.LAST_CHANNEL)  # Back
+    assert player.images == {}
+
+
+def test_tuning_from_the_guide_takes_the_pictures_away(tmp_path):
+    app, player, _, _ = build_arty_app(tmp_path)
+    app.start()
+    send(app, Action.HOME)
+    send(app, Action.ENTER)
+    assert player.images == {}
+
+
+def test_the_guide_timing_out_takes_the_pictures_away(tmp_path):
+    # Otherwise they would sit over the programme with nothing left to remove
+    # them.
+    app, player, clock, _ = build_arty_app(tmp_path, guide={"timeout_seconds": 20})
+    app.start()
+    send(app, Action.HOME)
+    assert player.images
+    clock.advance(21)
+    app.step()
+    assert player.images == {}
+
+
+def test_the_guide_text_knows_which_tiles_have_pictures(tmp_path):
+    # The two layers have to agree: a tile with a picture drops its name into
+    # the band, which a tile without one does not.
+    app, player, _, _ = build_arty_app(tmp_path)
+    app.start()
+    send(app, Action.HOME)
+    drawn = player.overlays[5]
+    index = app.lineup.index_of(3)
+    rect = [r for r in page_tiles(len(app.lineup), app.guide.cursor)
+            if r.index == index][0]
+    _, art_y, _, art_h = art_rect(rect)
+    name_y = _drawn_at(drawn, "Nick Jr")[1]
+    assert name_y > art_y + art_h
