@@ -207,13 +207,13 @@ def _style(ui: UiConfig, *, size: int, alpha: int = 0) -> str:
 # Geometry of the timeline row, on the 1280x720 overlay canvas. The bar ends
 # short of the right safe edge to leave room for the time, which is drawn
 # right-aligned to the same edge as the text above it.
-_BAR_W = 420
-_BAR_H = 6
-# Wide enough for the LONGEST reading, "1:29:40" - seven glyphs at size 30 plus
-# letter_spacing, which is what a feature film shows on the Cine list at its
-# start. Sized for the worst case rather than the common "8:12", because the
-# time is right-aligned and grows leftward into the bar. Eyeball it on the TV.
-_TIME_GUTTER = 160
+_BAR_W = 240
+_BAR_H = 8
+# Just wide enough for the LONGEST reading, "1:29:40" - seven glyphs at size 30
+# plus letter_spacing, about 92px. Sized tight on purpose: a generous gutter
+# leaves a visible hole between the bar and a short reading like "13:48", which
+# reads as two unrelated things rather than one row. Judged from a render.
+_TIME_GUTTER = 105
 
 
 def _progress_ass(position: float, duration: float, ui: UiConfig, *, y: int) -> str:
