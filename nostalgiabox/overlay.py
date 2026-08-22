@@ -78,10 +78,28 @@ class OverlayManager:
         show: Optional[str] = None,
         episode: Optional[str] = None,
         duration: Optional[float] = None,
+        position: Optional[float] = None,
+        runtime: Optional[float] = None,
     ) -> None:
-        """Flash the channel number, name, programme and episode."""
+        """Flash the channel number, name, programme and episode.
+
+        ``position``/``runtime`` add the timeline row. They are supplied by the
+        info button only - a channel change passes neither, so tuning looks
+        exactly as it always has.
+
+        Note ``duration`` is how long the BANNER stays up; ``runtime`` is how
+        long the episode runs. Two different clocks, so two different names.
+        """
         dur = self._config.channel_bug_seconds if duration is None else duration
-        ass = _channel_bug_ass(number, name, self._ui, show=show, episode=episode)
+        ass = _channel_bug_ass(
+            number,
+            name,
+            self._ui,
+            show=show,
+            episode=episode,
+            position=position,
+            duration=runtime,
+        )
         self._player.set_overlay(_ID_CHANNEL, ass, CANVAS_W, CANVAS_H)
         self._arm(_ID_CHANNEL, dur)
 
@@ -186,6 +204,47 @@ def _style(ui: UiConfig, *, size: int, alpha: int = 0) -> str:
 # --------------------------------------------------------------------------
 # ASS builders (free functions so they are easy to unit test)
 # --------------------------------------------------------------------------
+# Geometry of the timeline row, on the 1280x720 overlay canvas. The bar ends
+# short of the right safe edge to leave room for the time, which is drawn
+# right-aligned to the same edge as the text above it.
+_BAR_W = 420
+_BAR_H = 6
+# Wide enough for the LONGEST reading, "1:29:40" - seven glyphs at size 30 plus
+# letter_spacing, which is what a feature film shows on the Cine list at its
+# start. Sized for the worst case rather than the common "8:12", because the
+# time is right-aligned and grows leftward into the bar. Eyeball it on the TV.
+_TIME_GUTTER = 160
+
+
+def _progress_ass(position: float, duration: float, ui: UiConfig, *, y: int) -> str:
+    """The timeline row: unlit track, lit portion, playhead, and time left.
+
+    Returns "" when the length is unknown, so the banner falls back to exactly
+    what it has always drawn rather than showing a bar of invented extent.
+    """
+    if duration <= 0:
+        return ""
+    x1 = _IX1 - _TIME_GUTTER
+    x0 = x1 - _BAR_W
+    filled = bar_fill(position, duration, _BAR_W)
+    mid = y + _BAR_H / 2
+    parts = [
+        _filled_rect(x=x0, y=y, w=_BAR_W, h=_BAR_H, fill=_hex_to_ass(ui.dim_color)),
+    ]
+    if filled:
+        parts.append(
+            _filled_rect(x=x0, y=y, w=filled, h=_BAR_H, fill=_hex_to_ass(ui.color))
+        )
+    # A marker, not a handle: the remote has no seek, so it must not look
+    # grabbable. Sized to read across a room, and no larger.
+    parts.append(_dot(cx=x0 + filled, cy=mid, r=8, fill=_hex_to_ass(ui.color)))
+    parts.append(
+        rf"{{\an9\pos({_IX1},{y - 14}){_style(ui, size=30)}}}"
+        f"{format_remaining(duration - position)}"
+    )
+    return "\n".join(parts)
+
+
 def _channel_bug_ass(
     number: int,
     name: str,
@@ -193,6 +252,8 @@ def _channel_bug_ass(
     *,
     show: Optional[str] = None,
     episode: Optional[str] = None,
+    position: Optional[float] = None,
+    duration: Optional[float] = None,
 ) -> str:
     """Green digital 'CH 03', the channel name, and the programme on it.
 
@@ -213,6 +274,10 @@ def _channel_bug_ass(
         lines.append(
             rf"{{\an9\pos({_IX1},{_IY0 + 192}){_style(ui, size=28)}}}{_escape(episode)}"
         )
+    if position is not None and duration is not None:
+        row = _progress_ass(position, duration, ui, y=_IY0 + 248)
+        if row:
+            lines.append(row)
     return "\n".join(lines)
 
 
@@ -254,6 +319,32 @@ def _message_ass(text: str, ui: UiConfig) -> str:
 
 def _standby_ass(ui: UiConfig) -> str:
     return rf"{{\an5\pos({_FRAME_CX},{CANVAS_H // 2}){_style(ui, size=72)}}}STANDBY"
+
+
+def bar_fill(position: float, duration: float, width: int) -> int:
+    """How many pixels of a ``width``-wide bar are behind the playhead.
+
+    A duration of zero means "length unknown" - the static loop has no
+    meaningful end - and fills nothing rather than guessing.
+    """
+    if duration <= 0:
+        return 0
+    fraction = min(1.0, max(0.0, position / duration))
+    return int(round(fraction * width))
+
+
+def format_remaining(seconds: float) -> str:
+    """Seconds left as ``M:SS``, or ``H:MM:SS`` once there is an hour to show.
+
+    Never negative: the last moments of a file can report a position past its
+    own duration, and "-0:01 left" would read as a fault.
+    """
+    total = max(0, int(seconds))
+    hours, rest = divmod(total, 3600)
+    minutes, secs = divmod(rest, 60)
+    if hours:
+        return f"{hours}:{minutes:02d}:{secs:02d}"
+    return f"{minutes}:{secs:02d}"
 
 
 def _filled_rect(

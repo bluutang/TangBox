@@ -785,11 +785,16 @@ class TVApp:
         """Re-show the banner for whatever is on RIGHT NOW."""
         channel = self.lineup.current
         path = self._billed_path()
+        # The timeline rides along on THIS banner only. Channel changes call
+        # show_channel_bug without these, so tuning looks exactly as it always
+        # has - which is what the children see all evening.
         self.overlay.show_channel_bug(
             channel.number,
             channel.name,
             show=self._show_name(channel, path),
             episode=episode_label_for(path) if path is not None else None,
+            position=self.player.get_time_pos(),
+            runtime=self.player.get_duration(),
         )
 
     def _toggle_standby(self) -> None:

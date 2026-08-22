@@ -94,6 +94,15 @@ class Player(ABC):
     def get_time_pos(self) -> Optional[float]:
         """Current playback position in seconds, or None if nothing is playing."""
 
+    def get_duration(self) -> Optional[float]:
+        """How long the current item runs, or None when that is unknowable.
+
+        Concrete, not abstract, so a player written before the timeline existed
+        can still be instantiated - it simply reports nothing and the banner
+        falls back to what it always drew.
+        """
+        return None
+
     @abstractmethod
     def show_text(self, text: str, duration: float) -> None:
         """Show a plain OSD message for ``duration`` seconds."""
@@ -359,6 +368,13 @@ class MpvPlayer(Player):
         except Exception:  # noqa: BLE001
             return None
 
+    def get_duration(self) -> Optional[float]:
+        try:
+            length = self._mpv.duration
+        except Exception:  # noqa: BLE001
+            return None
+        return float(length) if length else None
+
     # -- OSD ----------------------------------------------------------------
     def show_text(self, text: str, duration: float) -> None:
         try:
@@ -457,6 +473,7 @@ class MockPlayer(Player):
         self.images: dict[int, Tuple[Path, int, int, int, int]] = {}
         self.stops = 0
         self.crt_shader: Optional[Path] = None
+        self.duration: float = 0.0
 
     def _log(self, msg: str) -> None:
         if self.verbose:
@@ -526,6 +543,11 @@ class MockPlayer(Player):
 
     def get_time_pos(self) -> Optional[float]:
         return self.time_pos if self.current is not None else None
+
+    def get_duration(self) -> Optional[float]:
+        if self.current is None or not self.duration:
+            return None
+        return self.duration
 
     def show_text(self, text: str, duration: float) -> None:
         self.messages.append((text, duration))
