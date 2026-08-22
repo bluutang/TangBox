@@ -32,6 +32,7 @@ from .channel import (
     show_name_for,
 )
 from .artwork import tile_image_for
+from .bedtime import deadline_for, due_mark, initial_marks
 from .config import Config
 from .crt import (
     CONFIG_RUNG,
@@ -115,6 +116,13 @@ class TVApp:
         self._crt_index = CONFIG_RUNG
         self._crt_shader_dir = crt_shader_dir or default_shader_path().parent
         self._crt_paths: Optional[tuple[Optional[Path], ...]] = None
+
+        # Bedtime. The deadline is fixed the moment the button is pressed and
+        # NOTHING afterwards moves it - not a channel change, not an episode
+        # ending. Otherwise a 4-year-old learns that channel-up buys another
+        # twenty minutes, and this becomes a negotiating position.
+        self.bedtime_deadline: Optional[float] = None
+        self._bedtime_marks: set[int] = set()
 
         # Direct channel entry ("type 1 then 2 -> channel 12").
         self._digit_buffer = ""
@@ -323,6 +331,7 @@ class TVApp:
         self._maybe_commit_switch(now)
         self._maybe_commit_digits(now)
         self._drain_playback_events()
+        self._tick_bedtime(now)
 
         event = self.input.get(timeout=timeout if block else 0.0)
         if event is not None:
@@ -393,6 +402,7 @@ class TVApp:
             Action.HOME: self._open_guide,
             Action.RANDOM: self._random_channel,
             Action.CRT_CYCLE: self._cycle_crt,
+            Action.BEDTIME: self._toggle_bedtime,
         }
         if action == Action.DIGIT:
             self._push_digit(event.value or 0)
@@ -406,6 +416,36 @@ class TVApp:
         # buttons are used while browsing - so redraw it.
         if self.guide.is_open:
             self._draw_guide()
+
+    def _toggle_bedtime(self) -> None:
+        """Arm the sign-off, or cancel one already armed."""
+        if self.bedtime_deadline is not None:
+            self.bedtime_deadline = None
+            self._bedtime_marks = set()
+            self.overlay.show_message("CARRY ON")
+            return
+        now = self._clock()
+        self.bedtime_deadline = deadline_for(
+            now,
+            position=self.player.get_time_pos() or 0.0,
+            runtime=self.player.get_duration(),
+        )
+        remaining = self.bedtime_deadline - now
+        self._bedtime_marks = initial_marks(remaining)
+        self.overlay.show_message(f"{int(remaining // 60)} MIN")
+
+    def _tick_bedtime(self, now: float) -> None:
+        """Count down to the sign-off, then take the box off the air."""
+        if self.bedtime_deadline is None or self.powered_off:
+            return
+        remaining = self.bedtime_deadline - now
+        if remaining <= 0:
+            self._power_off()
+            return
+        mark = due_mark(remaining, self._bedtime_marks)
+        if mark is not None:
+            self._bedtime_marks.add(mark)
+            self.overlay.show_message(f"{mark} MIN")
 
     def _cycle_crt(self) -> None:
         """Step the CRT picture effect to the next look and name it on screen."""
@@ -867,6 +907,18 @@ class TVApp:
                 # seen it.
                 self._advance_sign_on(self._sign_on_stage)
                 continue
+            # With bedtime armed, a finished programme is the end of the
+            # evening: never start something nobody is going to watch. The
+            # deadline is the LATEST it can end, not the earliest.
+            if (
+                reason in (END_EOF, END_ERROR)
+                and self.bedtime_deadline is not None
+                and not self.standby
+                and self._break_queue == []
+                and self._pending_episode is None
+            ):
+                self._power_off()
+                return
             # Coalesce: only advance once even if several events queued up.
             if reason in (END_EOF, END_ERROR) and not advanced and not self.standby:
                 self._advance_current()
