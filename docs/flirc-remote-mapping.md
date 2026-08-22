@@ -28,6 +28,12 @@ codes. `AUX` then drives TangBox and `TV` drives the television.
 Without this, one press talks to both at once — channel-up would change TangBox
 *and* the telly.
 
+> ⚠️ **This creates a mode the kids can get lost in.** If someone presses `TV`,
+> the number buttons drive the television instead of TangBox and nothing works
+> as expected until `AUX` is pressed again. Worth watching. Since TangBox now
+> switches the TV on and off by itself over CEC and the input stays on HDMI 3,
+> the `TV` side may never be needed at all in normal use.
+
 ### Choose a cable or satellite code. Never an audio one.
 
 The Flirc does not learn what a code *means* — it learns the shape of the
@@ -58,12 +64,6 @@ Front cameras usually do not filter infrared, so the LED appears on screen as a
 pale purple-white flash whenever a button genuinely emits something. Press the
 awkward ones — `•`, 🏠, ☰, the arrows, `CH` ▲/▼. A button that stays dark is one
 the Flirc can never learn, and it is much cheaper to find out now.
-
-> ⚠️ **This creates a mode the kids can get lost in.** If someone presses `TV`,
-> the number buttons drive the television instead of TangBox and nothing works
-> as expected until `AUX` is pressed again. Worth watching. Since TangBox now
-> switches the TV on and off by itself over CEC and the input stays on HDMI 3,
-> the `TV` side may never be needed at all in normal use.
 
 ## The mapping
 
