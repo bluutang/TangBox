@@ -78,7 +78,7 @@ the Flirc can never learn, and it is much cheaper to find out now.
 | **OK** | `Enter` | Tune to the highlighted channel, or open the guide |
 | `ENTER` | `Enter` | Same as OK — harmless duplicate |
 | 🏠 house | `h` | Open and close the channel guide |
-| ☰ hamburger | `i` | Re-show the channel banner — what am I watching? |
+| ☰ hamburger | `i` | The channel banner, now with a progress bar and time left |
 | ↰ back | `l` (lowercase L) | Leave the guide, or jump to the previous channel |
 | `ch⤸` return | `l` | Same as back — this is the classic "last channel" button |
 | `CH` ▲ | `Page Up` | **Always** changes channel, even with the guide open |
@@ -115,6 +115,26 @@ file properly afterwards.
 
 The point is being able to A/B the picture on the actual television while real
 footage is playing — the one thing that cannot be judged from a Mac.
+
+### What ☰ shows
+
+The channel number, name, programme and episode — and beneath them a **timeline**:
+a progress bar with the playhead, and **how long is left** of what is playing.
+
+```
+CH 02
+Dragon Tales
+Tales from the Playground
+━━━━━━━━●──────────  8:12
+```
+
+The bar appears **only on ☰**. A channel change flashes the same banner without
+it, so tuning looks exactly as it always has — which is what the children see all
+evening. When the length cannot be known (the no-signal static loops forever)
+nothing is drawn rather than a bar of invented extent.
+
+The dot is a position marker, not a handle. The remote has no seek, so it must
+not look draggable.
 
 ### Why the hamburger is the info button
 
