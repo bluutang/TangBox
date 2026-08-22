@@ -40,6 +40,7 @@ class Action(Enum):
     HOME = auto()           # open/close the channel guide
     RANDOM = auto()         # tune to a random channel
     CRT_CYCLE = auto()      # step the CRT picture effect through its presets
+    BEDTIME = auto()        # finish up, then sign off and halt (press again to cancel)
 
 
 @dataclass(frozen=True)

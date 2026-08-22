@@ -17,9 +17,9 @@ irrelevant.** We choose what each one does.
 
 ## It fits
 
-**28 buttons taught. 1 held back** (`✱`, for the bedtime sign-off, not built
-yet). **3 never touched** (`SETUP`, `TV`, `AUX`). Nothing the box can do is left
-unreachable.
+**29 buttons taught. Nothing held back.** **3 never touched** (`SETUP`, `TV`,
+`AUX`) — they are mode selectors and emit nothing of their own. Every button the
+remote can send is now spoken for, and nothing the box can do is unreachable.
 
 ## Do this first: put the remote in AUX mode
 
@@ -88,6 +88,7 @@ the Flirc can never learn, and it is much cheaper to find out now.
 | 🔇 mute | `m` | Mute |
 | **`•`** | `.` (full stop) | ⭐ **Random channel** |
 | `INPUT` | `c` | Step the CRT picture effect through its four looks |
+| `✱` star | `b` | Finish up, then sign off and halt — press again to cancel |
 | ⏻ power | `p` | Sign-off collapse, TV off, clean shutdown |
 
 ### Why the `•` key matters most
@@ -115,6 +116,47 @@ file properly afterwards.
 
 The point is being able to A/B the picture on the actual television while real
 footage is playing — the one thing that cannot be judged from a Mac.
+
+### What `✱` does: finish up, then bed
+
+**One rule.** Press it and the box stops at the end of this programme, or after
+15 minutes, whichever comes sooner — *except* that anything running 25 minutes
+or less is always allowed to finish.
+
+| On screen | Runtime | Left when pressed | Signs off |
+|---|---|---|---|
+| Normal episode, just started | 22 min | 21 min | **at 21 min** — short enough to finish |
+| Normal episode, nearly done | 22 min | 5 min | at 5 min |
+| Long episode | 45 min | 30 min | at 15 min |
+| Film | 90 min | 70 min | at 15 min |
+| Film, nearly over | 90 min | 9 min | at 9 min |
+
+Nothing is labelled a film. The **runtime** decides, which is why there is one
+rule rather than two. An earlier design tried to infer film-or-episode from
+duration and parked itself; once the box could ask how long was left, the
+distinction stopped mattering.
+
+**The deadline is fixed the moment you press.** Nothing afterwards moves it —
+not a channel change, not an episode ending. Otherwise a 4-year-old learns that
+channel-up buys another twenty minutes.
+
+**It never starts something new.** If the programme ends before the deadline,
+that is the end of the evening.
+
+**Countdown banners** at 15, 10, 5, 3, 2 and 1 minutes, skipping any already
+past — press with eight minutes left and you get 5, 3, 2, 1. The numeral is the
+big element because neither child can read the word.
+
+**Press `✱` again to cancel**, and it says `CARRY ON`.
+
+The ending itself is the same one the power button has always used: the sign-off
+collapse, the television switched off over CEC, then a clean halt. `✱` only
+decides when to call it.
+
+> One accepted rough edge: if you press `✱` **during a commercial break**, the
+> episode that break is holding still plays. The 15-minute deadline is the
+> backstop, so it cannot run away — it just may not stop at a programme
+> boundary.
 
 ### What ☰ shows
 
@@ -157,7 +199,6 @@ you skip one.
 |---|---|
 | `SETUP` | Programs the remote itself. Teaching it to the Flirc could make the remote unconfigurable. |
 | `TV` / `AUX` | Device selectors. They switch which device the remote talks to; they are not TangBox actions. |
-| `✱` star | **Reserved, and unassigned.** The last spare button. Bedtime sign-off is one proposal, not a decision — Brian wants alternatives weighed first. |
 
 > 🔴 **Never teach any button `Esc` or `q`.** Both map to QUIT, which exits
 > TangBox. systemd restarts it after about three seconds, so it recovers — but
