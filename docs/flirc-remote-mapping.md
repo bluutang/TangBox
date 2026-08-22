@@ -17,8 +17,9 @@ irrelevant.** We choose what each one does.
 
 ## It fits
 
-**27 buttons taught. 2 held back for Phase 3** (`INPUT`, `✱`). **3 never
-touched** (`SETUP`, `TV`, `AUX`). Nothing the box can do is left unreachable.
+**28 buttons taught. 1 held back** (`✱`, for the bedtime sign-off, not built
+yet). **3 never touched** (`SETUP`, `TV`, `AUX`). Nothing the box can do is left
+unreachable.
 
 ## Do this first: put the remote in AUX mode
 
@@ -86,6 +87,7 @@ the Flirc can never learn, and it is much cheaper to find out now.
 | `VOL` **−** | `-` | **Always** volume, even with the guide open |
 | 🔇 mute | `m` | Mute |
 | **`•`** | `.` (full stop) | ⭐ **Random channel** |
+| `INPUT` | `c` | Step the CRT picture effect through its four looks |
 | ⏻ power | `p` | Sign-off collapse, TV off, clean shutdown |
 
 ### Why the `•` key matters most
@@ -94,6 +96,25 @@ The users are 2 and 4, and neither can read. One button that always does
 something good, needs no aiming and no reading, may be the only control the
 2-year-old ever uses. It is on the number pad next to `0`, it is easy to find by
 feel, and the guide spec named this exact key before the remote was chosen.
+
+### What `INPUT` does
+
+It steps the CRT picture effect round a ladder of four looks, naming each one in
+the green banner as it goes:
+
+**NONE → SOFT FRAME → GLASS & GRAIN → HEAVY CRT →** (back to NONE)
+
+`GLASS & GRAIN` is read live from `config.yaml`, so whatever is tuned there is
+always a rung in its own right and never more than a press away. The box starts
+on it.
+
+**Nothing is saved.** A restart returns to whatever the file says, so a child
+cannot permanently change how the television looks and the config file stays the
+source of truth. A look you fall in love with on the sofa gets written into the
+file properly afterwards.
+
+The point is being able to A/B the picture on the actual television while real
+footage is playing — the one thing that cannot be judged from a Mac.
 
 ### Why the hamburger is the info button
 
@@ -116,8 +137,7 @@ you skip one.
 |---|---|
 | `SETUP` | Programs the remote itself. Teaching it to the Flirc could make the remote unconfigurable. |
 | `TV` / `AUX` | Device selectors. They switch which device the remote talks to; they are not TangBox actions. |
-| `INPUT` | **Reserved.** Phase 3 puts the CRT intensity cycle here. |
-| `✱` star | **Reserved.** Phase 3 puts the bedtime sign-off here. |
+| `✱` star | **Reserved.** The bedtime sign-off goes here, once it is built. |
 
 > 🔴 **Never teach any button `Esc` or `q`.** Both map to QUIT, which exits
 > TangBox. systemd restarts it after about three seconds, so it recovers — but

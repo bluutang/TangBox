@@ -35,6 +35,7 @@ def build_app(tmp_path, *, assets_dir=None, **overrides):
         InputManager([]),
         clock=clock,
         assets_dir=assets_dir,
+        crt_shader_dir=tmp_path / "crt-shaders",
     )
     return app, player, clock
 

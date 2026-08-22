@@ -173,3 +173,18 @@ def test_every_dev_keyboard_shortcut_also_works_on_a_real_remote():
         {key for key in _CHAR_TO_KEY.values() if evdev_key_to_event(key) is None}
     )
     assert not unreachable, f"typed-only, dead on a remote: {unreachable}"
+
+
+def test_evdev_crt_cycle_on_c():
+    # The Flirc teaches the remote's INPUT button the letter `c`.
+    assert evdev_key_to_event("KEY_C").action == Action.CRT_CYCLE
+
+
+def test_stdin_c_cycles_the_crt():
+    assert stdin_char_to_event("c").action == Action.CRT_CYCLE
+    assert stdin_char_to_event("C").action == Action.CRT_CYCLE
+
+
+def test_crt_cycle_is_bindable_from_config():
+    mapped = parse_key_overrides({"f7": "crt_cycle"})
+    assert mapped["KEY_F7"].action == Action.CRT_CYCLE
