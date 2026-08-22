@@ -681,3 +681,31 @@ def test_a_page_can_mix_tiles_with_and_without_pictures():
 def test_artwork_shorter_than_the_lineup_does_not_crash():
     # Defensive: a caller that builds the flags from a stale lineup.
     assert guide_ass(FOUR, cursor=0, ui=_ui(), artwork=[True]) != ""
+
+
+# --- page dots -------------------------------------------------------------
+
+from nostalgiabox.guide import dot_style  # noqa: E402
+
+
+def test_the_current_page_dot_is_bigger_not_just_brighter():
+    """Brightness alone did not read: the glow fills in the difference.
+
+    Seen in a render on 2026-08-22 - the lit dot was indistinguishable from
+    the unlit ones. Size survives glow, TV scaling and ten feet of sofa.
+    """
+    here_r, _ = dot_style(1, current=1)
+    away_r, _ = dot_style(0, current=1)
+    assert here_r > away_r
+
+
+def test_the_current_page_dot_is_fully_lit():
+    _, alpha = dot_style(2, current=2)
+    assert alpha == 0
+
+
+def test_other_page_dots_are_dimmer_than_the_tiles_are():
+    from nostalgiabox.guide import DIM_ALPHA
+
+    _, alpha = dot_style(0, current=2)
+    assert alpha > DIM_ALPHA

@@ -382,6 +382,8 @@ DIM_ALPHA = 150
 # The strip is reserved out of the tile area, so a name and a dot can never be
 # drawn on top of each other. Nothing is reserved on a single-page lineup.
 _DOT_R = 6
+_DOT_GROW = 3          # how much bigger the current page's dot is
+_DOT_AWAY_ALPHA = 205  # dimmer than the tiles: the dots are small and glow
 _DOT_SPACING = 26
 _DOT_STRIP = 34
 
@@ -521,12 +523,25 @@ def _page_dots(pages: int, current: int, color: str) -> List[str]:
         _dot(
             cx=x0 + index * _DOT_SPACING,
             cy=cy,
-            r=_DOT_R,
+            r=dot_style(index, current)[0],
             fill=color,
-            alpha=0 if index == current else DIM_ALPHA,
+            alpha=dot_style(index, current)[1],
         )
         for index in range(pages)
     ]
+
+
+def dot_style(index: int, current: int) -> Tuple[int, int]:
+    """Radius and alpha for one page dot.
+
+    The current page's dot is BIGGER as well as brighter. Brightness alone did
+    not read in a render: the glow fills the gap between alpha 0 and alpha 150,
+    and the dots are only six pixels across to begin with. A size difference
+    survives the glow, the television's 1.5x scaling, and the sofa.
+    """
+    if index == current:
+        return _DOT_R + _DOT_GROW, 0
+    return _DOT_R, _DOT_AWAY_ALPHA
 
 
 def _number_plate(
