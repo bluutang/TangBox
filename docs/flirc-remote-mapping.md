@@ -28,6 +28,37 @@ codes. `AUX` then drives TangBox and `TV` drives the television.
 Without this, one press talks to both at once — channel-up would change TangBox
 *and* the telly.
 
+### Choose a cable or satellite code. Never an audio one.
+
+The Flirc does not learn what a code *means* — it learns the shape of the
+infrared flash and staples a keystroke to it, so brand and device type are
+irrelevant to the dongle. What is not irrelevant: **a universal remote only
+emits infrared for buttons its code set defines.** Press one the code set has no
+meaning for and nothing comes out at all — no flash, nothing to learn. The
+category decides how much of the keypad is alive.
+
+| Category | Verdict |
+|---|---|
+| **Cable / satellite** | Best. The fullest keypad: digits, arrows, OK, menu, guide, info, channel, volume, and the `•` dot, which exists as the sub-channel separator for numbers like 5.1. |
+| TV | Same coverage, but some televisions answer to other brands' generic codes. A satellite code the Samsung has never heard of cannot. |
+| DVD / VCR | Avoid — no sub-channel dot. |
+| Audio / receiver | Worst. Amplifiers have no arrows, no channel up/down, no guide and no dot. |
+
+The `•` dot is the button that matters most (see below), and it is silent under
+a DVD or audio code. That alone decides the category.
+
+Whether `AUX` accepts every category on the 83036 is **unconfirmed** — it varies
+between GE models. If it rejects all cable codes, use whatever it does take and
+expect some dead buttons.
+
+### Check the keypad before teaching 27 buttons
+
+Point the remote at a phone's **front-facing** camera and open the camera app.
+Front cameras usually do not filter infrared, so the LED appears on screen as a
+pale purple-white flash whenever a button genuinely emits something. Press the
+awkward ones — `•`, 🏠, ☰, the arrows, `CH` ▲/▼. A button that stays dark is one
+the Flirc can never learn, and it is much cheaper to find out now.
+
 > ⚠️ **This creates a mode the kids can get lost in.** If someone presses `TV`,
 > the number buttons drive the television instead of TangBox and nothing works
 > as expected until `AUX` is pressed again. Worth watching. Since TangBox now
