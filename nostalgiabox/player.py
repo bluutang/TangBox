@@ -60,6 +60,13 @@ class Player(ABC):
         """
         self.play(target_path, start=start)
 
+    def set_crt_shader(self, path: Optional[Path]) -> None:
+        """Swap the CRT picture effect while playback continues.
+
+        ``None`` means no effect at all. The default does nothing, so a player
+        that cannot change shaders simply keeps the look it started with.
+        """
+
     def preload_next(self, target_path: Path, *, start: float = 0.0) -> None:
         """Begin loading ``target_path`` in the background while the CURRENT item
         keeps playing. Call :meth:`commit_switch` to cut over once it's ready.
@@ -236,6 +243,17 @@ class MpvPlayer(Player):
                     log.exception("error in on_end (error) callback")
 
     # -- playback -----------------------------------------------------------
+    def set_crt_shader(self, path: Optional[Path]) -> None:
+        # Attribute assignment sets the PROPERTY (`glsl-shaders`), which takes
+        # effect on the video already playing. Item assignment would set
+        # `options/glsl-shaders` instead - the load-time option - and the
+        # picture on screen would not change. Each rung has its own filename,
+        # so mpv cannot serve a cached compile of the previous look either.
+        try:
+            self._mpv.glsl_shaders = str(path) if path else ""
+        except Exception:
+            log.warning("could not switch the CRT shader", exc_info=True)
+
     def play(self, path: Path, *, start: float = 0.0) -> None:
         # Enable end detection only for real content.
         self._suppress = False
@@ -438,10 +456,14 @@ class MockPlayer(Player):
         self.overlays: dict[int, str] = {}
         self.images: dict[int, Tuple[Path, int, int, int, int]] = {}
         self.stops = 0
+        self.crt_shader: Optional[Path] = None
 
     def _log(self, msg: str) -> None:
         if self.verbose:
             print(f"[player] {msg}")
+
+    def set_crt_shader(self, path: Optional[Path]) -> None:
+        self.crt_shader = path
 
     def play(self, path: Path, *, start: float = 0.0) -> None:
         self.current = path

@@ -39,6 +39,7 @@ class Action(Enum):
     NAV_RIGHT = auto()
     HOME = auto()           # open/close the channel guide
     RANDOM = auto()         # tune to a random channel
+    CRT_CYCLE = auto()      # step the CRT picture effect through its presets
 
 
 @dataclass(frozen=True)

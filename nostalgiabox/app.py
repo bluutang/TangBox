@@ -33,6 +33,12 @@ from .channel import (
 )
 from .artwork import tile_image_for
 from .config import Config
+from .crt import (
+    CONFIG_RUNG,
+    crt_ladder,
+    default_shader_path,
+    write_ladder_shaders,
+)
 from .guide import Guide, art_rect, guide_ass, page_tiles
 from .input.manager import InputManager, create_backends
 from .interstitial import CommercialPool
@@ -70,6 +76,7 @@ class TVApp:
         clock: Callable[[], float] = time.monotonic,
         assets_dir: Optional[Path] = None,
         sleep: Callable[[float], None] = time.sleep,
+        crt_shader_dir: Optional[Path] = None,
     ) -> None:
         self.config = config
         self.player = player
@@ -99,6 +106,15 @@ class TVApp:
             page_rows=config.guide.page_rows,
         )
         self._rng = random.Random(config.shuffle_seed)
+
+        # The CRT intensity ladder, stepped by the remote's INPUT button. The
+        # box starts on whatever config.yaml says and NEVER writes back to it:
+        # a child cannot permanently change how the television looks, and the
+        # file stays the source of truth across a restart.
+        self._crt_ladder = crt_ladder(config.crt)
+        self._crt_index = CONFIG_RUNG
+        self._crt_shader_dir = crt_shader_dir or default_shader_path().parent
+        self._crt_paths: Optional[tuple[Optional[Path], ...]] = None
 
         # Direct channel entry ("type 1 then 2 -> channel 12").
         self._digit_buffer = ""
@@ -376,6 +392,7 @@ class TVApp:
             Action.NAV_LEFT: self._volume_down,
             Action.HOME: self._open_guide,
             Action.RANDOM: self._random_channel,
+            Action.CRT_CYCLE: self._cycle_crt,
         }
         if action == Action.DIGIT:
             self._push_digit(event.value or 0)
@@ -389,6 +406,18 @@ class TVApp:
         # buttons are used while browsing - so redraw it.
         if self.guide.is_open:
             self._draw_guide()
+
+    def _cycle_crt(self) -> None:
+        """Step the CRT picture effect to the next look and name it on screen."""
+        if self._crt_paths is None:
+            # Written on first use rather than at startup: most sessions never
+            # touch this button, and it costs three file writes.
+            self._crt_paths = write_ladder_shaders(
+                self._crt_ladder, self._crt_shader_dir
+            )
+        self._crt_index = (self._crt_index + 1) % len(self._crt_ladder)
+        self.player.set_crt_shader(self._crt_paths[self._crt_index])
+        self.overlay.show_message(self._crt_ladder[self._crt_index].name)
 
     # -- the channel guide --------------------------------------------------
     def _guide_consumes(self, action: Action) -> bool:

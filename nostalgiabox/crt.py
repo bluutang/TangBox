@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import logging
 import os
+from dataclasses import dataclass
 from pathlib import Path
 
 from .config import CrtConfig
@@ -69,6 +70,46 @@ vec4 hook() {{
 """
 
 
+@dataclass(frozen=True)
+class CrtPreset:
+    """One rung of the intensity ladder: a name to flash, and the look itself."""
+
+    name: str
+    crt: CrtConfig
+
+
+# The fixed reference rungs. HEAVY CRT is deliberately the old CrtConfig
+# defaults - the look the box shipped with before it was tuned down - so
+# "heavy" means a real thing somebody once chose, not an invented number.
+_SOFT_FRAME = CrtConfig(
+    curvature=0.02, corner_radius=0.06, vignette=0.10,
+    scanlines=True, scanline_intensity=0.015,
+)
+_HEAVY_CRT = CrtConfig(
+    curvature=0.12, corner_radius=0.065, vignette=0.25,
+    scanlines=True, scanline_intensity=0.12,
+)
+
+#: Which rung `config.yaml` occupies. The box starts here.
+CONFIG_RUNG = 2
+
+
+def crt_ladder(configured: CrtConfig) -> tuple[CrtPreset, ...]:
+    """The looks the INPUT button steps through, gentlest first.
+
+    The configured look is a rung in its own right rather than merely the
+    starting point, so it is always one press away. Being stranded on a look
+    you cannot get back from without restarting the box would make the feature
+    worse than useless on a sofa.
+    """
+    return (
+        CrtPreset("NONE", CrtConfig(enabled=False)),
+        CrtPreset("SOFT FRAME", _SOFT_FRAME),
+        CrtPreset("GLASS & GRAIN", configured),
+        CrtPreset("HEAVY CRT", _HEAVY_CRT),
+    )
+
+
 def render_shader(crt: CrtConfig) -> str:
     return _SHADER_TEMPLATE.format(
         curvature=crt.curvature,
@@ -77,6 +118,21 @@ def render_shader(crt: CrtConfig) -> str:
         scanlines=1 if crt.scanlines else 0,
         scanline_intensity=crt.scanline_intensity,
     )
+
+
+def write_ladder_shaders(
+    ladder: tuple[CrtPreset, ...], out_dir: Path
+) -> tuple[Path | None, ...]:
+    """Write one shader file per rung, returning a path for each.
+
+    Every rung gets its OWN filename. mpv keys its compiled-shader cache on the
+    path, so reusing one filename and rewriting it would leave the picture
+    unchanged when the look is switched - the bug this shape avoids.
+    """
+    paths: list[Path | None] = []
+    for index, rung in enumerate(ladder):
+        paths.append(write_shader(rung.crt, out_dir / f"crt-{index}.glsl"))
+    return tuple(paths)
 
 
 def default_shader_path() -> Path:
@@ -99,4 +155,12 @@ def write_shader(crt: CrtConfig, out_path: Path | None = None) -> Path | None:
         return None
 
 
-__all__ = ["render_shader", "write_shader", "default_shader_path"]
+__all__ = [
+    "CrtPreset",
+    "crt_ladder",
+    "write_ladder_shaders",
+    "CONFIG_RUNG",
+    "render_shader",
+    "write_shader",
+    "default_shader_path",
+]

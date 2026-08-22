@@ -51,6 +51,9 @@ _EVDEV_ACTIONS: Dict[str, InputEvent] = {
     # `h` arrives here as KEY_H. Matches KEY_M / KEY_I / KEY_L / KEY_P below.
     "KEY_H": InputEvent(Action.HOME),
     "KEY_KPDOT": InputEvent(Action.RANDOM),
+    # The remote's INPUT button, taught the letter `c`, steps the CRT effect
+    # through its presets so the picture can be judged on the actual telly.
+    "KEY_C": InputEvent(Action.CRT_CYCLE),
     "KEY_DOT": InputEvent(Action.RANDOM),
     "KEY_M": InputEvent(Action.MUTE),
     # Select / confirm a typed channel number.
@@ -97,6 +100,8 @@ _ACTION_BY_NAME: Dict[str, InputEvent] = {
     "home": InputEvent(Action.HOME),
     "guide": InputEvent(Action.HOME),
     "random": InputEvent(Action.RANDOM),
+    "crt_cycle": InputEvent(Action.CRT_CYCLE),
+    "crt": InputEvent(Action.CRT_CYCLE),
     "channel_down": InputEvent(Action.CHANNEL_DOWN),
     "volume_up": InputEvent(Action.VOLUME_UP),
     "volume_down": InputEvent(Action.VOLUME_DOWN),
@@ -159,6 +164,8 @@ _CHAR_TO_KEY: Dict[str, str] = {
     "M": "KEY_MUTE",
     "i": "KEY_INFO",
     "I": "KEY_INFO",
+    "c": "KEY_C",
+    "C": "KEY_C",
     "h": "KEY_HOME",
     "H": "KEY_HOME",
     ".": "KEY_KPDOT",
