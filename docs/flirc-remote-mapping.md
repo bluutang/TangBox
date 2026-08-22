@@ -155,6 +155,23 @@ stops listening. **The remote cannot switch the box back on.** That needs the
 Pi's onboard button or the inline switch, both of which live behind the
 television. TangBox is a box you switch on for a session.
 
+## The backup
+
+**`docs/Tangbox-remote.fcfg`** is all 28 buttons, saved off the dongle on
+2026-08-21 with the Flirc app's **File → Save Configuration**.
+
+To restore onto a wiped or replacement dongle, load it with **File → Load
+Configuration**, or from the command line:
+
+```bash
+/Applications/Flirc.app/Contents/Resources/flirc_util loadconfig \
+    docs/Tangbox-remote.fcfg
+```
+
+Re-save it after teaching or re-teaching any button, or the file quietly drifts
+out of date. Note the Flirc GUI holds the dongle over USB, so `flirc_util`
+reports `device disconnected` until the app is quit.
+
 ## Checking it worked
 
 **On the Mac, with no Pi involved.** Plug the Flirc in, open any text editor,
