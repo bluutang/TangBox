@@ -218,8 +218,8 @@ television. TangBox is a box you switch on for a session.
 
 ## The backup
 
-**`docs/Tangbox-remote.fcfg`** is all 28 buttons, saved off the dongle on
-2026-08-21 with the Flirc app's **File → Save Configuration**.
+**`docs/Tangbox-remote.fcfg`** is all 29 buttons, saved off the dongle on
+2026-08-21 — 42 stored fingerprints covering 27 distinct keystrokes.
 
 To restore onto a wiped or replacement dongle, load it with **File → Load
 Configuration**, or from the command line:
