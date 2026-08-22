@@ -137,7 +137,7 @@ you skip one.
 |---|---|
 | `SETUP` | Programs the remote itself. Teaching it to the Flirc could make the remote unconfigurable. |
 | `TV` / `AUX` | Device selectors. They switch which device the remote talks to; they are not TangBox actions. |
-| `✱` star | **Reserved.** The bedtime sign-off goes here, once it is built. |
+| `✱` star | **Reserved, and unassigned.** The last spare button. Bedtime sign-off is one proposal, not a decision — Brian wants alternatives weighed first. |
 
 > 🔴 **Never teach any button `Esc` or `q`.** Both map to QUIT, which exits
 > TangBox. systemd restarts it after about three seconds, so it recovers — but
