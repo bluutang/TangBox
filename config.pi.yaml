@@ -277,7 +277,7 @@ power_off_on_min_volume: false
 # receiver stops listening. The remote can switch the box OFF but NEVER back
 # on - that needs the Pi's onboard button or the inline switch, both of which
 # live behind the television.
-power_button: shutdown
+power_button: standby
 
 # Told to the television just before the Pi halts, after the collapse has
 # played. CEC is switched off for INPUT (the box ignores the TV's own remote,
