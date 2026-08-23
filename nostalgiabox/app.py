@@ -440,7 +440,7 @@ class TVApp:
             return
         remaining = self.bedtime_deadline - now
         if remaining <= 0:
-            self._power_off()
+            self._bedtime_finish()
             return
         mark = due_mark(remaining, self._bedtime_marks)
         if mark is not None:
@@ -753,28 +753,52 @@ class TVApp:
         self.powered_off = True
         self._switch_deadline = None
         self._pending_banner = None
-        # Everything here is best-effort. This sits in front of an actual
-        # shutdown, and ceremony must never be able to PREVENT one - a telly
-        # that will not switch off is worse than one that switches off without
-        # any flourish. Hence the bare except and the bounded wait.
-        try:
-            self.overlay.clear_all()
-            if self._power_off_path is not None:
-                self.player.play(self._power_off_path)
-                # A fixed, bounded wait rather than waiting for an end-of-clip
-                # event: the main loop is about to stop, and nothing here may
-                # hang the halt.
-                self._sleep(SIGN_OFF_SECONDS)
-            else:
-                self.overlay.show_message("GOODBYE", duration=0)
-            self.player.stop()
-        except Exception:  # noqa: BLE001
-            log.debug("sign-off did not play; halting anyway", exc_info=True)
+        self._play_sign_off()
         # After the collapse, so it is actually seen, and before the halt, so
         # the kernel's parting line lands on a television that is already off.
         self._run_tv_standby_command()
         self._run_power_off_command()
         self._running = False  # exit the main loop
+
+    def _play_sign_off(self) -> None:
+        """The CRT collapse that ends the evening.
+
+        Everything here is best-effort. It sits in front of an actual shutdown,
+        and ceremony must never be able to PREVENT one - a telly that will not
+        switch off is worse than one that switches off without any flourish.
+        Hence the bare except and the bounded wait.
+        """
+        try:
+            self.overlay.clear_all()
+            if self._power_off_path is not None:
+                self.player.play(self._power_off_path)
+                # A fixed, bounded wait rather than waiting for an end-of-clip
+                # event: the main loop may be about to stop, and nothing here
+                # may hang the halt.
+                self._sleep(SIGN_OFF_SECONDS)
+            else:
+                self.overlay.show_message("GOODBYE", duration=0)
+            self.player.stop()
+        except Exception:  # noqa: BLE001
+            log.debug("sign-off did not play; carrying on anyway", exc_info=True)
+
+    def _bedtime_finish(self) -> None:
+        """The evening is over. Halt, or merely go quiet.
+
+        Which one is `bedtime_ends_in`. Halting is the honest end of the day
+        but a one-way door - a halted Pi cuts its own USB power, so the remote
+        cannot switch it back on. Standby keeps the entire ritual and loses
+        only that, which is what you want if a small child can reach the ✱.
+        """
+        self.bedtime_deadline = None
+        self._bedtime_marks = set()
+        if self.config.bedtime_ends_in == "shutdown":
+            self._power_off()
+            return
+        log.info("bedtime: going quiet")
+        self._play_sign_off()
+        if not self.standby:
+            self._toggle_standby()
 
     def _run_tv_standby_command(self) -> None:
         """Ask the television to switch off as well, if configured.
@@ -917,7 +941,7 @@ class TVApp:
                 and self._break_queue == []
                 and self._pending_episode is None
             ):
-                self._power_off()
+                self._bedtime_finish()
                 return
             # Coalesce: only advance once even if several events queued up.
             if reason in (END_EOF, END_ERROR) and not advanced and not self.standby:

@@ -279,6 +279,25 @@ power_off_on_min_volume: false
 # live behind the television.
 power_button: standby
 
+# Where the bedtime sign-off ENDS. "shutdown" halts the Pi; "standby" plays the
+# same collapse and simply goes quiet.
+#
+# STANDBY since 2026-08-22, and the reason is the four-year-old. ✱ is a button
+# on a remote she can reach, and a halted Pi cuts its own USB power, so the
+# Flirc stops listening and only the button on the board brings it back. An
+# accidental press at four in the afternoon would cost the television for the
+# rest of the day.
+#
+# Standby keeps the entire ritual - the countdown at 15/10/5/3/2/1, the CRT
+# collapse - and only changes what is left afterwards: a quiet box that POWER
+# wakes, rather than a dead one.
+#
+# ⚠️ The trade: the Pi stays powered, and this case's RGB is wired to run
+# whenever the Pi has power, so the box glows all night. If that turns out to
+# be annoying in a dark living room, set this back to "shutdown" and use the
+# onboard button to switch it on in the morning.
+bedtime_ends_in: standby
+
 # Told to the television just before the Pi halts, after the collapse has
 # played. CEC is switched off for INPUT (the box ignores the TV's own remote,
 # which is deliberate) but sending is a separate direction, and the box already

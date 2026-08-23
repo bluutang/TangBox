@@ -225,6 +225,16 @@ class Config:
     # own USB ports, so an infrared receiver plugged into one stops listening.
     # The remote can switch the box OFF but never back ON.
     power_button: str = "standby"
+    # Where the bedtime sign-off ENDS. "shutdown" halts the Pi, which is the
+    # honest end of the day but a one-way door: a halted Pi cuts power to its
+    # own USB ports, so the infrared receiver stops listening and only the
+    # button on the board can bring it back. "standby" keeps the whole ritual
+    # - the countdown, the collapse - and simply leaves the box quiet and
+    # wakeable, which is what you want if a small child can reach the remote.
+    #
+    # Defaults to "shutdown" so that no existing box changes what its bedtime
+    # button does just by taking an update.
+    bedtime_ends_in: str = "shutdown"
     # Run just before the machine halts, to tell the television to switch off
     # too - e.g. ["sh", "-c", "echo standby 0 | cec-client -s -d 1"]. Empty
     # means "leave the television alone". Best-effort: if it fails, the Pi
@@ -441,6 +451,12 @@ def config_from_dict(data: Dict[str, Any], *, base_dir: Optional[Path] = None) -
             f"'power_button' must be 'standby' or 'shutdown', got {power_button!r}"
         )
 
+    bedtime_ends_in = str(data.get("bedtime_ends_in", "shutdown")).strip().lower()
+    if bedtime_ends_in not in ("standby", "shutdown"):
+        raise ConfigError(
+            f"'bedtime_ends_in' must be 'standby' or 'shutdown', got {bedtime_ends_in!r}"
+        )
+
     tv_raw = data.get("tv_standby_command", [])
     if isinstance(tv_raw, str):
         tv_standby_command = tuple(tv_raw.split())
@@ -476,6 +492,7 @@ def config_from_dict(data: Dict[str, Any], *, base_dir: Optional[Path] = None) -
         power_off_on_min_volume=bool(data.get("power_off_on_min_volume", True)),
         power_off_command=power_off_command,
         power_button=power_button,
+        bedtime_ends_in=bedtime_ends_in,
         tv_standby_command=tv_standby_command,
         scan_recursive=bool(data.get("scan_recursive", True)),
         shuffle_seed=(int(data["shuffle_seed"]) if data.get("shuffle_seed") is not None else None),
