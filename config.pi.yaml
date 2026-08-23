@@ -73,6 +73,22 @@ channels:
     # switching the box off, so a film started tonight begins again tomorrow.
     tune_in: resume
 
+  - number: 7
+    name: "Apple TV+"
+    path: /media/tangbox/AppleTV
+    # Stillwater / Lago tranquilo. Platform as the axis, which is the streaming
+    # block ("7x") from docs/superpowers/specs/2026-08-20-channel-numbering-design.md
+    # parked on a SINGLE digit: two-digit family blocks are the plan, but only
+    # once the catalogue is big enough to be worth renumbering every channel.
+    #
+    # ONE show today, 16 episodes, so it will feel repetitive until it fills.
+    # The Snoopy Show, Duck & Goose, Interrupting Chicken, Shape Island and
+    # Frog and Toad are all Apple TV+ and all "Wanted" on the Lineup - they
+    # belong in this folder when they arrive.
+    #
+    # Note this one is 1080p 16:9 and made in 2020, unlike every 4:3 rip
+    # elsewhere on the box.
+
   - number: 8
     name: "En Inglés"
     path: /media/tangbox/Ingles
