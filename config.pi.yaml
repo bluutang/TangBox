@@ -254,9 +254,17 @@ audio_device: "alsa/hdmi:CARD=vc4hdmi0,DEV=0"
 # 'preferred' or 'highest' also work if you ever want mpv to choose.
 display_mode: "1920x1080@60"
 
-# Volume-down again at zero cleanly powers the Pi off, so it's safe to unplug.
-# Correct on the Pi; the Mac config sets this false so it can't shut down a Mac.
-power_off_on_min_volume: true
+# Volume-down again at zero would cleanly power the Pi off.
+#
+# OFF since 2026-08-22. It is far too easy to hit by accident: a 2- and a
+# 4-year-old holding down volume-down until it stops is exactly the shape of
+# this gesture, and a halted Pi cuts USB power, so the remote cannot switch it
+# back on. Losing the television for the evening is a much worse outcome than
+# having one fewer way to shut down.
+#
+# The deliberate ways to switch off remain: the bedtime button, the onboard
+# button on the Pi itself, and POWER if power_button is set to "shutdown".
+power_off_on_min_volume: false
 
 # What the remote's POWER button does. "standby" just blanks the screen and
 # leaves the Pi running; "shutdown" plays the sign-off collapse, tells the
