@@ -29,7 +29,7 @@ _SEASON_PATTERNS = (
 )
 
 from .config import ChannelConfig, Config
-from .playlist import ShuffleBag
+from .playlist import ShowOrder, ShuffleBag
 from .probe import DEFAULT_EPISODE_SECONDS, probe_duration
 
 log = logging.getLogger(__name__)
@@ -219,6 +219,7 @@ class Channel:
         episodes: Sequence[Path],
         *,
         tune_in: str = "random",
+        episode_order: str = "shuffle",
         start_offset_min: float = 0.0,
         start_offset_max: Optional[float] = None,
         rng: Optional[random.Random] = None,
@@ -226,6 +227,7 @@ class Channel:
         self.config = config
         self.episodes: List[Path] = list(episodes)
         self.tune_in_mode = tune_in
+        self.episode_order = episode_order
         # Start each episode a random number of seconds in (within this range) so
         # the picture appears already "in the show" and channel switches land at
         # varied points instead of always the same spot.
@@ -236,9 +238,19 @@ class Channel:
             else max(self.start_offset_min, start_offset_max)
         )
         self._rng = rng or random.Random()
-        self._bag: Optional[ShuffleBag[Path]] = (
-            ShuffleBag(self.episodes, self._rng) if self.episodes else None
-        )
+        # "shuffle" bags every episode on the channel. "sequential" bags the
+        # SHOWS instead and walks each one's episodes in order - which show you
+        # get stays a surprise, which episode of it does not.
+        self._bag = None
+        if self.episodes:
+            if episode_order == "sequential":
+                self._bag = ShowOrder(
+                    self.episodes,
+                    key=lambda p: show_name_for(p, self.config.path) or p.parent.name,
+                    rng=self._rng,
+                )
+            else:
+                self._bag = ShuffleBag(self.episodes, self._rng)
         # Resume state (used by the "resume" tune-in mode).
         self._resume_path: Optional[Path] = None
         self._resume_position: float = 0.0
@@ -426,6 +438,7 @@ def build_lineup(config: Config, *, rng: Optional[random.Random] = None) -> Chan
                 # station running to a schedule next to a film channel that
                 # resumes. Falls back to the global setting.
                 tune_in=ch_cfg.tune_in or config.tune_in,
+                episode_order=ch_cfg.episode_order or config.episode_order,
                 start_offset_min=config.start_offset_min,
                 start_offset_max=config.start_offset_max,
                 rng=ch_rng,

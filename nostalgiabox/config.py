@@ -167,6 +167,8 @@ class ChannelConfig:
     # running to a schedule (broadcast) alongside a film channel that picks up
     # where you left off (resume).
     tune_in: Optional[str] = None
+    # Per-channel override of `episode_order`. None means "use the global one".
+    episode_order: Optional[str] = None
 
     def __post_init__(self) -> None:
         if self.number < 0:
@@ -182,6 +184,11 @@ class Config:
     channels: List[ChannelConfig]
     video_extensions: tuple[str, ...] = DEFAULT_VIDEO_EXTENSIONS
     tune_in: str = "random"
+    # How a channel picks what plays next.
+    #   shuffle    - a bag of every episode on the channel  [the old behaviour]
+    #   sequential - a bag of SHOWS; each show plays its episodes in order, so
+    #                which show you get is a surprise and which episode is not
+    episode_order: str = "shuffle"
     start_channel: Optional[int] = None
 
     # Presentation / "feel" of the TV.
@@ -355,9 +362,24 @@ def _parse_channels(raw: Any, base: Optional[Path], default_shuffle: bool) -> Li
                 exclude=_parse_str_list(entry.get("exclude"), "exclude"),
                 exclude_seasons=_parse_seasons(entry.get("exclude_seasons")),
                 tune_in=_parse_channel_tune_in(entry.get("tune_in"), i),
+                episode_order=_parse_episode_order(
+                    entry.get("episode_order"), f"channels[{i}].episode_order"
+                ),
             )
         )
     return channels
+
+
+def _parse_episode_order(raw: Any, where: str) -> Optional[str]:
+    """Validate an `episode_order`, or None to inherit the global setting."""
+    if raw is None:
+        return None
+    value = str(raw).strip().lower()
+    if value not in ("shuffle", "sequential"):
+        raise ConfigError(
+            f"'{where}' must be 'shuffle' or 'sequential', got {value!r}"
+        )
+    return value
 
 
 def _parse_channel_tune_in(raw: Any, index: int) -> Optional[str]:
@@ -508,6 +530,9 @@ def config_from_dict(data: Dict[str, Any], *, base_dir: Optional[Path] = None) -
         channels=channels,
         video_extensions=extensions,
         tune_in=tune_in,
+        episode_order=_parse_episode_order(
+            data.get("episode_order"), "episode_order"
+        ) or "shuffle",
         start_channel=start_channel,
         fullscreen=bool(data.get("fullscreen", True)),
         force_4_3=bool(data.get("force_4_3", False)),

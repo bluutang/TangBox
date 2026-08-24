@@ -16,7 +16,7 @@ see the same episode back-to-back across a cycle boundary.
 from __future__ import annotations
 
 import random
-from typing import Generic, List, Optional, Sequence, TypeVar
+from typing import Callable, Dict, Generic, List, Optional, Sequence, TypeVar
 
 T = TypeVar("T")
 
@@ -83,3 +83,69 @@ class ShuffleBag(Generic[T]):
 
 
 __all__ = ["ShuffleBag"]
+
+class ShowOrder(Generic[T]):
+    """Shuffles SHOWS; plays each show's episodes in order.
+
+    A channel used to be one shuffle bag of every episode on it, so a child
+    could get episode 7, then 2, then 19 of the same series. Fully sequential
+    is not the fix either - all of one show and then all of the next is a box
+    set, not a channel.
+
+    So the bag holds shows. Drawing one hands back that show's next episode in
+    order and moves its cursor on, wrapping when the show runs out. Which show
+    you get stays a surprise; which episode of it does not.
+
+    Every guarantee the plain bag gives now applies at the SHOW level: each
+    show appears once before any repeats, and the same show never comes twice
+    in a row while the channel has more than one.
+    """
+
+    def __init__(
+        self,
+        items: Sequence[T],
+        *,
+        key: Callable[[T], str],
+        rng: Optional[random.Random] = None,
+    ) -> None:
+        grouped: Dict[str, List[T]] = {}
+        for item in items:
+            grouped.setdefault(key(item), []).append(item)
+        # Sorted by name, not by the order the directory happened to list them
+        # in - S01E01 has to come first however the filesystem felt about it.
+        self._shows: Dict[str, List[T]] = {
+            name: sorted(eps, key=str) for name, eps in grouped.items()
+        }
+        self._cursor: Dict[str, int] = {name: 0 for name in self._shows}
+        self._count = sum(len(eps) for eps in self._shows.values())
+        self._bag: ShuffleBag[str] = ShuffleBag(sorted(self._shows), rng=rng)
+
+    def __len__(self) -> int:
+        return self._count
+
+    @property
+    def is_empty(self) -> bool:
+        return self._count == 0
+
+    def next(self) -> T:
+        """The next episode: a fresh show, at whatever point it had reached."""
+        if self.is_empty:
+            raise IndexError("cannot draw from an empty ShowOrder")
+        show = self._bag.next()
+        episodes = self._shows[show]
+        index = self._cursor[show] % len(episodes)
+        self._cursor[show] = (index + 1) % len(episodes)
+        return episodes[index]
+
+    def peek(self) -> T:
+        """What :meth:`next` would hand out, without spending it.
+
+        The guide asks every channel this so a tile can promise what you would
+        actually get, and it must disturb nothing - neither the show bag nor
+        any show's place in its own run.
+        """
+        if self.is_empty:
+            raise IndexError("cannot draw from an empty ShowOrder")
+        show = self._bag.peek()
+        episodes = self._shows[show]
+        return episodes[self._cursor[show] % len(episodes)]
