@@ -125,11 +125,21 @@ class TileRect(NamedTuple):
     h: float
 
 
-# How much of a tile's height is the band under the picture. 0.3125 of a 288px
-# tile is 90px, which holds the show name at 43px and ON NOW at 31px with a
+# How much of a tile's height is the band under the picture.
+#
+# Was 0.3125, which made the band so deep that the tile ended up TALLER than
+# its picture was wide - a portrait tile around a 4:3 picture, with the artwork
+# filling barely half the space. Photographed on the television 2026-08-24.
+#
+# At 0.18 the tile is landscape, the picture gains 42% of its area (280x210 ->
+# 333x250 on the canvas, 500x375 on a 1080p screen), and the band still holds
+# the name. Lower still keeps working - 0.12 gives another 15% - but the name
+# has to shrink with it.
+#
+# The old note read: 0.3125 of a 288px
 # little air. Proportional rather than fixed so it survives a change of page
 # size - the text scales with the tile too.
-_BAND_RATIO = 0.3125
+_BAND_RATIO = 0.18
 
 # The picture is 4:3, the shape the programmes themselves are.
 _ART_RATIO = 4 / 3
@@ -466,7 +476,10 @@ def guide_ass(
     # Text scales with the tile, so four big tiles and twenty small ones both
     # fill their space. The floors stop a crowded lineup shrinking to nothing.
     num_size = max(24, int(tile_h * 0.30))
-    name_size = max(14, int(tile_h * 0.15))
+    # Sized off the BAND, not the tile: the band is what the name has to fit
+    # inside, and the two stopped being proportional when it was narrowed.
+    band_h = tile_h * _BAND_RATIO
+    name_size = max(14, int(band_h * 0.52))
     tag_size = max(12, int(tile_h * 0.11))
 
     green = _hex_to_ass(ui.color)

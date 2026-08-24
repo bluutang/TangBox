@@ -64,10 +64,11 @@ def test_a_nonsense_display_size_is_ignored_rather_than_dividing_by_zero():
 def test_the_real_four_channel_tile_lands_at_the_size_the_guide_intends():
     """End to end against the guide's own geometry, at Brian's resolution.
 
-    Four channels give a 2x2 of 552x305 tiles, so the picture area is 280x210
-    on the canvas. The Pi is pinned to 1080p, so the television gets 419x315 -
-    the number the 1024x768 artwork recommendation is built on.
+    Four channels give a 2x2 of 333x305 tiles - the tile hugs its picture - so
+    the picture area is 333x250 on the canvas. The Pi is pinned to 1080p, so
+    the television gets 500x375, which is what 1024x768 artwork is scaled down
+    to and therefore the size worth judging legibility at.
     """
     x, y, w, h = art_rect(page_tiles(4, 0)[0])
     _, _, sw, sh = scale_to_display(x, y, w, h, canvas=CANVAS, display=(1920, 1080))
-    assert (sw, sh) == (419, 315)
+    assert (sw, sh) == (500, 375)

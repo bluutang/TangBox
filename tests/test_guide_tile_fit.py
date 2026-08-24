@@ -65,10 +65,16 @@ def test_the_row_is_centred():
 # --- what must NOT change --------------------------------------------------
 
 
-def test_the_picture_size_is_unchanged():
-    """The 1024x768 artwork recommendation depends on this staying 280x210."""
+def test_the_picture_is_the_size_the_artwork_spec_assumes():
+    """333x250 on the canvas, so 500x375 on a 1080p screen.
+
+    Was 280x210 until the text band was narrowed from 0.3125 to 0.18 - the deep
+    band had made the tile taller than its picture was wide. 1024x768 artwork
+    still covers this comfortably (about 2x oversampled), so the recommendation
+    is unchanged; the number quoted as "actual size" is not.
+    """
     _x, _y, w, h = art_rect(tiles(4)[0])
-    assert (round(w), round(h)) == (280, 210)
+    assert (round(w), round(h)) == (333, 250)
 
 
 def test_tiles_still_fit_when_there_are_many_columns():
