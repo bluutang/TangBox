@@ -87,6 +87,25 @@ echo " Flirc toggle-bit repair"
 echo "=============================================================="
 "$FLIRC_UTIL" version 2>&1 | head -1
 
+# The GUI app holds the dongle exclusively. flirc_util then sees nothing at all,
+# which looks exactly like an unplugged dongle - documented in
+# docs/flirc-remote-mapping.md and rediscovered the hard way at 3am.
+if pgrep -qf "/Applications/Flirc.app/Contents/MacOS/Flirc"; then
+  echo
+  echo "Flirc.app is running, and it holds the dongle exclusively." >&2
+  echo "Quit Flirc.app, then run this again." >&2
+  exit 1
+fi
+
+# A reachable dongle reports its firmware. Only the tool's own version means
+# nothing is listening.
+if ! "$FLIRC_UTIL" version 2>&1 | grep -q "FW Version"; then
+  echo
+  echo "No Flirc detected. Plug the dongle into this Mac and try again." >&2
+  echo "(If it IS plugged in, check that Flirc.app is not running.)" >&2
+  exit 1
+fi
+
 missing=()
 while IFS= read -r k; do [[ -n "$k" ]] && missing+=("$k"); done < <(under_recorded)
 
