@@ -28,3 +28,6 @@ config.staging.yaml
 
 # Demo commercial clips for Mac preview (ffmpeg test patterns).
 demo-commercials/
+
+# Backups written by ad-hoc config patch scripts.
+config*.yaml.bak-*

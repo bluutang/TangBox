@@ -334,7 +334,12 @@ tv_standby_command: ["sh", "-c", "echo 'standby 0' | cec-client -s -d 1 -o TangB
 # 3.0.0.0 - HDMI 3. A PlayStation 5 is on HDMI 1.
 # ⚠️ The COMMANDS themselves have still never been sent.
 # Empty means "leave the television alone", which is the code default.
-tv_wake_command: ["sh", "-c", "echo 'on 0' | cec-client -s -d 1 -o TangBox; echo 'as' | cec-client -s -d 1 -o TangBox"]
+# The `sleep 2` is LOAD-BEARING. On the Pi the CEC adapter belongs to the HDMI
+# driver, and mpv starting or restarting playback resets the output - which
+# kills an in-flight cec-client session. Without the delay the wake command
+# logs "opening a connection to the CEC adapter" and the television never
+# wakes. Proven on the set 2026-08-24: identical command works from a shell.
+tv_wake_command: ["sh", "-c", "sleep 2; echo 'on 0' | cec-client -s -d 1 -o TangBox; echo 'as' | cec-client -s -d 1 -o TangBox"]
 
 # --- Commercial breaks --------------------------------------------------------
 # When an episode ends, the station goes to break before the next one starts.
