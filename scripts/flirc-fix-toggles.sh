@@ -97,9 +97,10 @@ if pgrep -qf "/Applications/Flirc.app/Contents/MacOS/Flirc"; then
   exit 1
 fi
 
-# A reachable dongle reports its firmware. Only the tool's own version means
-# nothing is listening.
-if ! "$FLIRC_UTIL" version 2>&1 | grep -q "FW Version"; then
+# `version` prints a firmware line even with NO dongle attached, so it cannot be
+# used to detect one - learned the hard way. `settings` is the honest test: it
+# answers "device disconnected" when nothing is there.
+if "$FLIRC_UTIL" settings 2>&1 | grep -qi "device disconnected"; then
   echo
   echo "No Flirc detected. Plug the dongle into this Mac and try again." >&2
   echo "(If it IS plugged in, check that Flirc.app is not running.)" >&2
