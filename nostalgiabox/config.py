@@ -242,6 +242,14 @@ class Config:
     # Defaults to "shutdown" so that no existing box changes what its bedtime
     # button does just by taking an update.
     bedtime_ends_in: str = "shutdown"
+    # Play the sign-off collapse when POWER goes to standby, not only at a
+    # halt or bedtime. OFF by default: it puts the whole clip in front of every
+    # POWER press, which is a trade rather than an obvious win.
+    sign_off_on_standby: bool = False
+    # How long the sign-off clip is given before playback is stopped. Was a
+    # hard-coded 1.1, which silently truncated a longer clip - the mirrored
+    # ident sign-off runs about 3.8s.
+    sign_off_seconds: float = 1.1
     # Run just before the machine halts, to tell the television to switch off
     # too - e.g. ["sh", "-c", "echo standby 0 | cec-client -s -d 1"]. Empty
     # means "leave the television alone". Best-effort: if it fails, the Pi
@@ -465,6 +473,11 @@ def config_from_dict(data: Dict[str, Any], *, base_dir: Optional[Path] = None) -
             f"'power_button' must be 'standby' or 'shutdown', got {power_button!r}"
         )
 
+    sign_off_on_standby = bool(data.get("sign_off_on_standby", False))
+    sign_off_seconds = _clamp_float(
+        data.get("sign_off_seconds", 1.1), 0.0, 30.0, "sign_off_seconds"
+    )
+
     bedtime_ends_in = str(data.get("bedtime_ends_in", "shutdown")).strip().lower()
     if bedtime_ends_in not in ("standby", "shutdown"):
         raise ConfigError(
@@ -517,6 +530,8 @@ def config_from_dict(data: Dict[str, Any], *, base_dir: Optional[Path] = None) -
         power_off_command=power_off_command,
         power_button=power_button,
         bedtime_ends_in=bedtime_ends_in,
+        sign_off_on_standby=sign_off_on_standby,
+        sign_off_seconds=sign_off_seconds,
         tv_standby_command=tv_standby_command,
         tv_wake_command=tv_wake_command,
         scan_recursive=bool(data.get("scan_recursive", True)),

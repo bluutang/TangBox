@@ -301,6 +301,15 @@ power_button: standby
 # onboard button to switch it on in the morning.
 bedtime_ends_in: standby
 
+# Play the sign-off collapse when POWER goes to standby too, so switching
+# off is as much of an event as switching on. ✱ always plays it regardless.
+sign_off_on_standby: true
+
+# How long the clip is given. The mirrored ident sign-off - letters sliding
+# back behind the orange, then the orange collapsing to a dot - runs ~3.8s.
+# The old hard-coded 1.1 cut it off after a second.
+sign_off_seconds: 4.0
+
 # Told to the television just before the Pi halts, after the collapse has
 # played. CEC is switched off for INPUT (the box ignores the TV's own remote,
 # which is deliberate) but sending is a separate direction, and the box already

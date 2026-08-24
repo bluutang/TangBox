@@ -379,7 +379,9 @@ class TVApp:
             if self.config.power_button == "shutdown":
                 self._power_off()
             else:
-                self._toggle_standby()
+                self._toggle_standby(
+                    sign_off=self.config.sign_off_on_standby and not self.standby
+                )
             return
 
         # While in standby, ignore everything except POWER/QUIT (handled above).
@@ -791,7 +793,7 @@ class TVApp:
                 # A fixed, bounded wait rather than waiting for an end-of-clip
                 # event: the main loop may be about to stop, and nothing here
                 # may hang the halt.
-                self._sleep(SIGN_OFF_SECONDS)
+                self._sleep(self.config.sign_off_seconds)
             else:
                 self.overlay.show_message("GOODBYE", duration=0)
             self.player.stop()
@@ -812,9 +814,8 @@ class TVApp:
             self._power_off()
             return
         log.info("bedtime: going quiet")
-        self._play_sign_off()
         if not self.standby:
-            self._toggle_standby()
+            self._toggle_standby(sign_off=True)
 
     def _run_tv_wake_command(self) -> None:
         """Ask the television to come on, and to show US.
@@ -920,9 +921,19 @@ class TVApp:
         self._info_next_redraw = now + INFO_REDRAW_SECONDS
         self._draw_info_banner(duration=remaining)
 
-    def _toggle_standby(self) -> None:
+    def _toggle_standby(self, *, sign_off: bool = False) -> None:
+        """Go quiet, or come back.
+
+        ``sign_off`` plays the collapse on the way IN. Bedtime always passes
+        True - the ceremony is the point of ✱ - while POWER only does so when
+        `sign_off_on_standby` is set, because it costs the whole clip on every
+        press. It is played HERE rather than by each caller so it cannot be
+        played twice.
+        """
         self.standby = not self.standby
         if self.standby:
+            if sign_off:
+                self._play_sign_off()
             self._remember_position()
             self._switch_deadline = None
             self._pending_banner = None
