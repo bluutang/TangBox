@@ -585,11 +585,21 @@ def test_the_picture_leaves_a_band_for_the_text_underneath():
         assert tile.y + tile.h - (y + h) > 20, (count, cols, rows)
 
 
-def test_a_wide_tile_centres_its_picture_rather_than_stretching_it():
-    tile = page_tiles(4, cursor=0)[0]          # 552 x 305, very wide
-    x, _, w, _ = art_rect(tile)
-    assert w < tile.w
-    assert abs((x - tile.x) - (tile.x + tile.w - (x + w))) < 0.001
+def test_the_picture_is_never_stretched_to_fill_its_tile():
+    """Artwork keeps its 4:3 ratio and stays centred, whatever the tile.
+
+    This used to assert `w < tile.w` against a deliberately wide 552x305 tile.
+    Tiles no longer stretch past their picture, so that can never hold - but
+    what it was really protecting does still matter: the picture keeps its
+    shape rather than being squashed to fit, which is what makes the 4:3
+    artwork spec safe to publish.
+    """
+    for count in (4, 8, 17):
+        tile = page_tiles(count, cursor=0)[0]
+        x, _, w, h = art_rect(tile)
+        assert abs(w / h - 4 / 3) < 0.001, count
+        assert w <= tile.w + 0.001, count
+        assert abs((x - tile.x) - (tile.x + tile.w - (x + w))) < 0.001, count
 
 
 # --------------------------------------------------------------------------

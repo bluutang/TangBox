@@ -176,12 +176,32 @@ def page_tiles(
     page = max(0, min(pages - 1, cursor // per_page))
     first = page * per_page
     strip = _DOT_STRIP if pages > 1 else 0
-    tile_w = (CANVAS_W - 2 * _MARGIN_X - _GAP * (cols - 1)) / cols
     tile_h = (CANVAS_H - 2 * _MARGIN_Y - strip - _GAP * (rows - 1)) / rows
+
+    # A tile is only as wide as the picture it holds. Stretching it to fill the
+    # canvas just puts dead space either side of the artwork - with four
+    # channels that was a 552-wide tile around a 280-wide picture, which is what
+    # a photograph of the television showed. The picture cannot grow to meet it:
+    # it is 4:3 and limited by the tile's HEIGHT, because the name sits in a
+    # band underneath.
+    #
+    # Whatever that frees up becomes margin, so more of the programme playing
+    # behind the guide shows through.
+    slot_w = (CANVAS_W - 2 * _MARGIN_X - _GAP * (cols - 1)) / cols
+    tile_w = min(tile_h * (1 - _BAND_RATIO) * _ART_RATIO, slot_w)
+
+    # Each tile stays CENTRED IN ITS OWN SLOT rather than the grid collapsing
+    # to the middle. The channel numbering design doc is explicit that position
+    # is most of what a child who cannot read has to go on - "Nick Jr is forever
+    # top row, third along" - so a tile must not move just because it got
+    # narrower. The freed space becomes gaps BETWEEN tiles, which is where the
+    # programme behind shows through.
+    inset = (slot_w - tile_w) / 2
+
     return [
         TileRect(
             index=first + local,
-            x=_MARGIN_X + (local % cols) * (tile_w + _GAP),
+            x=_MARGIN_X + (local % cols) * (slot_w + _GAP) + inset,
             y=_MARGIN_Y + (local // cols) * (tile_h + _GAP),
             w=tile_w,
             h=tile_h,
