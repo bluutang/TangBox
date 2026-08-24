@@ -17,7 +17,7 @@ scales it to the TV) and cleared automatically after a few seconds by
 from __future__ import annotations
 
 import time
-from typing import Callable, Dict, Optional
+from typing import Callable, Dict, Optional, Tuple
 
 from .config import Config, UiConfig
 from .player import Player
@@ -234,6 +234,23 @@ _BAR_H = 8
 # leaves a visible hole between the bar and a short reading like "13:48", which
 # reads as two unrelated things rather than one row. Judged from a render.
 _TIME_GUTTER = 105
+
+# The info banner's picture. Sized to exactly a guide tile's picture so a show
+# looks the same in both places and one tile.jpg serves both. It sits to the
+# LEFT of the progress bar, in the width the text never reaches.
+_BANNER_ART_W = 280
+_BANNER_ART_H = 210
+_BANNER_ART_GAP = 30
+
+
+def banner_art_rect() -> Tuple[float, float, float, float]:
+    """``(x, y, w, h)`` of the show picture on the info banner.
+
+    Derived from the bar's own left edge rather than a magic number, so moving
+    the bar moves the picture with it instead of letting the two collide.
+    """
+    bar_x0 = _IX1 - _TIME_GUTTER - _BAR_W
+    return (bar_x0 - _BANNER_ART_GAP - _BANNER_ART_W, _IY0, _BANNER_ART_W, _BANNER_ART_H)
 
 
 def _progress_ass(position: float, duration: float, ui: UiConfig, *, y: int) -> str:

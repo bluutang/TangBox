@@ -43,7 +43,7 @@ from .crt import (
 from .guide import Guide, art_rect, guide_ass, page_tiles
 from .input.manager import InputManager, create_backends
 from .interstitial import CommercialPool
-from .overlay import CANVAS_H, CANVAS_W, OverlayManager
+from .overlay import CANVAS_H, CANVAS_W, OverlayManager, banner_art_rect
 from .player import END_EOF, END_ERROR, MockPlayer, Player
 from .static_gen import (
     COLORBARS_FILENAME,
@@ -68,6 +68,10 @@ SIGN_OFF_SECONDS = 1.1
 # counts in seconds, so anything slower visibly stutters; anything faster is
 # rebuilding a string nobody can see change.
 INFO_REDRAW_SECONDS = 1.0
+
+# The image slot the info banner's picture uses. Well clear of the guide, which
+# numbers its own from zero, so neither can wipe the other.
+BANNER_ART_SLOT = 99
 
 
 class TVApp:
@@ -906,6 +910,26 @@ class TVApp:
             runtime=self.player.get_duration(),
             duration=duration,
         )
+        self._draw_banner_artwork(channel, path)
+
+    def _draw_banner_artwork(self, channel, episode) -> None:
+        """Put the show's picture beside the banner text, if it has one.
+
+        The same `tile.jpg` the guide uses, at the same size - so one picture
+        serves both and a show looks the same wherever it appears. A show
+        without one simply gets no picture, exactly as in the guide.
+        """
+        picture = (
+            tile_image_for(episode, channel.config.path) if episode is not None else None
+        )
+        if picture is None:
+            self.player.clear_image(BANNER_ART_SLOT)
+            return
+        x, y, w, h = banner_art_rect()
+        self.player.show_image(
+            BANNER_ART_SLOT, picture,
+            round(x), round(y), round(w), round(h), CANVAS_W, CANVAS_H,
+        )
 
     def _tick_info_banner(self, now: float) -> None:
         """Keep the timeline moving while the banner is on screen.
@@ -916,7 +940,11 @@ class TVApp:
         so this only has to decide how often.
         """
         remaining = self.overlay.live_bug_remaining()
-        if remaining is None or now < self._info_next_redraw:
+        if remaining is None:
+            # The banner has gone; its picture must go with it.
+            self.player.clear_image(BANNER_ART_SLOT)
+            return
+        if now < self._info_next_redraw:
             return
         self._info_next_redraw = now + INFO_REDRAW_SECONDS
         self._draw_info_banner(duration=remaining)

@@ -141,6 +141,9 @@ class Player(ABC):
         none.
         """
 
+    def clear_image(self, slot: int) -> None:
+        """Remove just the picture in ``slot``, leaving the others alone."""
+
     def clear_images(self) -> None:
         """Remove every picture drawn by :meth:`show_image`."""
 
@@ -493,6 +496,15 @@ class MpvPlayer(Player):
         except Exception:  # pragma: no cover - libmpv specific
             log.debug("drawing a tile picture failed", exc_info=True)
 
+    def clear_image(self, slot: int) -> None:
+        overlay = self._image_overlays.pop(slot, None)
+        if overlay is None:
+            return
+        try:
+            overlay.remove()
+        except Exception:  # pragma: no cover - libmpv specific
+            log.debug("removing a tile picture failed", exc_info=True)
+
     def clear_images(self) -> None:
         for overlay in self._image_overlays.values():
             try:
@@ -632,6 +644,9 @@ class MockPlayer(Player):
         # No screen, so nothing to scale to: record the canvas units as given.
         self.images[slot] = (path, x, y, w, h)
         self._log(f"IMAGE {slot} {path.name} {w}x{h}+{x}+{y}")
+
+    def clear_image(self, slot: int) -> None:
+        self.images.pop(slot, None)
 
     def clear_images(self) -> None:
         self.images.clear()
