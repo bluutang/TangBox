@@ -88,7 +88,7 @@ the Flirc can never learn, and it is much cheaper to find out now.
 | 🔇 mute | `m` | Mute |
 | **`•`** | `.` (full stop) | ⭐ **Random channel** |
 | `INPUT` | `c` | Step the CRT picture effect through its four looks |
-| `✱` star | `b` | Finish up, then sign off and halt — press again to cancel |
+| `✱` star | `b` | Finish up, then sign off — press again to cancel. Goes to **standby** on this box, so POWER wakes it |
 | ⏻ power | `p` | Sign-off collapse, TV off, clean shutdown |
 
 ### Why the `•` key matters most
@@ -149,9 +149,18 @@ big element because neither child can read the word.
 
 **Press `✱` again to cancel**, and it says `CARRY ON`.
 
-The ending itself is the same one the power button has always used: the sign-off
-collapse, the television switched off over CEC, then a clean halt. `✱` only
-decides when to call it.
+The ending itself is the sign-off collapse the power button has always used.
+What comes *after* the collapse is `bedtime_ends_in` in the config, and **this
+box is set to `standby`**: the picture stops, a standby notice appears, every
+button except POWER is ignored, and POWER tunes straight back in.
+
+It used to halt the Pi, and that was changed on 2026-08-22 for one reason: a
+halted Pi cuts power to its own USB ports, so the Flirc stops listening and the
+remote cannot switch the box back on. Fine when a parent presses `✱` at bedtime;
+not fine when a four-year-old presses it at four in the afternoon.
+
+Set `bedtime_ends_in: shutdown` if you want the old behaviour. `✱` only decides
+*when* to call it either way.
 
 > One accepted rough edge: if you press `✱` **during a commercial break**, the
 > episode that break is holding still plays. The 15-minute deadline is the
