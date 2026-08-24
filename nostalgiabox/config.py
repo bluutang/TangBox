@@ -111,6 +111,13 @@ class SignOnConfig:
     # clearly. config.pi.yaml switches it on for the real box.
     enabled: bool = False
     bars_seconds: float = 2.0       # colour bars with the 1 kHz tone
+    # Replay the ident when WAKING from standby, not only at boot. Starts at
+    # the ident and skips the pre-roll: the pre-roll exists to cover a
+    # television waking up, and on a wake the set is already on and showing us.
+    #
+    # OFF by default, on the same rule as `enabled` - it changes what a button
+    # does, and that should be opted into rather than arrive in an update.
+    on_wake: bool = False
     logo: str = "logo.mp4"          # asset filename; missing = bars only
     # The CRT switch-on: a dot blooms to a line, the line opens to the frame.
     # Runs FIRST, so it is the very first thing the screen does.
@@ -590,6 +597,7 @@ def _parse_sign_on(raw: Any) -> SignOnConfig:
         enabled=bool(raw.get("enabled", d.enabled)),
         # Capped at 30s deliberately: nobody wants a five-minute ident before
         # the cartoons, and a typo here would be maddening to diagnose.
+        on_wake=bool(raw.get("on_wake", d.on_wake)),
         bars_seconds=_clamp_float(
             raw.get("bars_seconds", d.bars_seconds), 0.0, 30.0, "sign_on.bars_seconds"
         ),

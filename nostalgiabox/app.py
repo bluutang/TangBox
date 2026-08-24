@@ -935,7 +935,16 @@ class TVApp:
         else:
             self.overlay.clear_standby()
             self._run_tv_wake_command()
-            self.tune_current(show_static=False)
+            # Coming out of standby is the station opening again, so replay the
+            # ident - but START AT IT, skipping the pre-roll. The pre-roll only
+            # exists to cover a television waking and switching input; on a wake
+            # the set is already on, and a spinner would be dead air.
+            if not (
+                self.config.sign_on.enabled
+                and self.config.sign_on.on_wake
+                and self._enter_sign_on_stage_after("bars")
+            ):
+                self.tune_current(show_static=False)
 
     # -- direct channel entry ----------------------------------------------
     def _push_digit(self, digit: int) -> None:

@@ -140,10 +140,7 @@ start_channel: 2         # what it powers on to
 # bloom - bold shapes survive that, thin lines and small text do not.
 sign_on:
   enabled: true
-  bars_seconds: 7
-  # Replay the ident when WAKING from standby too, not just at boot.
-  # Starts AT the ident and skips the pre-roll - the set is already on.
-  on_wake: true        # 0 = straight to the ident, no colour bars. Set to 2
+  bars_seconds: 5        # 0 = straight to the ident, no colour bars. Set to 2
                          # for the full broadcast-day open (bars + 1 kHz tone)
                          # if you ever want the longer version back.
   logo: logo.mp4
@@ -334,7 +331,7 @@ tv_standby_command: ["sh", "-c", "echo 'standby 0' | cec-client -s -d 1 -o TangB
 # 3.0.0.0 - HDMI 3. A PlayStation 5 is on HDMI 1.
 # ⚠️ The COMMANDS themselves have still never been sent.
 # Empty means "leave the television alone", which is the code default.
-tv_wake_command: ["sh", "-c", "echo 'on 0' | cec-client -s -d 1 -o TangBox; echo 'as' | cec-client -s -d 1 -o TangBox"]
+tv_wake_command: ["sh", "-c", "printf 'on 0\\nas\\n' | cec-client -s -d 1 -o TangBox"]
 
 # --- Commercial breaks --------------------------------------------------------
 # When an episode ends, the station goes to break before the next one starts.
