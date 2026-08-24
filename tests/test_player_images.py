@@ -29,28 +29,28 @@ def test_a_player_that_cannot_draw_pictures_ignores_them_quietly():
     # show_image is concrete with a no-op default, not abstract. Making it
     # abstract would stop a player like this one being instantiated at all.
     player = _OldPlayer()
-    player.show_image(0, Path("tile.jpg"), 0, 0, 264, 198)
+    player.show_image(0, Path("tile.jpg"), 0, 0, 264, 198, 1280, 720)
     player.clear_images()
 
 
 def test_the_mock_records_where_a_picture_was_put():
     player = MockPlayer()
-    player.show_image(3, Path("/media/Rugrats/tile.jpg"), 76, 43, 264, 198)
+    player.show_image(3, Path("/media/Rugrats/tile.jpg"), 76, 43, 264, 198, 1280, 720)
     assert player.images[3] == (Path("/media/Rugrats/tile.jpg"), 76, 43, 264, 198)
 
 
 def test_clearing_empties_the_whole_picture_layer():
     player = MockPlayer()
-    player.show_image(0, Path("a.jpg"), 0, 0, 10, 10)
-    player.show_image(1, Path("b.jpg"), 0, 0, 10, 10)
+    player.show_image(0, Path("a.jpg"), 0, 0, 10, 10, 1280, 720)
+    player.show_image(1, Path("b.jpg"), 0, 0, 10, 10, 1280, 720)
     player.clear_images()
     assert player.images == {}
 
 
 def test_drawing_over_a_slot_replaces_what_was_there():
     player = MockPlayer()
-    player.show_image(0, Path("a.jpg"), 0, 0, 10, 10)
-    player.show_image(0, Path("b.jpg"), 5, 5, 20, 20)
+    player.show_image(0, Path("a.jpg"), 0, 0, 10, 10, 1280, 720)
+    player.show_image(0, Path("b.jpg"), 5, 5, 20, 20, 1280, 720)
     assert player.images == {0: (Path("b.jpg"), 5, 5, 20, 20)}
 
 

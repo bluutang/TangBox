@@ -43,7 +43,7 @@ from .crt import (
 from .guide import Guide, art_rect, guide_ass, page_tiles
 from .input.manager import InputManager, create_backends
 from .interstitial import CommercialPool
-from .overlay import OverlayManager
+from .overlay import CANVAS_H, CANVAS_W, OverlayManager
 from .player import END_EOF, END_ERROR, MockPlayer, Player
 from .static_gen import (
     COLORBARS_FILENAME,
@@ -62,6 +62,12 @@ _SIGN_ON_STAGES = ("zap", "bars", "logo")
 # How long to hold before halting, so the collapse is actually seen. Matches
 # generate_power_off's duration with a little slack for mpv to get going.
 SIGN_OFF_SECONDS = 1.1
+
+
+# How often the info banner redraws itself while it is up. The time-left text
+# counts in seconds, so anything slower visibly stutters; anything faster is
+# rebuilding a string nobody can see change.
+INFO_REDRAW_SECONDS = 1.0
 
 
 class TVApp:
@@ -121,6 +127,7 @@ class TVApp:
         # NOTHING afterwards moves it - not a channel change, not an episode
         # ending. Otherwise a 4-year-old learns that channel-up buys another
         # twenty minutes, and this becomes a negotiating position.
+        self._info_next_redraw: float = 0.0
         self.bedtime_deadline: Optional[float] = None
         self._bedtime_marks: set[int] = set()
 
@@ -332,6 +339,7 @@ class TVApp:
         self._maybe_commit_digits(now)
         self._drain_playback_events()
         self._tick_bedtime(now)
+        self._tick_info_banner(now)
 
         event = self.input.get(timeout=timeout if block else 0.0)
         if event is not None:
@@ -545,7 +553,14 @@ class TVApp:
                 continue
             art_x, art_y, art_w, art_h = art_rect(rect)
             self.player.show_image(
-                slot, picture, round(art_x), round(art_y), round(art_w), round(art_h)
+                slot,
+                picture,
+                round(art_x),
+                round(art_y),
+                round(art_w),
+                round(art_h),
+                CANVAS_W,
+                CANVAS_H,
             )
 
     def _tick_guide(self) -> None:
@@ -847,6 +862,16 @@ class TVApp:
 
     def _show_info(self) -> None:
         """Re-show the banner for whatever is on RIGHT NOW."""
+        self._draw_info_banner()
+        self._info_next_redraw = self._clock() + INFO_REDRAW_SECONDS
+
+    def _draw_info_banner(self, *, duration: Optional[float] = None) -> None:
+        """Draw the banner with a timeline for the current moment.
+
+        ``duration`` is how long the banner should remain, and exists so a
+        redraw can inherit what is left of the original deadline instead of
+        restarting it - otherwise animating it would keep it up for ever.
+        """
         channel = self.lineup.current
         path = self._billed_path()
         # The timeline rides along on THIS banner only. Channel changes call
@@ -859,7 +884,22 @@ class TVApp:
             episode=episode_label_for(path) if path is not None else None,
             position=self.player.get_time_pos(),
             runtime=self.player.get_duration(),
+            duration=duration,
         )
+
+    def _tick_info_banner(self, now: float) -> None:
+        """Keep the timeline moving while the banner is on screen.
+
+        A progress bar that does not progress is not a progress bar. The
+        overlay manager decides whether there is anything to animate - a
+        channel banner has no timeline, and an expired one has no time left -
+        so this only has to decide how often.
+        """
+        remaining = self.overlay.live_bug_remaining()
+        if remaining is None or now < self._info_next_redraw:
+            return
+        self._info_next_redraw = now + INFO_REDRAW_SECONDS
+        self._draw_info_banner(duration=remaining)
 
     def _toggle_standby(self) -> None:
         self.standby = not self.standby

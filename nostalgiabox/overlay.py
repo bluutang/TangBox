@@ -68,6 +68,7 @@ class OverlayManager:
         self._clock = clock
         # overlay id -> wall time (monotonic) at which it should disappear.
         self._expiry: Dict[int, float] = {}
+        self._bug_has_timeline = False
 
     # -- public API ---------------------------------------------------------
     def show_channel_bug(
@@ -100,6 +101,10 @@ class OverlayManager:
             position=position,
             duration=runtime,
         )
+        # Remembered so the app knows whether there is anything worth
+        # animating. A channel change passes no position/runtime, so drawing
+        # one silently ends any redrawing that was going on.
+        self._bug_has_timeline = position is not None and bool(runtime)
         self._player.set_overlay(_ID_CHANNEL, ass, CANVAS_W, CANVAS_H)
         self._arm(_ID_CHANNEL, dur)
 
@@ -145,6 +150,21 @@ class OverlayManager:
     def clear_standby(self) -> None:
         self._player.clear_overlay(_ID_STANDBY)
         self._expiry.pop(_ID_STANDBY, None)
+
+    def live_bug_remaining(self) -> Optional[float]:
+        """Seconds left on a channel banner that HAS a timeline, else None.
+
+        None covers every reason not to animate: no banner up, a banner with no
+        timeline on it, or one that has already expired. The caller redraws
+        for exactly as long as this keeps answering.
+        """
+        if not self._bug_has_timeline:
+            return None
+        when = self._expiry.get(_ID_CHANNEL)
+        if when is None:
+            return None
+        remaining = when - self._clock()
+        return remaining if remaining > 0 else None
 
     def tick(self) -> None:
         """Clear any overlays whose time is up. Call this every loop iteration."""

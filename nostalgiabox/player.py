@@ -116,9 +116,23 @@ class Player(ABC):
         """Remove a previously drawn overlay."""
 
     def show_image(
-        self, slot: int, path: Path, x: int, y: int, w: int, h: int
+        self,
+        slot: int,
+        path: Path,
+        x: int,
+        y: int,
+        w: int,
+        h: int,
+        res_x: int,
+        res_y: int,
     ) -> None:
         """Draw the picture at ``path`` scaled into ``w`` x ``h`` at ``x, y``.
+
+        ``x``/``y``/``w``/``h`` are on a ``res_x`` x ``res_y`` virtual canvas,
+        exactly as :meth:`set_overlay` takes its own resolution. A player that
+        draws to a real screen has to scale them itself, because mpv positions
+        image overlays in DISPLAY pixels and will otherwise bunch every picture
+        toward the top-left.
 
         A second overlay layer underneath the ASS one: the channel guide's tile
         pictures. Concrete rather than abstract, and a no-op by default, so a
@@ -133,6 +147,39 @@ class Player(ABC):
     @abstractmethod
     def close(self) -> None:
         """Release resources."""
+
+
+def scale_to_display(
+    x: float,
+    y: float,
+    w: float,
+    h: float,
+    *,
+    canvas: Tuple[int, int],
+    display: Optional[Tuple[Optional[int], Optional[int]]],
+) -> Tuple[int, int, int, int]:
+    """Map a rectangle on the ASS canvas onto real display pixels.
+
+    Overlays are authored on a fixed virtual canvas which mpv scales up to the
+    television. ASS rides that scaling for free because it is told its own
+    resolution; IMAGE overlays do not - mpv positions those in real display
+    pixels. Handing canvas coordinates straight to one draws it at
+    canvas/display of the intended position and size, bunched toward the
+    top-left, which is what a photograph of the television showed.
+
+    An unknown display size returns the rectangle unscaled rather than
+    refusing to draw: mpv may not know its output size yet, and a picture in
+    the wrong place beats no picture at all.
+    """
+    unscaled = (round(x), round(y), round(w), round(h))
+    if not display:
+        return unscaled
+    dw, dh = display
+    cw, ch = canvas
+    if not dw or not dh or not cw or not ch:
+        return unscaled
+    sx, sy = dw / cw, dh / ch
+    return (round(x * sx), round(y * sy), round(w * sx), round(h * sy))
 
 
 def build_mpv_options(
@@ -394,7 +441,19 @@ class MpvPlayer(Player):
             log.debug("osd-overlay failed, falling back to show-text", exc_info=True)
             self.show_text(_strip_ass(ass), 3.0)
 
-    def show_image(self, slot: int, path: Path, x: int, y: int, w: int, h: int) -> None:
+    def _display_size(self) -> Optional[Tuple[Optional[int], Optional[int]]]:
+        """mpv's real output size, or None while it does not know one yet."""
+        try:
+            dim = self._mpv.osd_dimensions
+            return (int(dim["w"]), int(dim["h"]))
+        except Exception:  # noqa: BLE001 - property missing, empty, or pre-render
+            log.debug("osd-dimensions unavailable; drawing tiles unscaled", exc_info=True)
+            return None
+
+    def show_image(
+        self, slot: int, path: Path, x: int, y: int, w: int, h: int,
+        res_x: int, res_y: int,
+    ) -> None:
         """Scale ``path`` into the tile and hand the pixels to mpv.
 
         libass draws text and shapes but not photographs, so this is a second
@@ -411,6 +470,11 @@ class MpvPlayer(Player):
         except ImportError:
             log.debug("Pillow is not installed, so tile pictures are skipped")
             return
+        # Canvas units in, display pixels out. Before the resize, because these
+        # are the dimensions the picture is actually rendered at.
+        x, y, w, h = scale_to_display(
+            x, y, w, h, canvas=(res_x, res_y), display=self._display_size()
+        )
         try:
             with Image.open(path) as src:
                 picture = src.convert("RGBA")
@@ -561,7 +625,11 @@ class MockPlayer(Player):
         self.overlays.pop(overlay_id, None)
         self._log(f"CLEAR OVERLAY {overlay_id}")
 
-    def show_image(self, slot: int, path: Path, x: int, y: int, w: int, h: int) -> None:
+    def show_image(
+        self, slot: int, path: Path, x: int, y: int, w: int, h: int,
+        res_x: int = 0, res_y: int = 0,
+    ) -> None:
+        # No screen, so nothing to scale to: record the canvas units as given.
         self.images[slot] = (path, x, y, w, h)
         self._log(f"IMAGE {slot} {path.name} {w}x{h}+{x}+{y}")
 
