@@ -253,6 +253,11 @@ class Config:
     # halt or bedtime. OFF by default: it puts the whole clip in front of every
     # POWER press, which is a trade rather than an obvious win.
     sign_off_on_standby: bool = False
+    # Draw the "STANDBY" card once the box has gone quiet. Turn it off to let
+    # the sign-off's last frame be the last thing on screen - worth doing where
+    # the television switches itself off anyway, less so where it stays on and
+    # a black screen is indistinguishable from a crash.
+    standby_notice: bool = True
     # How long the sign-off clip is given before playback is stopped. Was a
     # hard-coded 1.1, which silently truncated a longer clip - the mirrored
     # ident sign-off runs about 3.8s.
@@ -496,6 +501,7 @@ def config_from_dict(data: Dict[str, Any], *, base_dir: Optional[Path] = None) -
         )
 
     sign_off_on_standby = bool(data.get("sign_off_on_standby", False))
+    standby_notice = bool(data.get("standby_notice", True))
     sign_off_seconds = _clamp_float(
         data.get("sign_off_seconds", 1.1), 0.0, 30.0, "sign_off_seconds"
     )
@@ -556,6 +562,7 @@ def config_from_dict(data: Dict[str, Any], *, base_dir: Optional[Path] = None) -
         power_button=power_button,
         bedtime_ends_in=bedtime_ends_in,
         sign_off_on_standby=sign_off_on_standby,
+        standby_notice=standby_notice,
         sign_off_seconds=sign_off_seconds,
         tv_standby_command=tv_standby_command,
         tv_wake_command=tv_wake_command,

@@ -305,6 +305,11 @@ bedtime_ends_in: standby
 # off is as much of an event as switching on. ✱ always plays it regardless.
 sign_off_on_standby: true
 
+# No STANDBY card once the box has gone quiet - the sign-off's last frame
+# is the last thing on screen. Safe here because the television switches
+# itself off when the signal stops.
+standby_notice: false
+
 # How long the clip is given. The mirrored ident sign-off - letters sliding
 # back behind the orange, then the orange collapsing to a dot - runs ~3.8s.
 # The old hard-coded 1.1 cut it off after a second.

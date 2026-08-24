@@ -967,7 +967,8 @@ class TVApp:
             self._pending_banner = None
             self.player.stop()
             self.overlay.clear_all()
-            self.overlay.show_standby()
+            if self.config.standby_notice:
+                self.overlay.show_standby()
             # Take the television with us. Safe to do only because waking
             # brings it back - see _run_tv_wake_command.
             self._run_tv_standby_command()
