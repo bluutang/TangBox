@@ -10,11 +10,12 @@ and the reason is the television:
 
 * At boot the set is often asleep, so the pre-roll exists to cover the seconds
   it takes to wake and switch input over CEC. That is what the spinner is for.
-* At wake the set is ALREADY on and showing us. There is nothing to cover, and
-  ten seconds of spinning orange before the ident would be dead air.
+* At wake the set may ALSO be asleep - TangBox cannot switch this television
+  off (the Samsung ignores CEC standby), so it gets switched off by hand, and
+  a wake has to bring it back and wait for it just like a cold boot.
 
-So a wake starts at the ident and skips the pre-roll. Off by default, because
-it changes what a button does; config.pi.yaml turns it on.
+So a wake replays the WHOLE sign-on, pre-roll included. Off by default,
+because it changes what a button does; config.pi.yaml turns it on.
 """
 
 from __future__ import annotations
@@ -79,6 +80,12 @@ def sleep_and_wake(app):
 SIGN_ON = {"enabled": True, "bars_seconds": 10, "on_wake": True}
 
 
+def run_out_the_pre_roll(app):
+    """Let the timed pre-roll expire so the sign-on moves on to the ident."""
+    app._clock.advance(app.config.sign_on.bars_seconds + 1)
+    app.step()
+
+
 # --- the new behaviour -----------------------------------------------------
 
 
@@ -86,15 +93,24 @@ def test_waking_plays_the_ident(tmp_path):
     app, player = build(tmp_path, sign_on=SIGN_ON)
     app.start()
     sleep_and_wake(app)
+    run_out_the_pre_roll(app)
     assert "logo.mp4" in played(player)
 
 
-def test_waking_skips_the_pre_roll(tmp_path):
-    """The television is already on. Ten seconds of spinner would be dead air."""
+def test_waking_plays_the_pre_roll_too(tmp_path):
+    """The television may well be OFF on a wake, so it still needs covering.
+
+    This asserted the opposite at first, on the reasoning that a wake finds the
+    set already on. That is wrong for this box: TangBox cannot put the
+    television into standby (the Samsung ignores CEC standby entirely), so
+    Brian switches it off by hand - and then a wake has to bring it back and
+    wait for it, exactly like a cold boot. Proven on the set 2026-08-24: the
+    ident played to a television that was still waking.
+    """
     app, player = build(tmp_path, sign_on=SIGN_ON)
     app.start()
     sleep_and_wake(app)
-    assert "colorbars.mp4" not in played(player)
+    assert "colorbars.mp4" in played(player)
 
 
 def test_waking_is_still_signing_on(tmp_path):
@@ -109,16 +125,22 @@ def test_the_ident_hands_over_to_the_channel(tmp_path):
     app, player = build(tmp_path, sign_on=SIGN_ON)
     app.start()
     sleep_and_wake(app)
+    run_out_the_pre_roll(app)
     app._finish_sign_on()
     assert app.signing_on is False
     assert player.current is not None
 
 
 def test_a_missing_ident_still_wakes_the_box(tmp_path):
-    """Every stage is optional; a missing asset must never cost the cartoons."""
+    """Every stage is optional; a missing asset must never cost the cartoons.
+
+    With no ident to play, the pre-roll expires and the box tunes straight in
+    rather than sitting on a spinner for ever.
+    """
     app, player = build(tmp_path, assets=("colorbars.mp4",), sign_on=SIGN_ON)
     app.start()
     sleep_and_wake(app)
+    run_out_the_pre_roll(app)
     assert app.signing_on is False
     assert player.current is not None
 

@@ -936,13 +936,18 @@ class TVApp:
             self.overlay.clear_standby()
             self._run_tv_wake_command()
             # Coming out of standby is the station opening again, so replay the
-            # ident - but START AT IT, skipping the pre-roll. The pre-roll only
-            # exists to cover a television waking and switching input; on a wake
-            # the set is already on, and a spinner would be dead air.
+            # WHOLE sign-on, pre-roll included.
+            #
+            # It skipped the pre-roll at first, reasoning that a wake finds the
+            # television already on. Wrong for this box: TangBox cannot put the
+            # set into standby - the Samsung ignores CEC standby in every form -
+            # so it is switched off by hand, and a wake has to bring it back and
+            # wait for it exactly like a cold boot. Without the pre-roll the
+            # ident plays to a screen that is still waking up.
             if not (
                 self.config.sign_on.enabled
                 and self.config.sign_on.on_wake
-                and self._enter_sign_on_stage_after("bars")
+                and self._begin_sign_on()
             ):
                 self.tune_current(show_static=False)
 
