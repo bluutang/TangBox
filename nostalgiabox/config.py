@@ -240,6 +240,13 @@ class Config:
     # means "leave the television alone". Best-effort: if it fails, the Pi
     # still halts.
     tv_standby_command: tuple[str, ...] = ()
+    # Run when the box comes back ON - waking from standby, or starting up.
+    # HDMI-CEC "One Touch Play" both powers the television on AND switches it
+    # to this input, e.g.
+    #   ["sh", "-c", "echo 'on 0' | cec-client -s -d 1; echo as | cec-client -s -d 1"]
+    # Empty means "leave the television alone". Best-effort: a set that will
+    # not answer must never stop the box working.
+    tv_wake_command: tuple[str, ...] = ()
 
     # Playback.
     scan_recursive: bool = True           # look in sub-folders for episodes
@@ -457,6 +464,16 @@ def config_from_dict(data: Dict[str, Any], *, base_dir: Optional[Path] = None) -
             f"'bedtime_ends_in' must be 'standby' or 'shutdown', got {bedtime_ends_in!r}"
         )
 
+    wake_raw = data.get("tv_wake_command", [])
+    if isinstance(wake_raw, str):
+        tv_wake_command = tuple(wake_raw.split())
+    elif not wake_raw:
+        tv_wake_command = ()
+    elif isinstance(wake_raw, (list, tuple)):
+        tv_wake_command = tuple(str(x) for x in wake_raw)
+    else:
+        raise ConfigError("'tv_wake_command' must be a string or list of strings")
+
     tv_raw = data.get("tv_standby_command", [])
     if isinstance(tv_raw, str):
         tv_standby_command = tuple(tv_raw.split())
@@ -494,6 +511,7 @@ def config_from_dict(data: Dict[str, Any], *, base_dir: Optional[Path] = None) -
         power_button=power_button,
         bedtime_ends_in=bedtime_ends_in,
         tv_standby_command=tv_standby_command,
+        tv_wake_command=tv_wake_command,
         scan_recursive=bool(data.get("scan_recursive", True)),
         shuffle_seed=(int(data["shuffle_seed"]) if data.get("shuffle_seed") is not None else None),
         commercials=_parse_commercials(data.get("commercials")),

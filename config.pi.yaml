@@ -312,6 +312,23 @@ bedtime_ends_in: standby
 # time the box is shut down from the remote, and set this to [] if it misbehaves.
 tv_standby_command: ["sh", "-c", "echo 'standby 0' | cec-client -s -d 1"]
 
+# Run when the box comes back ON - waking from standby, and at start-up.
+#
+# Two CEC messages, and the SECOND is the one that matters: `on 0` powers the
+# television, `as` (active source) makes it switch to THIS input. Powering a
+# television on is little use if it lands on the wrong HDMI socket.
+#
+# This is what makes switching the television off on standby safe: without a
+# way back, POWER would wake the box to a dark screen.
+#
+# ⚠️ UNTESTED. No part of the CEC path has ever run on this box - not even the
+# standby command above. Two things must be true first:
+#   * `cec-client` installed on the Pi (libcec / cec-utils)
+#   * CEC enabled on the television. Samsung calls it ANYNET+, and it is off
+#     by default on many sets.
+# Empty means "leave the television alone", which is the code default.
+tv_wake_command: ["sh", "-c", "echo 'on 0' | cec-client -s -d 1; echo 'as' | cec-client -s -d 1"]
+
 # --- Commercial breaks --------------------------------------------------------
 # When an episode ends, the station goes to break before the next one starts.
 # Drop advert clips into the folder below - the leading underscore keeps it from

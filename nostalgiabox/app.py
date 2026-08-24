@@ -222,6 +222,7 @@ class TVApp:
         """Power on: set volume, start input, and tune to the first channel."""
         self.player.set_volume(self.volume)
         self.player.set_mute(self.muted)
+        self._run_tv_wake_command()
         self.input.start()
         self._select_start_channel()
         if not self._begin_sign_on():
@@ -815,6 +816,24 @@ class TVApp:
         if not self.standby:
             self._toggle_standby()
 
+    def _run_tv_wake_command(self) -> None:
+        """Ask the television to come on, and to show US.
+
+        HDMI-CEC "One Touch Play". Best-effort like its opposite number: a
+        television that will not wake must never stop the box working, so
+        every failure here is swallowed and logged.
+        """
+        self._run_tv_command(self.config.tv_wake_command, "wake")
+
+    def _run_tv_command(self, command, what: str) -> None:
+        command = list(command)
+        if not command:
+            return  # leave the television alone
+        try:
+            subprocess.Popen(command)
+        except Exception:  # noqa: BLE001
+            log.warning("tv %s command failed, carrying on: %s", what, command)
+
     def _run_tv_standby_command(self) -> None:
         """Ask the television to switch off as well, if configured.
 
@@ -910,8 +929,12 @@ class TVApp:
             self.player.stop()
             self.overlay.clear_all()
             self.overlay.show_standby()
+            # Take the television with us. Safe to do only because waking
+            # brings it back - see _run_tv_wake_command.
+            self._run_tv_standby_command()
         else:
             self.overlay.clear_standby()
+            self._run_tv_wake_command()
             self.tune_current(show_static=False)
 
     # -- direct channel entry ----------------------------------------------
