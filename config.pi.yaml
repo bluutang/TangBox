@@ -310,7 +310,7 @@ bedtime_ends_in: standby
 # ⚠️ UNVERIFIED ON THIS HARDWARE. Sending 'as' is proven on the Samsung;
 # 'standby 0' is the same mechanism but nobody has run it. Check it the first
 # time the box is shut down from the remote, and set this to [] if it misbehaves.
-tv_standby_command: ["sh", "-c", "echo 'standby 0' | cec-client -s -d 1"]
+tv_standby_command: ["sh", "-c", "echo 'standby 0' | cec-client -s -d 1 -o TangBox"]
 
 # Run when the box comes back ON - waking from standby, and at start-up.
 #
@@ -321,13 +321,17 @@ tv_standby_command: ["sh", "-c", "echo 'standby 0' | cec-client -s -d 1"]
 # This is what makes switching the television off on standby safe: without a
 # way back, POWER would wake the box to a dark screen.
 #
-# ⚠️ UNTESTED. No part of the CEC path has ever run on this box - not even the
-# standby command above. Two things must be true first:
-#   * `cec-client` installed on the Pi (libcec / cec-utils)
-#   * CEC enabled on the television. Samsung calls it ANYNET+, and it is off
-#     by default on many sets.
+# `-o TangBox` sets the name the box announces on the CEC bus. Without it
+# libCEC calls itself "CECTester", which is what a Samsung shows when it
+# switches source.
+#
+# ✅ The CEC BUS was verified 2026-08-24 by scanning it from the Pi with the
+# television in standby: the Samsung answers (so Anynet+ is already on),
+# cec-client is installed, /dev/cec0 exists, and the Pi sits at address
+# 3.0.0.0 - HDMI 3. A PlayStation 5 is on HDMI 1.
+# ⚠️ The COMMANDS themselves have still never been sent.
 # Empty means "leave the television alone", which is the code default.
-tv_wake_command: ["sh", "-c", "echo 'on 0' | cec-client -s -d 1; echo 'as' | cec-client -s -d 1"]
+tv_wake_command: ["sh", "-c", "echo 'on 0' | cec-client -s -d 1 -o TangBox; echo 'as' | cec-client -s -d 1 -o TangBox"]
 
 # --- Commercial breaks --------------------------------------------------------
 # When an episode ends, the station goes to break before the next one starts.
