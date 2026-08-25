@@ -66,23 +66,27 @@ def test_right_moves_to_the_next_channel():
     assert g.cursor == 1
 
 
-def test_right_at_the_end_of_a_row_continues_onto_the_next_row():
-    # Reading order, so you can never land between two rows and stall.
+def test_right_at_the_end_of_a_row_wraps_within_that_row():
+    # SPATIAL, not reading order. Right from the top-right used to drop
+    # diagonally to the row below, which is not what pressing right looks
+    # like it should do - Brian hit exactly this on the television.
     g = Guide(count=4, cursor=1)
-    g.right()
-    assert g.cursor == 2
-
-
-def test_right_off_the_last_channel_wraps_to_the_first():
-    g = Guide(count=4, cursor=3)
     g.right()
     assert g.cursor == 0
 
 
-def test_left_off_the_first_channel_wraps_to_the_last():
+def test_right_off_the_last_channel_stays_in_its_row():
+    # Bottom-right of a single page: the row wraps, the cursor does not leap
+    # back up to the top of the grid.
+    g = Guide(count=4, cursor=3)
+    g.right()
+    assert g.cursor == 2
+
+
+def test_left_off_the_first_channel_wraps_within_its_row():
     g = Guide(count=4, cursor=0)
     g.left()
-    assert g.cursor == 3
+    assert g.cursor == 1
 
 
 def test_down_moves_a_whole_row():
@@ -403,16 +407,34 @@ def test_up_from_the_first_page_wraps_round_to_the_last():
 
 
 def test_right_off_the_edge_of_a_page_carries_onto_the_next_page():
-    # Reading order across the whole lineup, exactly as it always has been.
-    g = Guide(count=17, cursor=7)
+    # Keeping the ROW as the page turns, the mirror of what down() already
+    # does with the column - so the cursor does not appear to jump.
+    g = Guide(count=17, cursor=7)      # page 0, bottom row, last column
     g.right()
-    assert g.cursor == 8
+    assert g.cursor == 12              # page 1, bottom row, FIRST column
 
 
 def test_left_off_the_start_of_a_page_carries_back_onto_the_previous_one():
-    g = Guide(count=17, cursor=8)
+    g = Guide(count=17, cursor=8)      # page 1, top row, first column
     g.left()
-    assert g.cursor == 7
+    assert g.cursor == 3               # page 0, top row, LAST column
+
+
+def test_right_and_left_keep_the_row_across_a_page_turn():
+    # Two full pages, so the row survives the turn in both directions.
+    g = Guide(count=16, cursor=4)      # page 0, bottom row, first column
+    g.left()
+    assert g.cursor == 15              # page 1, bottom row, last column
+    g.right()
+    assert g.cursor == 4               # and back
+
+
+def test_a_page_turn_never_lands_on_an_empty_cell():
+    # 17 channels leave the last page holding ONE tile. Turning onto it while
+    # keeping the bottom row would aim at a cell that does not exist.
+    g = Guide(count=17, cursor=4)      # page 0, bottom row, first column
+    g.left()
+    assert g.cursor == 16              # the only tile there is
 
 
 def test_every_move_from_every_position_lands_on_a_real_channel():
@@ -584,11 +606,20 @@ def test_the_picture_always_fits_inside_the_tile_that_holds_it():
         assert y >= tile.y and y + h <= tile.y + tile.h + 0.001, (count, cols, rows)
 
 
-def test_the_picture_leaves_a_band_for_the_text_underneath():
+def test_the_picture_takes_the_whole_tile():
+    """No band is reserved any more - the name rides on the picture instead.
+
+    This used to assert the opposite: that at least 20px of tile was left
+    below the picture for a text band. The band was costing a sixth of every
+    tile to caption a picture for two children who cannot read.
+    """
     for count, cols, rows in ((17, 4, 2), (17, 5, 3), (4, 4, 2)):
         tile = page_tiles(count, cursor=0, page_cols=cols, page_rows=rows)[0]
-        _, y, _, h = art_rect(tile)
-        assert tile.y + tile.h - (y + h) > 20, (count, cols, rows)
+        _, _, w, h = art_rect(tile)
+        fills_a_side = (
+            abs(w - tile.w) < 0.001 or abs(h - tile.h) < 0.001
+        )
+        assert fills_a_side, (count, cols, rows)
 
 
 def test_the_picture_is_never_stretched_to_fill_its_tile():
@@ -630,11 +661,18 @@ def test_the_name_stays_inside_its_own_tile():
     assert _name_y(arty, "Los Pequenos") < tile.y + tile.h
 
 
-def test_the_name_sits_below_the_picture_not_on_it():
+def test_the_name_sits_on_the_picture_near_its_bottom():
+    """The reverse of what this asserted while there was a band below.
+
+    The name is on the artwork now, low enough to caption it and high enough
+    to still be inside it.
+    """
     arty = guide_ass(FOUR, cursor=0, ui=_ui(), artwork=FOUR_WITH_ART)
     tile = page_tiles(len(FOUR), cursor=0)[0]
     _, art_y, _, art_h = art_rect(tile)
-    assert _name_y(arty, "Los Pequenos") > art_y + art_h
+    name_y = _name_y(arty, "Los Pequenos")
+    assert name_y < art_y + art_h, "the name has fallen off the picture"
+    assert name_y > art_y + art_h * 0.75, "the name should caption, not cover"
 
 
 def test_a_tile_with_no_picture_is_drawn_exactly_as_before():
@@ -671,13 +709,21 @@ def test_the_plate_sits_inside_the_picture_area():
     assert art_y <= py <= art_y + art_h
 
 
-def test_on_now_stays_in_the_band_with_the_name():
+def test_on_now_sits_at_the_top_clear_of_the_name():
+    """The collision Brian photographed, made impossible rather than unlikely.
+
+    ON NOW used to sit under the name inside the text band; once the band was
+    narrowed to 0.15 of the tile there was no longer room for both, and they
+    overlapped. It now hangs in the picture's top corner, as far from the name
+    bar as the tile allows.
+    """
     arty = guide_ass(FOUR, cursor=0, ui=_ui(), on_now=0, artwork=FOUR_WITH_ART)
     tile = page_tiles(len(FOUR), cursor=0)[0]
     _, art_y, _, art_h = art_rect(tile)
     on_now_y = [y for line in arty.split("\n") if "ON NOW" in line
                 for _, y in _positions(line)][0]
-    assert on_now_y > art_y + art_h
+    assert on_now_y < art_y + art_h * 0.25, "ON NOW should be up at the top"
+    assert on_now_y < _name_y(arty, "Los Pequenos"), "and well clear of the name"
 
 
 def test_the_number_is_still_drawn_when_there_is_a_picture():

@@ -125,21 +125,28 @@ class TileRect(NamedTuple):
     h: float
 
 
-# How much of a tile's height is the band under the picture.
+# How much of the picture's height the name bar covers, drawn ON the picture.
 #
-# Was 0.3125, which made the band so deep that the tile ended up TALLER than
-# its picture was wide - a portrait tile around a 4:3 picture, with the artwork
-# filling barely half the space. Photographed on the television 2026-08-24.
+# There used to be a BAND below the picture instead - 0.3125 of the tile, then
+# 0.18, then 0.15 - and every reduction was an attempt to stop the band
+# stealing the tile from the artwork it was labelling. Photographed on the
+# television 2026-08-25, the answer was that the band should not be there at
+# all: neither child can read, so a strip of text permanently occupying a sixth
+# of every tile buys nothing they can use, and the ON NOW tag had run out of
+# room to sit under the name without colliding with it.
 #
-# At 0.18 the tile is landscape, the picture gains 42% of its area (280x210 ->
-# 333x250 on the canvas, 500x375 on a 1080p screen), and the band still holds
-# the name. Lower still keeps working - 0.12 gives another 15% - but the name
-# has to shrink with it.
-#
-# The old note read: 0.3125 of a 288px
-# little air. Proportional rather than fixed so it survives a change of page
-# size - the text scales with the tile too.
-_BAND_RATIO = 0.15
+# The tile is now the picture, and the name rides on a shaded bar across the
+# bottom of it, the way a printed guide captions a thumbnail. The picture gains
+# 38% of its area (339x254 -> 399x299 on the canvas, 598x449 on a 1080p
+# screen), and the bar can be as dark as it needs to be, because it no longer
+# costs the picture anything to be there.
+_LABEL_RATIO = 0.17
+
+# How opaque the name bar is. ASS alpha is inverted, so this is how much of the
+# picture still shows through underneath: dark enough that the name reads over
+# a white cartoon frame, light enough that the bar is part of the picture
+# rather than a lid on it.
+_LABEL_ALPHA = 70
 
 # The picture is 4:3, the shape the programmes themselves are.
 _ART_RATIO = 4 / 3
@@ -148,21 +155,20 @@ _ART_RATIO = 4 / 3
 def art_rect(tile: "TileRect") -> Tuple[float, float, float, float]:
     """``(x, y, w, h)`` of the picture area inside ``tile``.
 
-    The largest 4:3 rectangle that fits above the text band, centred across the
-    tile. On the real box - a 264x288 tile - that is exactly 264x198 with a
-    90px band, which is what the artwork is cut to.
+    The largest 4:3 rectangle that fits the WHOLE tile, centred both ways. It
+    used to stop short of a text band along the bottom; the name now sits on
+    the picture instead, so nothing is reserved and the artwork gets the lot.
 
-    It has to be fitted rather than simply derived from the tile's width: a
-    lineup small enough for one page gets very wide tiles (552x305 for four
-    channels), and a 4:3 picture as wide as that would be 414 tall and burst
-    out of the bottom of the tile.
+    It still has to be FITTED rather than simply derived from the tile's width:
+    a lineup small enough for one page gets very wide tiles, and a 4:3 picture
+    as wide as that would burst out of the bottom of the tile.
     """
-    h = tile.h * (1 - _BAND_RATIO)
-    w = h * _ART_RATIO
-    if w > tile.w:
-        w = tile.w
+    w, h = tile.w, tile.h
+    if w / h > _ART_RATIO:
+        w = h * _ART_RATIO
+    else:
         h = w / _ART_RATIO
-    return (tile.x + (tile.w - w) / 2, tile.y, w, h)
+    return (tile.x + (tile.w - w) / 2, tile.y + (tile.h - h) / 2, w, h)
 
 
 def page_tiles(
@@ -197,20 +203,36 @@ def page_tiles(
     #
     # Whatever that frees up becomes margin, so more of the programme playing
     # behind the guide shows through.
-    slot_w = (CANVAS_W - 2 * _MARGIN_X - _GAP * (cols - 1)) / cols
-    tile_w = min(tile_h * (1 - _BAND_RATIO) * _ART_RATIO, slot_w)
+    # A tile is exactly as wide as the 4:3 picture its HEIGHT allows, unless
+    # there is not room for that many across, in which case width wins.
+    widest = (CANVAS_W - 2 * _MARGIN_X - _GAP * (cols - 1)) / cols
+    tile_w = min(tile_h * _ART_RATIO, widest)
 
-    # The whole grid is centred with a fixed gap, so the slack lands at the
-    # OUTER edges rather than down the middle. Centring each tile in its own
-    # slot put 243 canvas pixels between the two columns and only 185 at the
-    # screen edge - the negative space ended up exactly where the eye goes.
-    row_w = tile_w * cols + _GAP * (cols - 1)
-    x0 = (CANVAS_W - row_w) / 2
+    # Spread the leftover width EVENLY between the outer margins and the gaps,
+    # rather than banking it all at the edges.
+    #
+    # Banking it at the edges was the previous fix, for the opposite problem:
+    # centring each tile in its own slot had put 243 canvas pixels between the
+    # two columns and only 185 at the screen edge. That overcorrected -
+    # photographed on the television 2026-08-25, two columns sat huddled in the
+    # middle of the screen inside wide black borders.
+    #
+    # Even shares put the same air between the tiles as around them. The outer
+    # margin is never allowed below _MARGIN_X, because that one is not taste:
+    # televisions overscan, and closer to the edge risks being cut off.
+    gaps = cols - 1
+    leftover = CANVAS_W - tile_w * cols
+    share = leftover / (cols + 1)
+    if share >= _MARGIN_X:
+        margin = gap = share
+    else:
+        margin = float(_MARGIN_X)
+        gap = max(0.0, (leftover - 2 * margin) / gaps) if gaps else 0.0
 
     return [
         TileRect(
             index=first + local,
-            x=x0 + (local % cols) * (tile_w + _GAP),
+            x=margin + (local % cols) * (tile_w + gap),
             y=_MARGIN_Y + (local // cols) * (tile_h + _GAP),
             w=tile_w,
             h=tile_h,
@@ -301,16 +323,43 @@ class Guide:
 
     # -- movement -----------------------------------------------------------
     def right(self) -> None:
-        """Next channel in reading order, wrapping past the last to the first."""
-        if self._count:
-            self._cursor = (self._cursor + 1) % self._count
-            self._touch()
+        """One column right, carrying onto the next PAGE from the last column.
+
+        SPATIAL rather than reading order. Reading order meant right from the
+        top-right corner dropped diagonally to the row below: Brian pressed
+        right on the top-right tile expecting the next page and landed on the
+        tile underneath, which is not what an arrow looks like it should do.
+
+        The ROW is kept as the page turns, the mirror of what :meth:`down`
+        already does with the column. On a single page there is nowhere to turn
+        to, so the row wraps on itself.
+        """
+        if not self._count:
+            return
+        beside = self._cursor + 1
+        if self._column < self._cols - 1 and beside < self._count:
+            self._cursor = beside
+        else:
+            self._cursor = self._land_at(
+                (self.page + 1) % self._pages, self._row, 0
+            )
+        self._touch()
 
     def left(self) -> None:
-        """Previous channel in reading order, wrapping past the first."""
-        if self._count:
-            self._cursor = (self._cursor - 1) % self._count
-            self._touch()
+        """One column left, carrying back onto the previous PAGE.
+
+        The mirror of :meth:`right`: the row is kept, and the cursor arrives in
+        the LAST column of it.
+        """
+        if not self._count:
+            return
+        if self._column > 0:
+            self._cursor -= 1
+        else:
+            self._cursor = self._land_at(
+                (self.page - 1) % self._pages, self._row, self._cols - 1
+            )
+        self._touch()
 
     def down(self) -> None:
         """One row down, carrying onto the next PAGE from the bottom row.
@@ -371,6 +420,21 @@ class Guide:
         if not from_bottom:
             return min(start + column, last)
         candidate = start + (self._rows - 1) * self._cols + column
+        while candidate > last:
+            candidate -= self._cols
+        return candidate if candidate >= start else last
+
+    def _land_at(self, page: int, row: int, column: int) -> int:
+        """The tile to land on arriving at ``page`` at (``row``, ``column``).
+
+        Only the LAST page can be part-full, so a page turn that keeps its row
+        can aim at a cell that does not exist. Walk UP the column until a real
+        tile appears, and settle for the last tile on the page if that column
+        is empty from top to bottom - never park on an empty cell.
+        """
+        start = page * self._per_page
+        last = min(start + self._per_page, self._count) - 1
+        candidate = start + row * self._cols + column
         while candidate > last:
             candidate -= self._cols
         return candidate if candidate >= start else last
@@ -475,10 +539,9 @@ def guide_ass(
     # Text scales with the tile, so four big tiles and twenty small ones both
     # fill their space. The floors stop a crowded lineup shrinking to nothing.
     num_size = max(24, int(tile_h * 0.30))
-    # Sized off the BAND, not the tile: the band is what the name has to fit
-    # inside, and the two stopped being proportional when it was narrowed.
-    band_h = tile_h * _BAND_RATIO
-    name_size = max(14, int(band_h * 0.52))
+    # Only a tile with NO picture uses this. A tile with one sizes its label
+    # off the bar the label sits in, which is what it has to fit inside.
+    name_size = max(14, int(tile_h * 0.12))
     tag_size = max(12, int(tile_h * 0.11))
 
     green = _hex_to_ass(ui.color)
@@ -504,37 +567,49 @@ def guide_ass(
 
         has_art = bool(artwork) and index < len(artwork) and artwork[index]
         if has_art:
-            # The picture takes the middle of the tile, so the number moves to
-            # a plate in its corner and everything else drops below it.
+            # The picture is the whole tile, so the label rides ON it: a shaded
+            # bar across the bottom, the way a printed guide captions a
+            # thumbnail. The number LEADS the name rather than sitting in its
+            # own corner plate - one label reads as one thing, and it leaves
+            # the top of the picture free for the ON NOW tag, which used to
+            # collide with the name in the old band.
             art_x, art_y, art_w, art_h = art_rect(rect)
-            band_y, band_h = art_y + art_h, tile_h - art_h
+            label_h = art_h * _LABEL_RATIO
+            label_y = art_y + art_h - label_h
             parts.append(
-                _number_plate(
-                    art_x + _PLATE_INSET, art_y + _PLATE_INSET,
-                    max(18, int(art_h * 0.16)), number, green, ui, alpha=alpha,
+                _filled_rect(
+                    x=art_x, y=label_y, w=art_w, h=label_h,
+                    fill="&H00000000", alpha=min(255, alpha + _LABEL_ALPHA),
                 )
             )
-            name_y = band_y + band_h * 0.40
-            on_now_y = band_y + band_h * 0.80
+            parts.append(
+                rf"{{\an5\pos({round(art_x + art_w / 2)},{round(label_y + label_h / 2)})"
+                rf"{_style(ui, size=max(14, int(label_h * 0.60)), alpha=alpha)}}}"
+                rf"{number:02d}  {_escape(name)}"
+            )
+            if on_now is not None and index == on_now:
+                parts.append(
+                    _on_now_tag(
+                        art_x + art_w - _PLATE_INSET, art_y + _PLATE_INSET,
+                        tag_size, ui, alpha=alpha,
+                    )
+                )
         else:
             parts.append(
                 rf"{{\an5\pos({round(cx)},{round(y + tile_h * 0.34)})"
                 rf"{_style(ui, size=num_size, alpha=alpha)}}}{number:02d}"
             )
-            name_y = y + tile_h * 0.66
-            on_now_y = y + tile_h * 0.90
-
-        parts.append(
-            rf"{{\an5\pos({round(cx)},{round(name_y)})"
-            rf"{_style(ui, size=name_size, alpha=alpha)}}}{_escape(name)}"
-        )
-        if on_now is not None and index == on_now:
-            # Home then OK always means "never mind", so the guide has to say
-            # which one you are already watching.
             parts.append(
-                rf"{{\an5\pos({round(cx)},{round(on_now_y)})"
-                rf"{_style(ui, size=tag_size, alpha=alpha)}}}ON NOW"
+                rf"{{\an5\pos({round(cx)},{round(y + tile_h * 0.66)})"
+                rf"{_style(ui, size=name_size, alpha=alpha)}}}{_escape(name)}"
             )
+            if on_now is not None and index == on_now:
+                # Home then OK always means "never mind", so the guide has to
+                # say which one you are already watching.
+                parts.append(
+                    rf"{{\an5\pos({round(cx)},{round(y + tile_h * 0.90)})"
+                    rf"{_style(ui, size=tag_size, alpha=alpha)}}}ON NOW"
+                )
 
     parts.extend(_page_dots(pages, page, green))
     return "\n".join(parts)
@@ -576,30 +651,36 @@ def dot_style(index: int, current: int) -> Tuple[int, int]:
     return _DOT_R, _DOT_AWAY_ALPHA
 
 
-def _number_plate(
-    x: float, y: float, size: int, number: int, color: str, ui: UiConfig,
-    *, alpha: int,
+def _on_now_tag(
+    right: float, y: float, size: int, ui: UiConfig, *, alpha: int,
 ) -> str:
-    """The channel number on a solid dark block, over the picture.
+    """ON NOW on a solid dark block in the picture's top-right corner.
 
-    A green numeral on a bright cartoon frame is unreadable, and the OSD's
-    usual defence - a dark outline and a phosphor glow - only ever helps. The
-    plate guarantees it: whatever the artwork contains, the number is on black.
+    ``right`` is the plate's RIGHT edge, so the tag hangs off the corner of the
+    picture without the caller having to work out how wide it came out.
 
-    Printed television guides solve it the same way, which is a reasonable
-    thing for a box pretending to be a television to copy.
+    It used to sit under the channel name in the text band, where the two
+    collided once the band was narrowed to 0.15 - photographed on the
+    television 2026-08-25. The name has since moved onto a bar across the
+    bottom of the picture, which leaves this corner empty and makes the
+    collision impossible rather than merely unlikely.
+
+    The dark block is the trick the channel number used to need: green text on
+    a bright cartoon frame is unreadable, and the phosphor glow alone does not
+    save it. Printed television guides solve it the same way.
     """
-    plate_w = round(size * 2.1)
-    plate_h = round(size * 1.35)
+    text = "ON NOW"
+    plate_w = round(size * len(text) * 0.62)
+    plate_h = round(size * 1.5)
     plate = _filled_rect(
-        x=x, y=y, w=plate_w, h=plate_h, fill="&H00000000",
+        x=right - plate_w, y=y, w=plate_w, h=plate_h, fill="&H00000000",
         alpha=min(255, alpha + 30),
     )
-    numeral = (
-        rf"{{\an5\pos({round(x + plate_w / 2)},{round(y + plate_h / 2)})"
-        rf"{_style(ui, size=size, alpha=alpha)}}}{number:02d}"
+    label = (
+        rf"{{\an5\pos({round(right - plate_w / 2)},{round(y + plate_h / 2)})"
+        rf"{_style(ui, size=size, alpha=alpha)}}}{text}"
     )
-    return plate + "\n" + numeral
+    return plate + "\n" + label
 
 
 def _tile_frame(

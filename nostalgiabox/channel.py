@@ -173,6 +173,19 @@ def _is_excluded(
     return False
 
 
+#: The moment every broadcast channel counts from - 2026-01-01T00:00:00Z.
+#:
+#: Fixed and shared, so a channel is mid-programme the first time anyone tunes
+#: to it and stays in step with itself across a restart. The particular date is
+#: arbitrary; only its being constant matters.
+BROADCAST_EPOCH = 1767225600.0
+
+#: Seconds of phase between one channel number and the next, so channels do not
+#: all change programme on the same second. Prime, so it does not fall into
+#: step with common episode lengths.
+_PHASE_STRIDE = 1009.0
+
+
 class BroadcastSchedule:
     """A never-ending, always-running shuffled running order for a channel.
 
@@ -344,10 +357,28 @@ class Channel:
         for path in self.episodes:
             dur = probe_duration(path)
             durations.append(dur if dur else DEFAULT_EPISODE_SECONDS)
-        # Use a channel-stable epoch offset so different channels are out of
-        # phase with each other, but keep it deterministic per run.
+
+        # Count from a FIXED origin shared by every channel, not from the
+        # moment this one happened to be built.
+        #
+        # `epoch` used to be the wall-clock time of the first tune-in, which
+        # quietly defeated the whole mode: a channel began its running order
+        # the instant you first landed on it, so every channel opened at the
+        # top of a programme, once each, in the order you visited them. The
+        # comment here promised "a channel-stable epoch offset" and the code
+        # never did it.
+        #
+        # From a fixed origin the channel has been running since long before
+        # the box was switched on - which is the illusion - and it survives a
+        # restart, because the origin does not move.
+        #
+        # The phase keeps channels out of step with each other, so they do not
+        # all change programme on the same second. Derived from the channel
+        # number, so it is stable across restarts too.
+        cycle = sum(durations) or 1.0
+        phase = (self.number * _PHASE_STRIDE) % cycle
         self._broadcast = BroadcastSchedule(
-            self.episodes, durations, epoch=epoch, rng=self._rng
+            self.episodes, durations, epoch=BROADCAST_EPOCH - phase, rng=self._rng
         )
         return self._broadcast
 

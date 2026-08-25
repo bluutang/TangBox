@@ -52,9 +52,11 @@ def test_more_of_the_programme_shows_through():
     got = tiles(4)
     covered = sum(t.w * t.h for t in got) / (CANVAS_W * CANVAS_H)
     # 73% before the tiles were shrunk to their pictures, 37% after, 49% once
-    # the pictures were then made as large as the height allows. The point is
-    # that the tiles no longer blanket the screen - not a race to the smallest.
-    assert covered < 0.55
+    # the pictures were made as large as the height allows, and 58% now the
+    # text band is gone and the picture IS the tile. The point is that the
+    # tiles no longer blanket the screen - not a race to the smallest, and the
+    # band was never programme showing through anyway, it was a black strip.
+    assert covered < 0.65
 
 
 def test_the_row_is_centred():
@@ -68,15 +70,22 @@ def test_the_row_is_centred():
 
 
 def test_the_picture_is_the_size_the_artwork_spec_assumes():
-    """358x269 on the canvas, so 537x403 on a 1080p screen.
+    """421x316 on the canvas, so 632x474 on a 1080p screen.
 
-    Was 280x210 until the text band was narrowed from 0.3125 to 0.18 - the deep
-    band had made the tile taller than its picture was wide. 1024x768 artwork
-    still covers this comfortably (about 2x oversampled), so the recommendation
-    is unchanged; the number quoted as "actual size" is not.
+    The history of this one number: 280x210, then 358x269 once the text band
+    was narrowed from 0.3125 to 0.18, and now 421x316 with the band gone
+    altogether and the name moved onto the picture.
+
+    On the real box - ten channels at 2x2 paging - it is 399x299, or 598x449
+    on a 1080p screen, because more channels mean a page turn rather than
+    smaller tiles.
+
+    1024x768 artwork still covers all of these (about 1.7x oversampled at the
+    largest), so the RECOMMENDATION is unchanged. The number quoted as "actual
+    size" is not, and both published artifacts still say 419x315.
     """
     _x, _y, w, h = art_rect(tiles(4)[0])
-    assert (round(w), round(h)) == (358, 269)
+    assert (round(w), round(h)) == (421, 316)
 
 
 def test_tiles_still_fit_when_there_are_many_columns():

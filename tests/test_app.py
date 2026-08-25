@@ -806,8 +806,10 @@ def test_the_guide_timing_out_takes_the_pictures_away(tmp_path):
 
 
 def test_the_guide_text_knows_which_tiles_have_pictures(tmp_path):
-    # The two layers have to agree: a tile with a picture drops its name into
-    # the band, which a tile without one does not.
+    # The two layers have to agree: a tile with a picture captions it with a
+    # name bar ACROSS THE BOTTOM OF THE ARTWORK, which a tile without one does
+    # not. (It used to be a band below the picture; the picture now fills the
+    # tile and the name rides on it.)
     app, player, _, _ = build_arty_app(tmp_path)
     app.start()
     send(app, Action.HOME)
@@ -817,4 +819,4 @@ def test_the_guide_text_knows_which_tiles_have_pictures(tmp_path):
             if r.index == index][0]
     _, art_y, _, art_h = art_rect(rect)
     name_y = _drawn_at(drawn, "Nick Jr")[1]
-    assert name_y > art_y + art_h
+    assert art_y + art_h * 0.75 < name_y < art_y + art_h

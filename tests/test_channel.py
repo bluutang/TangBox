@@ -166,11 +166,39 @@ def test_broadcast_tune_in_uses_real_time(tmp_path, monkeypatch):
 
     monkeypatch.setattr(channel_mod, "probe_duration", lambda p: 60.0)
     ch = _channel(tmp_path, episodes=3, tune_in="broadcast")
-    # Two tune-ins at different times should generally land at different offsets.
+    # Thirty seconds of wall clock is thirty seconds further into the schedule.
     r1 = ch.tune_in(now=0.0)
     r2 = ch.tune_in(now=30.0)
-    assert r1.start == 0.0
-    assert r2.start == 30.0
+    assert r2.start - r1.start == 30.0
+
+
+def test_a_channel_has_been_broadcasting_before_you_ever_tune_in(tmp_path, monkeypatch):
+    """The illusion the whole mode exists for, and it used to be broken.
+
+    The schedule was built lazily with ``epoch=now``, so a channel started its
+    running order the instant you first landed on it - every channel opened at
+    the top of a programme, once each, in the order you happened to visit them.
+    Brian caught it on the television: "when i go to a new channel, it starts
+    its episode anew".
+
+    What has to be true instead is that the position depends on the WALL CLOCK
+    and nothing else - so a channel built only now reports exactly what a
+    channel built an hour ago would.
+    """
+    import nostalgiabox.channel as channel_mod
+
+    monkeypatch.setattr(channel_mod, "probe_duration", lambda p: 60.0)
+
+    watched_early = _channel(tmp_path, episodes=3, tune_in="broadcast")
+    watched_early.tune_in(now=1000.0)          # schedule built here
+
+    never_watched = _channel(tmp_path, episodes=3, tune_in="broadcast")
+
+    # Built at completely different moments; they must agree about NOW.
+    assert (
+        never_watched.tune_in(now=5000.0).start
+        == watched_early.tune_in(now=5000.0).start
+    )
 
 
 def test_lineup_navigation(tmp_path):
