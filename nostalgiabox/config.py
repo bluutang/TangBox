@@ -147,6 +147,7 @@ class CommercialsConfig:
     enabled: bool = True
     path: Optional[Path] = None
     break_seconds: float = 75.0     # aim for roughly this much advertising
+    break_ratio: float = 0.0        # 0 = every break the same length
 
 
 @dataclass(frozen=True)
@@ -683,6 +684,9 @@ def _parse_commercials(raw: Any) -> CommercialsConfig:
         path=(Path(str(path)).expanduser() if path else None),
         break_seconds=_clamp_float(
             raw.get("break_seconds", d.break_seconds), 0.0, 600.0, "commercials.break_seconds"
+        ),
+        break_ratio=_clamp_float(
+            raw.get("break_ratio", d.break_ratio), 0.0, 1.0, "commercials.break_ratio"
         ),
     )
 

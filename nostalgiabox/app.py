@@ -20,7 +20,7 @@ import random
 import subprocess
 import time
 from pathlib import Path
-from typing import Callable, List, Optional, Sequence
+from typing import Callable, Dict, List, Optional, Sequence
 
 from .actions import Action, InputEvent
 from .channel import (
@@ -45,6 +45,7 @@ from .input.manager import InputManager, create_backends
 from .interstitial import CommercialPool
 from .overlay import CANVAS_H, CANVAS_W, OverlayManager, banner_art_rect
 from .player import END_EOF, END_ERROR, MockPlayer, Player
+from .probe import probe_duration
 from .static_gen import (
     COLORBARS_FILENAME,
     DEFAULT_ASSETS_DIR,
@@ -104,6 +105,7 @@ class TVApp:
         self.standby = False
         self.powered_off = False
         self._playing_path: Optional[Path] = None
+        self._episode_seconds: Dict[Path, Optional[float]] = {}
         self._last_channel_number: Optional[int] = None
         self._running = False
 
@@ -154,6 +156,7 @@ class TVApp:
         self.commercials = CommercialPool(
             config.commercials.path,
             break_seconds=config.commercials.break_seconds,
+            break_ratio=config.commercials.break_ratio,
             extensions=config.video_extensions,
             enabled=config.commercials.enabled,
             recursive=config.scan_recursive,
@@ -1065,6 +1068,21 @@ class TVApp:
                 self._advance_current()
                 advanced = True
 
+    def _finished_episode_seconds(self) -> Optional[float]:
+        """How long the programme that just ended ran, if we can tell.
+
+        Read from ``_playing_path`` before it is overwritten, and remembered per
+        file: the same episode comes round again, and an ffprobe between every
+        pair of episodes is a cost worth paying only once. ``None`` (no file, or
+        ffprobe missing) simply means the break falls back to a fixed length.
+        """
+        path = self._playing_path
+        if path is None:
+            return None
+        if path not in self._episode_seconds:
+            self._episode_seconds[path] = probe_duration(path)
+        return self._episode_seconds[path]
+
     def _advance_current(self) -> None:
         """Something finished. Decide what plays next.
 
@@ -1086,7 +1104,9 @@ class TVApp:
             self._show_no_signal(self.lineup.current)
             return
 
-        clips = self.commercials.build_break()
+        clips = self.commercials.build_break(
+            episode_seconds=self._finished_episode_seconds()
+        )
         if not clips:
             self._play_request(request)
             return

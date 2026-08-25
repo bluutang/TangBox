@@ -380,6 +380,16 @@ tv_wake_command: ["sh", "-c", "sleep 2; echo 'on 0' | cec-client -s -d 1 -o Tang
 commercials:
   path: /media/tangbox/_commercials
   break_seconds: 75
+  # Break length follows the programme. `break_seconds` is the FLOOR, and a
+  # longer episode earns roughly this fraction of its own length in adverts.
+  # 0.18 is the ratio a 75s break has to a seven-minute cartoon segment, so a
+  # twenty-minute episode gets about three and a half minutes.
+  #
+  # This is also what makes a long advert usable at all: a clip is only ever
+  # chosen when it fits the time the break has LEFT, so a two-minute clip can
+  # air after a full episode and never after a short one. Leave it at 0 and
+  # every break is exactly `break_seconds`, as it was before this existed.
+  break_ratio: 0.18
   enabled: true
 
 # --- Playback -----------------------------------------------------------------

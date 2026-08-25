@@ -255,3 +255,110 @@ def test_underscore_folders_are_not_channels(tmp_path):
     make_ads(tmp_path, 3)
     config = config_from_dict({"media_root": str(tmp_path), "shuffle_seed": 1})
     assert [c.name for c in config.channels] == ["Dragon"]
+
+
+# ------------------------------------------- breaks that scale to the show ---
+
+
+def test_break_ignores_episode_length_until_a_ratio_is_set(tmp_path):
+    """The old fixed-length behaviour is what you get by default."""
+    make_ads(tmp_path, 10)
+    pool = CommercialPool(
+        tmp_path / "_commercials", break_seconds=75, probe=fixed_probe(30.0)
+    )
+    assert len(pool.build_break(episode_seconds=1230)) == 3
+
+
+def test_a_longer_episode_earns_a_longer_break(tmp_path):
+    make_ads(tmp_path, 20)
+    pool = CommercialPool(
+        tmp_path / "_commercials",
+        break_seconds=75,
+        break_ratio=0.18,
+        probe=fixed_probe(30.0),
+    )
+    short = pool.build_break(episode_seconds=410)   # target 75 (the floor)
+    long = pool.build_break(episode_seconds=1230)   # target 221
+    assert len(short) == 3
+    assert len(long) > len(short)
+
+
+def test_break_never_falls_below_break_seconds(tmp_path):
+    """A seven-minute segment still gets a proper break, not a token one."""
+    make_ads(tmp_path, 10)
+    pool = CommercialPool(
+        tmp_path / "_commercials",
+        break_seconds=75,
+        break_ratio=0.18,
+        probe=fixed_probe(30.0),
+    )
+    assert len(pool.build_break(episode_seconds=60)) == 3
+
+
+def test_an_advert_too_long_for_the_budget_is_not_used(tmp_path):
+    """A nine-minute compilation must never become the whole break."""
+    folder = make_ads(tmp_path, 4)
+    lengths = {"ad01": 600.0, "ad02": 30.0, "ad03": 30.0, "ad04": 30.0}
+    pool = CommercialPool(
+        folder, break_seconds=75, probe=lambda p: lengths[p.stem]
+    )
+    for _ in range(10):
+        clips = pool.build_break()
+        assert all(c.stem != "ad01" for c in clips)
+
+
+def test_a_long_advert_airs_when_the_episode_is_long_enough(tmp_path):
+    """The same compilation is fine in front of a feature-length programme."""
+    folder = make_ads(tmp_path, 4)
+    lengths = {"ad01": 300.0, "ad02": 30.0, "ad03": 30.0, "ad04": 30.0}
+    pool = CommercialPool(
+        folder, break_seconds=75, break_ratio=0.18, probe=lambda p: lengths[p.stem]
+    )
+    aired = set()
+    for _ in range(20):
+        aired.update(c.stem for c in pool.build_break(episode_seconds=3000))
+    assert "ad01" in aired
+
+
+def test_a_rejected_advert_is_not_burned(tmp_path):
+    """Passing over an over-long clip must not consume its turn in the bag."""
+    folder = make_ads(tmp_path, 3)
+    lengths = {"ad01": 600.0, "ad02": 30.0, "ad03": 30.0}
+    pool = CommercialPool(
+        folder, break_seconds=45, probe=lambda p: lengths[p.stem]
+    )
+    # ad02 and ad03 are the only usable clips; each break should draw one of
+    # them, and over many breaks both must air repeatedly rather than the pool
+    # running dry.
+    seen = [c.stem for _ in range(20) for c in pool.build_break()]
+    assert seen.count("ad02") > 5
+    assert seen.count("ad03") > 5
+
+
+def test_the_finished_episode_sets_the_break_length(tmp_path, monkeypatch):
+    """The break is built for the programme that just ended, not a fixed guess."""
+    app = build_app(tmp_path, ads=6)
+    seen = {}
+
+    real = app.commercials.build_break
+
+    def spy(episode_seconds=None):
+        seen["episode_seconds"] = episode_seconds
+        return real(episode_seconds=episode_seconds)
+
+    monkeypatch.setattr(app.commercials, "build_break", spy)
+    monkeypatch.setattr(
+        "nostalgiabox.app.probe_duration", lambda path, **kw: 1230.0
+    )
+
+    app.start()
+    end_episode(app)
+    assert seen["episode_seconds"] == 1230.0
+
+
+def test_an_unprobeable_episode_still_gets_a_break(tmp_path, monkeypatch):
+    app = build_app(tmp_path, ads=6)
+    monkeypatch.setattr("nostalgiabox.app.probe_duration", lambda path, **kw: None)
+    app.start()
+    end_episode(app)
+    assert is_ad(app)

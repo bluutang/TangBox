@@ -63,6 +63,21 @@ class ShuffleBag(Generic[T]):
         self._last = item
         return item
 
+    def put_back(self, item: T) -> None:
+        """Return an item drawn but not used, so its turn is not spent.
+
+        A commercial break passes over an advert too long for the time it has
+        left. Without this the clip would count as aired, and the "every advert
+        before any repeats" guarantee would quietly start skipping the long
+        ones for a whole cycle.
+        """
+        # next() pops from the END of the queue, so an item appended there
+        # would be handed straight back on the very next draw - the caller
+        # would see the same over-long advert forever.
+        self._queue.insert(0, item)
+        if self._last == item:
+            self._last = None
+
     def peek(self) -> T:
         """The item :meth:`next` will hand out, without handing it out.
 
