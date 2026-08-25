@@ -111,14 +111,33 @@ won't build on macOS, which is why the command above installs `.[dev]` plus
 | ↑ / ↓ | Change channel |
 | ← / → | Volume down / up (`-` and `+` also work) |
 | `2`, `3`, `4`… | Jump straight to that channel number |
+| `h` | Open the channel guide |
+| `.` | Random channel |
 | `m` | Mute |
 | `i` | Info |
 | `l` | Last channel |
+| `c` | Cycle the CRT picture preset |
+| `b` | Bedtime sign-off (the `✱` button) — press again to cancel |
+| `p` | Power |
 | `q` or `Esc` | Quit |
 
+**What POWER does is a setting, not a fact.** `power_button: standby` (what the
+box ships with) sends it to standby, and POWER wakes it again. `shutdown` halts
+the Pi instead — an honest end of the day, but a one-way door: a halted Pi cuts
+power to its own USB ports, so the Flirc stops listening and the remote cannot
+switch it back on. `bedtime_ends_in` decides the same question for `b` / `✱`.
+
+From a shell on the Pi there is exactly one way in, because input only ever
+comes from evdev devices enumerated at startup:
+
+```bash
+sudo systemctl kill -s USR1 tangbox   # a POWER press: standby, or wake
+```
+
 If you keep a local `config.yaml` for development, one setting matters:
-`power_off_on_min_volume: false`. On the Pi, pressing volume-down again at zero
-powers the box off; on a Mac it would try to shut down your computer.
+`power_off_on_min_volume: false`. It is `false` on the box too, so volume-down
+at zero just stays at zero. Left `true` on a Mac, it would try to shut down your
+computer.
 
 ---
 
@@ -424,10 +443,16 @@ Skip this if you're using your TV's remote over CEC.
 | Volume up | **Right arrow** |
 | Volume down | **Left arrow** |
 | Mute | `m` |
+| Guide | `h` |
+| `✱` star | `b` |
 | Power | `p` |
 
 Up/down for channel and left/right for volume is the layout the code actually
 uses, and it matches how the TV-remote (CEC) path behaves too.
+
+`✱` is the bedtime sign-off: the box finishes what it is playing, then signs
+off. Press it again to cancel. The full button-by-button mapping for the GE Big
+Button remote lives in [`docs/flirc-remote-mapping.md`](docs/flirc-remote-mapping.md).
 
 4. Move the Flirc back to the Pi.
 

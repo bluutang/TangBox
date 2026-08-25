@@ -175,7 +175,7 @@ guide:
                          # 1 = black. Lower it if the tiles get lost in a bright
                          # cartoon; raise it if the picture is distracting.
   page_cols: 2           # FOUR channels a page, not eight.
-  page_rows: 2           # A 2x2 page keeps the tile PICTURE at 508x381 on
+  page_rows: 2           # A 2x2 page keeps the tile PICTURE at 598x449 on
                          # screen however big the catalogue grows. A 4x2 page
                          # fits twice as many channels but drops the picture
                          # to 396x297 - and the picture is the only part of a
