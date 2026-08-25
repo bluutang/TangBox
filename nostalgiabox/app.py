@@ -165,6 +165,9 @@ class TVApp:
         self._break_queue: List[Path] = []
         self._pending_episode: Optional[PlayRequest] = None
 
+        # Set by :meth:`request_power`, acted on by the next loop iteration.
+        self._power_requested = False
+
         # Playback-finished events from the player (may arrive on any thread).
         self._ended: "queue.Queue[str]" = queue.Queue()
         self.player.on_end = self._ended.put
@@ -333,6 +336,29 @@ class TVApp:
         self.input.stop()
         self.player.close()
 
+    def request_power(self) -> None:
+        """Ask for a POWER press from outside the remote. Safe from a signal.
+
+        The box reads input only from evdev devices it enumerated at STARTUP,
+        so there is otherwise no way to reach it from a shell: a synthesised
+        keypress needs a new virtual device, the keyboard backend would never
+        bind one, and creating one and restarting to pick it up would kill the
+        REAL remote the moment the virtual device went away - the backend's
+        select loop breaks on a disappearing fd.
+
+        This sets a flag and returns, rather than doing the work here. A signal
+        handler runs at an arbitrary bytecode boundary on the main thread, and
+        toggling standby means talking to the player and the overlays; doing
+        that mid-step could interleave with the loop halfway through its own
+        call. The loop picks it up on its next pass, microseconds later.
+
+        It raises a POWER press rather than calling standby directly, so there
+        is one door rather than two - the sign-off, the television switching
+        off and the wake all come along for free, and cannot drift apart from
+        what the button does.
+        """
+        self._power_requested = True
+
     # -- main-loop step (small and testable) --------------------------------
     def step(self, *, block: bool = False, timeout: float = 0.1) -> None:
         """Advance the state machine by one iteration.
@@ -340,6 +366,10 @@ class TVApp:
         Handles overlay expiry, channel-entry timeouts, finished episodes, and
         at most one queued input event.
         """
+        if self._power_requested:
+            self._power_requested = False
+            self.handle_event(InputEvent(Action.POWER))
+
         now = self._clock()
         self.overlay.tick()
         self._tick_guide()
@@ -1193,6 +1223,26 @@ class TVApp:
 def run_from_config(config: Config, *, dry_run: bool = False) -> None:
     """Convenience entry point used by the CLI."""
     app = TVApp.from_config(config, dry_run=dry_run)
+
+    # SIGUSR1 is a POWER press, so the box can be put into standby (or woken)
+    # from a shell:  systemctl kill -s USR1 tangbox
+    #
+    # There is no other way in. Input comes only from evdev devices enumerated
+    # at startup, and a synthesised keypress would need a virtual device the
+    # keyboard backend never bound - see TVApp.request_power.
+    #
+    # Installed HERE rather than in TVApp because a signal handler is process
+    # global: an app under test, or two apps in one process, must not fight
+    # over it.
+    try:
+        import signal
+
+        signal.signal(signal.SIGUSR1, lambda *_: app.request_power())
+    except (ValueError, OSError, AttributeError):  # pragma: no cover
+        # Not the main thread, or a platform without SIGUSR1. The remote still
+        # works; only the shell door is missing.
+        log.debug("could not install the SIGUSR1 handler", exc_info=True)
+
     app.run()
 
 
