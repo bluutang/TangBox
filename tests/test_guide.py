@@ -526,9 +526,15 @@ def test_page_tiles_carries_the_lineup_index_not_the_position_on_the_page():
     assert page_tiles(17, cursor=8)[0].index == 8
 
 
-def test_a_tile_is_264_by_288_on_a_four_by_two_page():
+def test_a_tile_is_264_by_299_on_a_four_by_two_page():
+    """Width is capped by the slot at four across; height grew with the margin.
+
+    Was 264x288. The vertical margin was tightened from 0.06 to 0.045 because
+    HEIGHT is what limits the picture - the tile is as wide as its 4:3 picture,
+    and that picture is sized off the height left after the text band.
+    """
     tile = page_tiles(17, cursor=0)[0]
-    assert (round(tile.w), round(tile.h)) == (264, 288)
+    assert (round(tile.w), round(tile.h)) == (264, 299)
 
 
 def test_an_empty_lineup_has_no_tiles():

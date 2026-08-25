@@ -51,8 +51,10 @@ def test_more_of_the_programme_shows_through():
     """
     got = tiles(4)
     covered = sum(t.w * t.h for t in got) / (CANVAS_W * CANVAS_H)
-    # 73% of the screen before, 37% after - the programme behind gets the rest.
-    assert covered < 0.45
+    # 73% before the tiles were shrunk to their pictures, 37% after, 49% once
+    # the pictures were then made as large as the height allows. The point is
+    # that the tiles no longer blanket the screen - not a race to the smallest.
+    assert covered < 0.55
 
 
 def test_the_row_is_centred():
@@ -66,7 +68,7 @@ def test_the_row_is_centred():
 
 
 def test_the_picture_is_the_size_the_artwork_spec_assumes():
-    """333x250 on the canvas, so 500x375 on a 1080p screen.
+    """358x269 on the canvas, so 537x403 on a 1080p screen.
 
     Was 280x210 until the text band was narrowed from 0.3125 to 0.18 - the deep
     band had made the tile taller than its picture was wide. 1024x768 artwork
@@ -74,7 +76,7 @@ def test_the_picture_is_the_size_the_artwork_spec_assumes():
     is unchanged; the number quoted as "actual size" is not.
     """
     _x, _y, w, h = art_rect(tiles(4)[0])
-    assert (round(w), round(h)) == (333, 250)
+    assert (round(w), round(h)) == (358, 269)
 
 
 def test_tiles_still_fit_when_there_are_many_columns():

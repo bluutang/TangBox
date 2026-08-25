@@ -139,7 +139,7 @@ class TileRect(NamedTuple):
 # The old note read: 0.3125 of a 288px
 # little air. Proportional rather than fixed so it survives a change of page
 # size - the text scales with the tile too.
-_BAND_RATIO = 0.18
+_BAND_RATIO = 0.15
 
 # The picture is 4:3, the shape the programmes themselves are.
 _ART_RATIO = 4 / 3
@@ -200,18 +200,17 @@ def page_tiles(
     slot_w = (CANVAS_W - 2 * _MARGIN_X - _GAP * (cols - 1)) / cols
     tile_w = min(tile_h * (1 - _BAND_RATIO) * _ART_RATIO, slot_w)
 
-    # Each tile stays CENTRED IN ITS OWN SLOT rather than the grid collapsing
-    # to the middle. The channel numbering design doc is explicit that position
-    # is most of what a child who cannot read has to go on - "Nick Jr is forever
-    # top row, third along" - so a tile must not move just because it got
-    # narrower. The freed space becomes gaps BETWEEN tiles, which is where the
-    # programme behind shows through.
-    inset = (slot_w - tile_w) / 2
+    # The whole grid is centred with a fixed gap, so the slack lands at the
+    # OUTER edges rather than down the middle. Centring each tile in its own
+    # slot put 243 canvas pixels between the two columns and only 185 at the
+    # screen edge - the negative space ended up exactly where the eye goes.
+    row_w = tile_w * cols + _GAP * (cols - 1)
+    x0 = (CANVAS_W - row_w) / 2
 
     return [
         TileRect(
             index=first + local,
-            x=_MARGIN_X + (local % cols) * (slot_w + _GAP) + inset,
+            x=x0 + (local % cols) * (tile_w + _GAP),
             y=_MARGIN_Y + (local // cols) * (tile_h + _GAP),
             w=tile_w,
             h=tile_h,
@@ -395,7 +394,7 @@ class Guide:
 # bar which are laid out inside the 4:3 picture area. That is deliberate: the
 # banner sits over the picture, the guide replaces it.
 _MARGIN_X = int(CANVAS_W * 0.06)      # televisions overscan; keep clear of the edge
-_MARGIN_Y = int(CANVAS_H * 0.06)
+_MARGIN_Y = int(CANVAS_H * 0.045)   # tighter than X: height is what limits the picture
 _GAP = 24                              # space between tiles, in canvas pixels
 
 # How much the picture behind the guide is dimmed, 0 (not at all) to 1 (black).

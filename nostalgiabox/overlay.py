@@ -246,11 +246,10 @@ _BANNER_ART_GAP = 30
 def banner_art_rect() -> Tuple[float, float, float, float]:
     """``(x, y, w, h)`` of the show picture on the info banner.
 
-    Derived from the bar's own left edge rather than a magic number, so moving
-    the bar moves the picture with it instead of letting the two collide.
+    Top-left of the safe area. The text and the progress bar are right-aligned
+    against the other edge, so the two cannot meet.
     """
-    bar_x0 = _IX1 - _TIME_GUTTER - _BAR_W
-    return (bar_x0 - _BANNER_ART_GAP - _BANNER_ART_W, _IY0, _BANNER_ART_W, _BANNER_ART_H)
+    return (_IX0, _IY0, _BANNER_ART_W, _BANNER_ART_H)
 
 
 def _progress_ass(position: float, duration: float, ui: UiConfig, *, y: int) -> str:
