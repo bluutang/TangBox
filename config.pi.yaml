@@ -160,8 +160,16 @@ guide:
   dim: 0.66              # how far the picture behind it dims. 0 = not at all,
                          # 1 = black. Lower it if the tiles get lost in a bright
                          # cartoon; raise it if the picture is distracting.
-  page_cols: 4           # how many channels fit on ONE page, across and down.
-  page_rows: 2           # Four by two is eight a page, and the biggest tiles of
+  page_cols: 2           # FOUR channels a page, not eight.
+  page_rows: 2           # A 2x2 page keeps the tile PICTURE at 508x381 on
+                         # screen however big the catalogue grows. A 4x2 page
+                         # fits twice as many channels but drops the picture
+                         # to 396x297 - and the picture is the only part of a
+                         # tile a child who cannot read can use.
+                         #
+                         # The cost is pages: 24 channels is 6 pages here, 3
+                         # at 4x2. Acceptable because the kids reach shows by
+                         # picture and the random button, not by scanning.
                          # any shape that fits. Once the lineup outgrows a page
                          # the guide turns pages instead of shrinking the tiles,
                          # and a row of dots along the bottom shows which page
