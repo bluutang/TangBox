@@ -19,7 +19,37 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
 
+from dataclasses import dataclass
+
 from .artwork import crop_box
+
+
+@dataclass(frozen=True)
+class TileLabel:
+    """The caption burned into a guide tile's picture.
+
+    Burned in rather than drawn as ASS over the top, because mpv will not allow
+    the other order. From its own manual: "Z order between different overlays
+    of different formats is static, and cannot be changed ... bitmap overlays
+    added by overlay-add are always on top of the ASS overlays added by
+    osd-overlay."
+
+    The picture is a bitmap overlay and the guide's text is ASS, so ANY text
+    over a tile's artwork is invisible - which is why the channel number on its
+    little dark plate was never once seen, and why Brian asked for a number
+    that was already being drawn.
+
+    ``dim`` is the unfocused state: everything fades back so the focused tile
+    is the only bright thing on the screen, which is the cue doing the work for
+    a child who cannot read.
+    """
+
+    text: str
+    color: str = "#33FF66"
+    font: Optional[Path] = None
+    tag: Optional[str] = None
+    ratio: float = 0.17
+    dim: bool = False
 
 log = logging.getLogger(__name__)
 
@@ -125,6 +155,7 @@ class Player(ABC):
         h: int,
         res_x: int,
         res_y: int,
+        label: Optional[TileLabel] = None,
     ) -> None:
         """Draw the picture at ``path`` scaled into ``w`` x ``h`` at ``x, y``.
 
@@ -134,11 +165,13 @@ class Player(ABC):
         image overlays in DISPLAY pixels and will otherwise bunch every picture
         toward the top-left.
 
-        A second overlay layer underneath the ASS one: the channel guide's tile
-        pictures. Concrete rather than abstract, and a no-op by default, so a
-        player that cannot draw pictures simply does not draw them - the guide
-        already has to handle a tile with no picture, because most shows have
-        none.
+        A second overlay layer ON TOP OF the ASS one - see :class:`TileLabel`
+        for why that order cannot be changed, and why ``label`` therefore has
+        to be burned into the picture rather than drawn over it.
+
+        Concrete rather than abstract, and a no-op by default, so a player that
+        cannot draw pictures simply does not draw them - the guide already has
+        to handle a tile with no picture, because most shows have none.
         """
 
     def clear_image(self, slot: int) -> None:
@@ -229,6 +262,62 @@ def build_mpv_options(
     if extra_options:
         options.update(extra_options)
     return options
+
+
+def _burn_label(picture, label: "TileLabel") -> None:
+    """Draw ``label`` onto the top of ``picture``, in place.
+
+    A shaded bar across the top with the channel number, its name, and ON NOW
+    on the right when the channel is the one playing. Burned into the bitmap
+    because ASS drawn over a bitmap overlay is invisible in mpv - see
+    :class:`TileLabel`.
+
+    Every failure here is survivable: a missing font, an unreadable one, a
+    Pillow too old for `textlength`. The tile then shows its artwork with no
+    caption, which is what a tile has always done when it had no picture to
+    caption. Losing the whole picture over a font would be a far worse trade.
+    """
+    try:
+        from PIL import Image, ImageDraw, ImageFont
+    except ImportError:  # pragma: no cover - Pi-only
+        return
+    try:
+        w, h = picture.size
+        bar_h = max(18, int(h * label.ratio))
+        # ASS dims unfocused tiles by fading them; here the bar and its text
+        # simply come out fainter, for the same reason - the focused tile has
+        # to be the only bright thing on the screen.
+        shade = 150 if label.dim else 205
+        ink = _dim_hex(label.color, 0.45) if label.dim else label.color
+
+        picture.alpha_composite(
+            Image.new("RGBA", (w, bar_h), (0, 0, 0, shade)), (0, 0)
+        )
+
+        draw = ImageDraw.Draw(picture)
+        size = max(11, int(bar_h * 0.62))
+        font = (
+            ImageFont.truetype(str(label.font), size)
+            if label.font and Path(label.font).is_file()
+            else ImageFont.load_default()
+        )
+        pad = max(6, int(w * 0.02))
+        draw.text((pad, bar_h / 2), label.text, font=font, fill=ink, anchor="lm")
+        if label.tag:
+            draw.text(
+                (w - pad, bar_h / 2), label.tag, font=font, fill=ink, anchor="rm"
+            )
+    except Exception:  # pragma: no cover - never lose the picture over a caption
+        log.debug("could not burn a tile label", exc_info=True)
+
+
+def _dim_hex(hex_color: str, factor: float) -> str:
+    """``hex_color`` scaled toward black by ``factor``."""
+    h = hex_color.lstrip("#")
+    r, g, b = (int(h[i:i + 2], 16) for i in (0, 2, 4))
+    return "#%02X%02X%02X" % (
+        int(r * factor), int(g * factor), int(b * factor)
+    )
 
 
 class MpvPlayer(Player):
@@ -455,7 +544,7 @@ class MpvPlayer(Player):
 
     def show_image(
         self, slot: int, path: Path, x: int, y: int, w: int, h: int,
-        res_x: int, res_y: int,
+        res_x: int, res_y: int, label: Optional[TileLabel] = None,
     ) -> None:
         """Scale ``path`` into the tile and hand the pixels to mpv.
 
@@ -487,6 +576,8 @@ class MpvPlayer(Player):
         except (OSError, ValueError):
             log.warning("could not read tile picture %s", path, exc_info=True)
             return
+        if label is not None:
+            _burn_label(picture, label)
         overlay = self._image_overlays.get(slot)
         try:
             if overlay is None:
@@ -547,6 +638,7 @@ class MockPlayer(Player):
         self.messages: List[Tuple[str, float]] = []
         self.overlays: dict[int, str] = {}
         self.images: dict[int, Tuple[Path, int, int, int, int]] = {}
+        self.image_labels: dict[int, Optional[TileLabel]] = {}
         self.stops = 0
         self.crt_shader: Optional[Path] = None
         self.duration: float = 0.0
@@ -639,17 +731,23 @@ class MockPlayer(Player):
 
     def show_image(
         self, slot: int, path: Path, x: int, y: int, w: int, h: int,
-        res_x: int = 0, res_y: int = 0,
+        res_x: int = 0, res_y: int = 0, label: Optional[TileLabel] = None,
     ) -> None:
         # No screen, so nothing to scale to: record the canvas units as given.
         self.images[slot] = (path, x, y, w, h)
+        # Kept separately so a test can assert what a tile is CAPTIONED with -
+        # the caption is burned into the bitmap on the real player, where no
+        # test can read it back.
+        self.image_labels[slot] = label
         self._log(f"IMAGE {slot} {path.name} {w}x{h}+{x}+{y}")
 
     def clear_image(self, slot: int) -> None:
         self.images.pop(slot, None)
+        self.image_labels.pop(slot, None)
 
     def clear_images(self) -> None:
         self.images.clear()
+        self.image_labels.clear()
         self._log("CLEAR IMAGES")
 
     def close(self) -> None:

@@ -567,33 +567,22 @@ def guide_ass(
 
         has_art = bool(artwork) and index < len(artwork) and artwork[index]
         if has_art:
-            # The picture is the whole tile, so the label rides ON it: a shaded
-            # bar across the bottom, the way a printed guide captions a
-            # thumbnail. The number LEADS the name rather than sitting in its
-            # own corner plate - one label reads as one thing, and it leaves
-            # the top of the picture free for the ON NOW tag, which used to
-            # collide with the name in the old band.
-            art_x, art_y, art_w, art_h = art_rect(rect)
-            label_h = art_h * _LABEL_RATIO
-            label_y = art_y + art_h - label_h
-            parts.append(
-                _filled_rect(
-                    x=art_x, y=label_y, w=art_w, h=label_h,
-                    fill="&H00000000", alpha=min(255, alpha + _LABEL_ALPHA),
-                )
-            )
-            parts.append(
-                rf"{{\an5\pos({round(art_x + art_w / 2)},{round(label_y + label_h / 2)})"
-                rf"{_style(ui, size=max(14, int(label_h * 0.60)), alpha=alpha)}}}"
-                rf"{number:02d}  {_escape(name)}"
-            )
-            if on_now is not None and index == on_now:
-                parts.append(
-                    _on_now_tag(
-                        art_x + art_w - _PLATE_INSET, art_y + _PLATE_INSET,
-                        tag_size, ui, alpha=alpha,
-                    )
-                )
+            # NOTHING is drawn over a tile that has a picture, because nothing
+            # drawn here could be seen. mpv's own manual: "Z order between
+            # different overlays of different formats is static, and cannot be
+            # changed ... bitmap overlays added by overlay-add are always on
+            # top of the ASS overlays added by osd-overlay."
+            #
+            # The picture is a bitmap overlay and this is ASS, so a caption
+            # over the artwork has to be BURNED INTO the bitmap - see
+            # player.TileLabel, which is where the number, the name and ON NOW
+            # went. The channel number used to be drawn here on a little dark
+            # plate and was never once visible; the band underneath the picture
+            # was the only text anyone ever saw.
+            #
+            # The frame is still worth drawing: ASS centres a border on its
+            # path, so the outer half of it falls outside the tile and shows.
+            pass
         else:
             parts.append(
                 rf"{{\an5\pos({round(cx)},{round(y + tile_h * 0.34)})"

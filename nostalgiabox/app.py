@@ -44,7 +44,7 @@ from .guide import Guide, art_rect, guide_ass, page_tiles
 from .input.manager import InputManager, create_backends
 from .interstitial import CommercialPool
 from .overlay import CANVAS_H, CANVAS_W, OverlayManager, banner_art_rect
-from .player import END_EOF, END_ERROR, MockPlayer, Player
+from .player import END_EOF, END_ERROR, MockPlayer, Player, TileLabel
 from .probe import probe_duration
 from .static_gen import (
     COLORBARS_FILENAME,
@@ -557,11 +557,14 @@ class TVApp:
             self.config.guide.page_cols,
             self.config.guide.page_rows,
         )
+        channels = list(self.lineup)
+        on_air = self.lineup.index_of(self.lineup.current.number)
         for slot, rect in enumerate(rects):
             picture = artwork[rect.index]
             if picture is None:
                 continue
             art_x, art_y, art_w, art_h = art_rect(rect)
+            channel = channels[rect.index]
             self.player.show_image(
                 slot,
                 picture,
@@ -571,7 +574,26 @@ class TVApp:
                 round(art_h),
                 CANVAS_W,
                 CANVAS_H,
+                label=TileLabel(
+                    text=f"{channel.number:02d}  {channel.name}",
+                    color=self.config.ui.color,
+                    font=self._tile_label_font(),
+                    tag="ON NOW" if rect.index == on_air else None,
+                    dim=rect.index != self.guide.cursor,
+                ),
             )
+
+    def _tile_label_font(self) -> Optional[Path]:
+        """The TTF the burned-in tile caption is drawn with.
+
+        The same VT323 the ASS overlays name, but as a FILE: libass resolves a
+        font by name, Pillow needs the bytes. None if it is missing, and the
+        caption then falls back to Pillow's built-in font rather than vanishing.
+        """
+        if self._assets_dir is None:
+            return None
+        candidate = Path(self._assets_dir) / "fonts" / "VT323-Regular.ttf"
+        return candidate if candidate.is_file() else None
 
     def _tick_guide(self) -> None:
         """Let the guide close itself after sitting untouched."""

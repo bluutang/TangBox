@@ -642,102 +642,54 @@ def test_the_picture_is_never_stretched_to_fill_its_tile():
 # --------------------------------------------------------------------------
 # The tile with a picture
 # --------------------------------------------------------------------------
-# guide_ass never draws a picture. It is TOLD where one will be and moves the
-# text out of the way: the name drops into the band underneath, and the channel
-# number shrinks onto a dark plate in the corner.
+# guide_ass draws NOTHING over a tile that has a picture, because nothing drawn
+# there could be seen. mpv composites bitmap overlays above ASS ones and the
+# order cannot be changed, so the caption is burned into the bitmap instead -
+# see player.TileLabel. This is also why the channel number, drawn here on a
+# dark plate for weeks, was never once visible on the television.
 
 FOUR_WITH_ART = [True, False, False, False]
 
 
-def test_a_tile_with_a_picture_puts_its_name_below_the_picture():
-    plain = guide_ass(FOUR, cursor=0, ui=_ui())
-    arty = guide_ass(FOUR, cursor=0, ui=_ui(), artwork=FOUR_WITH_ART)
-    assert _name_y(plain, "Los Pequenos") < _name_y(arty, "Los Pequenos")
-
-
-def test_the_name_stays_inside_its_own_tile():
-    arty = guide_ass(FOUR, cursor=0, ui=_ui(), artwork=FOUR_WITH_ART)
-    tile = page_tiles(len(FOUR), cursor=0)[0]
-    assert _name_y(arty, "Los Pequenos") < tile.y + tile.h
-
-
-def test_the_name_sits_on_the_picture_near_its_bottom():
-    """The reverse of what this asserted while there was a band below.
-
-    The name is on the artwork now, low enough to caption it and high enough
-    to still be inside it.
-    """
-    arty = guide_ass(FOUR, cursor=0, ui=_ui(), artwork=FOUR_WITH_ART)
-    tile = page_tiles(len(FOUR), cursor=0)[0]
-    _, art_y, _, art_h = art_rect(tile)
-    name_y = _name_y(arty, "Los Pequenos")
-    assert name_y < art_y + art_h, "the name has fallen off the picture"
-    assert name_y > art_y + art_h * 0.75, "the name should caption, not cover"
-
-
-def test_a_tile_with_no_picture_is_drawn_exactly_as_before():
-    # The whole reason this is safe to ship before any artwork exists.
-    none = [False, False, False, False]
-    assert guide_ass(FOUR, cursor=0, ui=_ui(), artwork=none) == guide_ass(
-        FOUR, cursor=0, ui=_ui()
-    )
-
-
-def test_omitting_artwork_altogether_is_the_same_as_none_of_it():
-    assert guide_ass(FOUR, cursor=0, ui=_ui(), artwork=None) == guide_ass(
-        FOUR, cursor=0, ui=_ui()
-    )
-
-
-def test_the_channel_number_gets_a_plate_so_it_cannot_be_lost_in_the_picture():
-    # A green numeral on a bright cartoon frame is unreadable, and the glow
-    # alone does not fix it. One plate for the one tile with a picture, plus
-    # the guide's own scrim.
-    assert len(_plates(guide_ass(FOUR, cursor=0, ui=_ui(), artwork=FOUR_WITH_ART))) == 2
-
-
-def test_a_plain_tile_gets_no_plate():
-    assert len(_plates(guide_ass(FOUR, cursor=0, ui=_ui()))) == 1  # the scrim only
-
-
-def test_the_plate_sits_inside_the_picture_area():
-    arty = guide_ass(FOUR, cursor=0, ui=_ui(), artwork=FOUR_WITH_ART)
-    tile = page_tiles(len(FOUR), cursor=0)[0]
-    art_x, art_y, art_w, art_h = art_rect(tile)
-    (px, py), = _positions(_plates(arty)[1])
-    assert art_x <= px <= art_x + art_w
-    assert art_y <= py <= art_y + art_h
-
-
-def test_on_now_sits_at_the_top_clear_of_the_name():
-    """The collision Brian photographed, made impossible rather than unlikely.
-
-    ON NOW used to sit under the name inside the text band; once the band was
-    narrowed to 0.15 of the tile there was no longer room for both, and they
-    overlapped. It now hangs in the picture's top corner, as far from the name
-    bar as the tile allows.
-    """
+def test_a_tile_with_a_picture_draws_no_text_over_it():
+    """Text over artwork is invisible in mpv, so drawing it is a lie."""
     arty = guide_ass(FOUR, cursor=0, ui=_ui(), on_now=0, artwork=FOUR_WITH_ART)
     tile = page_tiles(len(FOUR), cursor=0)[0]
-    _, art_y, _, art_h = art_rect(tile)
-    on_now_y = [y for line in arty.split("\n") if "ON NOW" in line
-                for _, y in _positions(line)][0]
-    assert on_now_y < art_y + art_h * 0.25, "ON NOW should be up at the top"
-    assert on_now_y < _name_y(arty, "Los Pequenos"), "and well clear of the name"
+    art_x, art_y, art_w, art_h = art_rect(tile)
+    # Only TEXT matters here. The tile frame is anchored at the same corner on
+    # purpose: ASS centres a border on its path, so the outer half of it falls
+    # outside the picture and is the one thing over a tile that DOES show.
+    for line in arty.split("\n"):
+        if "\\fn" not in line:
+            continue
+        for px, py in _positions(line):
+            inside = (art_x <= px <= art_x + art_w
+                      and art_y <= py <= art_y + art_h)
+            assert not inside, f"text drawn where it cannot be seen: {line[:60]}"
 
 
-def test_the_number_is_still_drawn_when_there_is_a_picture():
+def test_a_tile_with_no_picture_still_gets_its_name_and_number():
+    """The pictureless layout is untouched - it is all anyone can see there."""
+    plain = guide_ass(FOUR, cursor=0, ui=_ui(), artwork=FOUR_WITH_ART)
+    for _, name in FOUR[1:]:
+        assert name in plain
+    assert "04" in plain
+
+
+def test_a_tile_with_a_picture_gets_no_plate(FOUR_WITH_ART=FOUR_WITH_ART):
+    """The number's dark plate went with the number, into the bitmap."""
     arty = guide_ass(FOUR, cursor=0, ui=_ui(), artwork=FOUR_WITH_ART)
-    assert "02" in arty
+    assert len(_plates(arty)) == 1  # the scrim only
 
 
 def test_a_page_can_mix_tiles_with_and_without_pictures():
     # Half a page of photographs beside half a page of numerals. Both layouts
     # have to survive being drawn side by side.
     mixed = guide_ass(FOUR, cursor=0, ui=_ui(), artwork=[True, False, True, False])
-    for _, name in FOUR:
-        assert name in mixed
-    assert len(_plates(mixed)) == 3  # scrim + two pictures
+    for _, name in (FOUR[1], FOUR[3]):
+        assert name in mixed, "a pictureless tile lost its name"
+    for _, name in (FOUR[0], FOUR[2]):
+        assert name not in mixed, "a tile with a picture drew hidden text"
 
 
 def test_artwork_shorter_than_the_lineup_does_not_crash():
