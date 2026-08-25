@@ -429,6 +429,17 @@ commercials:
   # air after a full episode and never after a short one. Leave it at 0 and
   # every break is exactly `break_seconds`, as it was before this existed.
   break_ratio: 0.18
+  # A HARD CEILING on a break, whatever the ratio asks for. Measured on the box
+  # 2026-08-25: breaks were running 2:21 to 4:43, and the long tail was the
+  # problem rather than the typical length.
+  #
+  # Note this clamps the OVERSHOOT allowance too, not just the target - a break
+  # is otherwise allowed to run over by up to break_seconds, which would have
+  # carried it to five minutes through a 3:45 ceiling.
+  #
+  # 0 turns it off. For scale, a real broadcast half-hour carried six to eight
+  # minutes of advertising, so even this is gentler than the thing it imitates.
+  break_max_seconds: 225
   enabled: true
 
 # --- Playback -----------------------------------------------------------------

@@ -49,6 +49,7 @@ class CommercialPool:
         *,
         break_seconds: float = 75.0,
         break_ratio: float = 0.0,
+        break_max_seconds: float = 0.0,
         extensions: Sequence[str] = (".mp4", ".mkv", ".avi", ".m4v"),
         enabled: bool = True,
         recursive: bool = True,
@@ -58,6 +59,7 @@ class CommercialPool:
     ) -> None:
         self._break_seconds = max(0.0, float(break_seconds))
         self._break_ratio = max(0.0, float(break_ratio))
+        self._break_max = max(0.0, float(break_max_seconds))
         self._probe = probe
         self._max_clips = max(1, int(max_clips))
         self._durations: Dict[Path, float] = {}
@@ -159,8 +161,14 @@ class CommercialPool:
         so a very short programme is never followed by a token five seconds.
         """
         if self._break_ratio <= 0 or not episode_seconds or episode_seconds <= 0:
-            return self._break_seconds
-        return max(self._break_seconds, float(episode_seconds) * self._break_ratio)
+            target = self._break_seconds
+        else:
+            target = max(
+                self._break_seconds, float(episode_seconds) * self._break_ratio
+            )
+        if self._break_max > 0:
+            target = min(target, self._break_max)
+        return target
 
     def _something_fits(self, allowance: float, clips: List[Path]) -> bool:
         """Is any advert short enough for ``allowance``?
@@ -173,7 +181,7 @@ class CommercialPool:
 
     def _draw_that_fits(
         self, remaining: float, *, must_return: bool,
-        bag: ShuffleBag[Path], clips: List[Path],
+        bag: ShuffleBag[Path], clips: List[Path], hard_remaining: float = 0.0,
     ) -> Optional[Path]:
         """The next advert short enough for the time left, or None.
 
@@ -189,6 +197,13 @@ class CommercialPool:
         any clip - the filter steps aside entirely rather than blocking breaks.
         """
         allowance = remaining + self._break_seconds
+        if hard_remaining > 0:
+            # A break may run over its TARGET by up to break_seconds, because a
+            # thirty-second advert finishing a break with five seconds left is
+            # what television did. That same slack would carry it straight
+            # through a CEILING, though - 225s of target plus 75s of allowance
+            # is five minutes - so the ceiling clamps the allowance itself.
+            allowance = min(allowance, hard_remaining)
         if not self._something_fits(allowance, clips):
             # Every advert in the folder is longer than the break allows. Draw
             # normally rather than sifting: sifting would drain the bag and put
@@ -248,7 +263,8 @@ class CommercialPool:
         total = 0.0
         while len(chosen) < limit and total < target:
             clip = self._draw_that_fits(
-                target - total, must_return=not chosen, bag=bag, clips=clips
+                target - total, must_return=not chosen, bag=bag, clips=clips,
+                hard_remaining=(self._break_max - total) if self._break_max else 0.0,
             )
             if clip is None:
                 break

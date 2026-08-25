@@ -440,3 +440,56 @@ def test_each_network_keeps_its_own_running_order(tmp_path):
         pool.build_break(network="Nickelodeon")
     generic = [c.name for _ in range(2) for c in pool.build_break()]
     assert sorted(generic) == ["ad01.mp4", "ad02.mp4"]
+
+
+# ---------------------------------------------------- the hard ceiling ---
+
+
+def test_no_ceiling_by_default(tmp_path):
+    """Zero means what it has always meant here: the feature is off."""
+    make_ads(tmp_path, 20)
+    pool = CommercialPool(
+        tmp_path / "_commercials", break_seconds=75, break_ratio=0.18,
+        probe=fixed_probe(60.0),
+    )
+    clips = pool.build_break(episode_seconds=3600)   # target 648s
+    assert sum(pool._duration_of(c) for c in clips) > 300
+
+
+def test_a_break_never_runs_past_the_ceiling(tmp_path):
+    make_ads(tmp_path, 20)
+    pool = CommercialPool(
+        tmp_path / "_commercials", break_seconds=75, break_ratio=0.18,
+        break_max_seconds=225, probe=fixed_probe(30.0), max_clips=20,
+    )
+    for _ in range(40):
+        clips = pool.build_break(episode_seconds=3600)
+        assert sum(pool._duration_of(c) for c in clips) <= 225
+
+
+def test_the_last_advert_cannot_overshoot_the_ceiling(tmp_path):
+    """The overshoot allowance must not be able to breach the hard cap.
+
+    A break is allowed to run over its TARGET by up to break_seconds, because
+    a thirty-second advert finishing a break with five seconds left is what
+    television did. Left unchecked that same allowance would carry it straight
+    through a ceiling - 225s of target plus 75s of slack is five minutes.
+    """
+    folder = make_ads(tmp_path, 8)
+    lengths = {f"ad{i:02d}": 70.0 for i in range(1, 9)}
+    pool = CommercialPool(
+        folder, break_seconds=75, break_ratio=0.18, break_max_seconds=225,
+        probe=lambda p: lengths[p.stem], max_clips=20,
+    )
+    for _ in range(30):
+        clips = pool.build_break(episode_seconds=3600)
+        assert sum(pool._duration_of(c) for c in clips) <= 225
+
+
+def test_a_ceiling_never_leaves_a_break_empty(tmp_path):
+    """Even an advert longer than the whole ceiling still gets a break out."""
+    folder = make_ads(tmp_path, 3)
+    pool = CommercialPool(
+        folder, break_seconds=75, break_max_seconds=60, probe=fixed_probe(300.0)
+    )
+    assert pool.build_break(episode_seconds=1230)

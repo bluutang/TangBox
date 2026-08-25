@@ -157,6 +157,7 @@ class TVApp:
             config.commercials.path,
             break_seconds=config.commercials.break_seconds,
             break_ratio=config.commercials.break_ratio,
+            break_max_seconds=config.commercials.break_max_seconds,
             extensions=config.video_extensions,
             enabled=config.commercials.enabled,
             recursive=config.scan_recursive,

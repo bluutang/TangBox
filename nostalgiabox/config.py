@@ -148,6 +148,7 @@ class CommercialsConfig:
     path: Optional[Path] = None
     break_seconds: float = 75.0     # aim for roughly this much advertising
     break_ratio: float = 0.0        # 0 = every break the same length
+    break_max_seconds: float = 0.0  # 0 = no ceiling
 
 
 @dataclass(frozen=True)
@@ -697,6 +698,10 @@ def _parse_commercials(raw: Any) -> CommercialsConfig:
         ),
         break_ratio=_clamp_float(
             raw.get("break_ratio", d.break_ratio), 0.0, 1.0, "commercials.break_ratio"
+        ),
+        break_max_seconds=_clamp_float(
+            raw.get("break_max_seconds", d.break_max_seconds), 0.0, 1800.0,
+            "commercials.break_max_seconds",
         ),
     )
 
