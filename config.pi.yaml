@@ -140,7 +140,11 @@ start_channel: 2         # what it powers on to
 # bloom - bold shapes survive that, thin lines and small text do not.
 sign_on:
   enabled: true
-  bars_seconds: 7
+  # Must MATCH the length of assets/colorbars.mp4, which is a lead-in plus a
+  # spin (scripts/make-spinner.py SPIN LEAD_IN, currently 8 + 8). The lead-in
+  # covers the CEC wake and input switch - about nine seconds on the Samsung -
+  # so the spin itself is still on screen when the picture finally arrives.
+  bars_seconds: 16
   # Replay the ident when WAKING from standby too, not just at boot.
   # Starts AT the ident and skips the pre-roll - the set is already on.
   on_wake: true        # 0 = straight to the ident, no colour bars. Set to 2

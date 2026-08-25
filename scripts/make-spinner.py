@@ -1,5 +1,18 @@
 """The orange spinning like a loading icon, settling onto exactly the frame
-the ident opens with - same size AND same position."""
+the ident opens with - same size AND same position.
+
+    python3 make-spinner.py [SPIN_SECONDS] [LEAD_IN_SECONDS]
+
+LEAD_IN exists because the television is not showing yet. Waking the set over
+CEC and switching its input takes the best part of ten seconds, so a spin that
+starts at t=0 is mostly over before anybody can see it - the first cut was a
+10s spin of which Brian caught the last second.
+
+Through the lead-in the orange sits still, upright, already framed. Then it
+winds up, turns, and settles upright again exactly as the ident opens. A still
+logo rather than black is deliberate: if the set settles EARLY, a waiting logo
+reads as intentional where a black screen reads as broken.
+"""
 from PIL import Image
 from pathlib import Path
 import subprocess, sys, math
@@ -8,7 +21,9 @@ import os
 A = Path(os.environ.get("TANGBOX_ASSETS",
          Path(__file__).resolve().parent.parent / "nostalgiabox" / "assets"))
 W, H, FPS = 1920, 1080, 60
-DURATION = float(sys.argv[1]) if len(sys.argv) > 1 else 10.0
+SPIN = float(sys.argv[1]) if len(sys.argv) > 1 else 8.0
+LEAD_IN = float(sys.argv[2]) if len(sys.argv) > 2 else 8.0
+DURATION = LEAD_IN + SPIN
 TURNS = 5
 
 circle = Image.open(A / "logo-circle.png").convert("RGBA")
@@ -40,10 +55,19 @@ sq.save("/tmp/orange.png")
 ox, oy = round(screen_cx - diag / 2), round(screen_cy - diag / 2)
 print(f"overlay at ({ox}, {oy}), square {diag}px")
 
-# easeOutCubic across a whole number of turns: fast, then settling to upright
-# at exactly t=DURATION, which is the angle the ident opens on.
-u = f"(1-t/{DURATION})"
-angle = f"2*PI*{TURNS}*(1-{u}*{u}*{u})"
+# Smoothstep across a whole number of turns, over the SPIN window only.
+#
+# Smoothstep rather than the easeOutCubic this started with: cubic leaves at
+# full speed from a standing start, which snaps hard when the orange has been
+# sitting still all through the lead-in. Smoothstep begins AND ends at zero
+# velocity, so it winds up and settles.
+#
+# p is progress through the spin, clamped - so the whole lead-in sits at p=0
+# (upright, still) and nothing runs past a whole number of turns at the end.
+# t=DURATION therefore lands on exactly the angle the ident opens on, which is
+# the property this whole script exists to preserve.
+p = f"clip((t-{LEAD_IN})/{SPIN},0,1)"
+angle = f"2*PI*{TURNS}*(3*{p}*{p}-2*{p}*{p}*{p})"
 
 subprocess.run([
     "ffmpeg", "-y", "-v", "error",
