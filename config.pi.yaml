@@ -396,6 +396,16 @@ tv_wake_command: ["sh", "-c", "sleep 2; echo 'on 0' | cec-client -s -d 1 -o Tang
 # An empty or missing folder means no breaks at all - the box behaves exactly as
 # it did before this existed. Set enabled:false to switch it off without moving
 # the files.
+# Clips in the ROOT of this folder are the generic pool: period advertising any
+# channel could have run. Each SUBFOLDER is a network, and a channel naming one
+# (`commercials: Nickelodeon` on the channel) draws from those bumps AS WELL AS
+# the generic pool - not instead of it. There are nine Nickelodeon bumps against
+# sixty-odd generic adverts, so bumps alone would come round every few breaks;
+# and real Nickelodeon ran its bumps between the same cereal and toy adverts
+# everybody else was running.
+#
+# A channel naming no network, or a network with no folder, quietly gets the
+# generic pool - so a typo here costs a channel its bumps, never its adverts.
 commercials:
   path: /media/tangbox/_commercials
   break_seconds: 75

@@ -1105,7 +1105,8 @@ class TVApp:
             return
 
         clips = self.commercials.build_break(
-            episode_seconds=self._finished_episode_seconds()
+            episode_seconds=self._finished_episode_seconds(),
+            network=self.lineup.current.config.commercials,
         )
         if not clips:
             self._play_request(request)

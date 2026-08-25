@@ -170,6 +170,11 @@ class ChannelConfig:
     tune_in: Optional[str] = None
     # Per-channel override of `episode_order`. None means "use the global one".
     episode_order: Optional[str] = None
+    # Which subfolder of the commercials folder this channel's bumps live in.
+    # None means "generic adverts only", which is right for a channel with no
+    # network to imitate - and for Netflix and Apple TV+, which never carried
+    # advertising at all.
+    commercials: Optional[str] = None
 
     def __post_init__(self) -> None:
         if self.number < 0:
@@ -370,6 +375,11 @@ def _parse_channels(raw: Any, base: Optional[Path], default_shuffle: bool) -> Li
                 tune_in=_parse_channel_tune_in(entry.get("tune_in"), i),
                 episode_order=_parse_episode_order(
                     entry.get("episode_order"), f"channels[{i}].episode_order"
+                ),
+                commercials=(
+                    str(entry["commercials"]).strip() or None
+                    if entry.get("commercials") is not None
+                    else None
                 ),
             )
         )

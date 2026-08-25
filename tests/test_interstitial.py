@@ -342,9 +342,9 @@ def test_the_finished_episode_sets_the_break_length(tmp_path, monkeypatch):
 
     real = app.commercials.build_break
 
-    def spy(episode_seconds=None):
+    def spy(episode_seconds=None, *, network=None):
         seen["episode_seconds"] = episode_seconds
-        return real(episode_seconds=episode_seconds)
+        return real(episode_seconds=episode_seconds, network=network)
 
     monkeypatch.setattr(app.commercials, "build_break", spy)
     monkeypatch.setattr(
@@ -362,3 +362,81 @@ def test_an_unprobeable_episode_still_gets_a_break(tmp_path, monkeypatch):
     app.start()
     end_episode(app)
     assert is_ad(app)
+
+
+# ------------------------------------------------ adverts that match the channel ---
+
+
+def make_network_ads(root, network, count, seconds=30.0):
+    """A folder of adverts belonging to one network."""
+    folder = root / "_commercials" / network
+    folder.mkdir(parents=True, exist_ok=True)
+    for i in range(1, count + 1):
+        (folder / f"{network.lower()}{i:02d}.mp4").write_bytes(b"\x00")
+    return folder
+
+
+def test_a_flat_folder_behaves_exactly_as_it_always_has(tmp_path):
+    """The whole reason this is safe to ship before anything is sorted."""
+    make_ads(tmp_path, 6)
+    pool = CommercialPool(tmp_path / "_commercials", probe=fixed_probe(30.0))
+    assert len(pool) == 6
+    assert all(c.parent.name == "_commercials" for c in pool.build_break())
+
+
+def test_a_channel_with_no_network_gets_only_the_generic_pool(tmp_path):
+    make_ads(tmp_path, 6)
+    make_network_ads(tmp_path, "Nickelodeon", 4)
+    pool = CommercialPool(tmp_path / "_commercials", probe=fixed_probe(30.0))
+    aired = {c.name for _ in range(20) for c in pool.build_break()}
+    assert not any(n.startswith("nickelodeon") for n in aired)
+
+
+def test_a_channel_on_a_network_gets_its_bumps_as_well_as_the_ads(tmp_path):
+    """Network AND generic, not network alone.
+
+    Nine Nickelodeon bumps on their own would come round every few breaks. Real
+    Nickelodeon ran its bumps between the same cereal and toy adverts everybody
+    else was running, so the network pool sprinkles identity through the period
+    advertising rather than replacing it.
+    """
+    make_ads(tmp_path, 6)
+    make_network_ads(tmp_path, "Nickelodeon", 4)
+    pool = CommercialPool(tmp_path / "_commercials", probe=fixed_probe(30.0))
+    aired = {c.name for _ in range(30)
+             for c in pool.build_break(network="Nickelodeon")}
+    assert any(n.startswith("nickelodeon") for n in aired), "no bumps aired"
+    assert any(n.startswith("ad") for n in aired), "no generic adverts aired"
+
+
+def test_one_network_never_airs_anothers_bumps(tmp_path):
+    make_ads(tmp_path, 6)
+    make_network_ads(tmp_path, "Nickelodeon", 4)
+    make_network_ads(tmp_path, "Disney", 4)
+    pool = CommercialPool(tmp_path / "_commercials", probe=fixed_probe(30.0))
+    aired = {c.name for _ in range(30) for c in pool.build_break(network="Disney")}
+    assert not any(n.startswith("nickelodeon") for n in aired)
+
+
+def test_an_unknown_network_falls_back_to_the_generic_pool(tmp_path):
+    """A typo in config.yaml must not take the adverts off a channel."""
+    make_ads(tmp_path, 6)
+    make_network_ads(tmp_path, "Nickelodeon", 4)
+    pool = CommercialPool(tmp_path / "_commercials", probe=fixed_probe(30.0))
+    clips = pool.build_break(network="Nickleodeon")   # misspelled on purpose
+    assert clips
+    assert all(c.parent.name == "_commercials" for c in clips)
+
+
+def test_each_network_keeps_its_own_running_order(tmp_path):
+    """The every-advert-before-repeats guarantee is per channel, not global."""
+    make_ads(tmp_path, 2)
+    make_network_ads(tmp_path, "Nickelodeon", 1)
+    pool = CommercialPool(
+        tmp_path / "_commercials", break_seconds=30, probe=fixed_probe(30.0)
+    )
+    # Draining Nickelodeon's bag must not affect what the generic pool owes.
+    for _ in range(10):
+        pool.build_break(network="Nickelodeon")
+    generic = [c.name for _ in range(2) for c in pool.build_break()]
+    assert sorted(generic) == ["ad01.mp4", "ad02.mp4"]
