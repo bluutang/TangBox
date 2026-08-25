@@ -99,13 +99,24 @@ class CrtPreset:
 # 0.5 takes the corners to exactly black and anything above it clips a growing
 # ring of the picture to nothing. HEAVY sits at 0.45, which leaves the corners
 # at 10% - dark, but still picture.
+# Raised a THIRD time, 2026-08-25. The three dials are no longer equally free,
+# so they no longer move together:
+#
+#   scanlines  most room left, and the most CRT-identifying of the three - a
+#              tube reads as a tube because of the line structure, not the
+#              shading. This is where the raises should keep coming from.
+#   curvature  past about 0.35 the bend stops looking like glass and starts
+#              looking like a fault in the picture.
+#   vignette   nearly spent. See the ceiling above; HEAVY is 0.04 off it, and
+#              the last of that range buys darker corners rather than a more
+#              convincing tube.
 _SOFT_FRAME = CrtConfig(
-    curvature=0.07, corner_radius=0.065, vignette=0.26,
-    scanlines=True, scanline_intensity=0.09,
+    curvature=0.10, corner_radius=0.07, vignette=0.30,
+    scanlines=True, scanline_intensity=0.15,
 )
 _HEAVY_CRT = CrtConfig(
-    curvature=0.24, corner_radius=0.08, vignette=0.45,
-    scanlines=True, scanline_intensity=0.32,
+    curvature=0.30, corner_radius=0.085, vignette=0.46,
+    scanlines=True, scanline_intensity=0.45,
 )
 
 #: Which rung `config.yaml` occupies. The box starts here.

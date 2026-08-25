@@ -234,11 +234,11 @@ ui:
 # --- CRT picture effect -------------------------------------------------------
 crt:
   enabled: true
-  curvature: 0.13          # "Glass & Grain": a bend you feel, not one you see
-  corner_radius: 0.07
-  vignette: 0.36
+  curvature: 0.18          # "Glass & Grain": a bend you feel, not one you see
+  corner_radius: 0.075
+  vignette: 0.38
   scanlines: true
-  scanline_intensity: 0.17
+  scanline_intensity: 0.26
   # RAISED 2026-08-25, after the first proper viewing on the television. The
   # previous numbers (0.04 / 0.17 / 0.03) came with a warning to "raise gently
   # if at all", written from a computer monitor. From the sofa the opposite was

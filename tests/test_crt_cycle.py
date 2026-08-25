@@ -11,7 +11,7 @@ from nostalgiabox.crt import crt_ladder, write_ladder_shaders
 # What config.pi.yaml actually sets, so these tests fail if the shipped middle
 # rung ever stops being stronger than SOFT FRAME. Raised with the rest of the
 # ladder on 2026-08-25 - every rung read as too subtle on the television.
-TUNED = CrtConfig(curvature=0.13, vignette=0.36, scanline_intensity=0.17)
+TUNED = CrtConfig(curvature=0.18, vignette=0.38, scanline_intensity=0.26)
 
 
 def test_ladder_names_run_from_nothing_to_heavy():
