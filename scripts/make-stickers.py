@@ -26,8 +26,11 @@ DPI = 600
 SIZE = 3 * DPI                  # 1800px = 3in
 BAND = SIZE // 3                # 600px = 1in each
 WORDMARK_W = int(2.50 * DPI)    # 2.50in, matching the standalone split sticker
-GLOW_BLUR = 22                  # px of soft dark halo on the test-card band
-GLOW_PASSES = 3                 # composited repeatedly to deepen it
+GLOW_BLUR = 34                  # px of soft dark halo on the test-card band
+GLOW_PASSES = 2                 # composited repeatedly to deepen it
+# Wider and lighter than the first version: 22px x3 held the wordmark fine but
+# sat behind it as a distinct dark shape. Spreading it and dropping a pass
+# keeps the contrast and loses the hard edge.
 
 src = Image.open(SRC).convert("RGBA")
 
