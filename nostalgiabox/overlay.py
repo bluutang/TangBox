@@ -81,12 +81,17 @@ class OverlayManager:
         duration: Optional[float] = None,
         position: Optional[float] = None,
         runtime: Optional[float] = None,
+        up_next: bool = False,
     ) -> None:
         """Flash the channel number, name, programme and episode.
 
         ``position``/``runtime`` add the timeline row. They are supplied by the
         info button only - a channel change passes neither, so tuning looks
         exactly as it always has.
+
+        ``up_next`` bills the programme as the one COMING BACK rather than the
+        one playing, which is what a commercial break needs: the channel bug
+        stays up through the ads, but the episode named on it has not started.
 
         Note ``duration`` is how long the BANNER stays up; ``runtime`` is how
         long the episode runs. Two different clocks, so two different names.
@@ -100,6 +105,7 @@ class OverlayManager:
             episode=episode,
             position=position,
             duration=runtime,
+            up_next=up_next,
         )
         # Remembered so the app knows whether there is anything worth
         # animating. A channel change passes no position/runtime, so drawing
@@ -150,6 +156,20 @@ class OverlayManager:
     def clear_standby(self) -> None:
         self._player.clear_overlay(_ID_STANDBY)
         self._expiry.pop(_ID_STANDBY, None)
+
+    def bug_remaining(self) -> Optional[float]:
+        """Seconds left on the channel banner, timeline or not, else None.
+
+        The banner's PICTURE lives for exactly this long. Kept apart from
+        :meth:`live_bug_remaining`, which answers a different question - is
+        there anything worth redrawing - because conflating the two took the
+        artwork off screen the moment a banner had no timeline to animate.
+        """
+        when = self._expiry.get(_ID_CHANNEL)
+        if when is None:
+            return None
+        remaining = when - self._clock()
+        return remaining if remaining > 0 else None
 
     def live_bug_remaining(self) -> Optional[float]:
         """Seconds left on a channel banner that HAS a timeline, else None.
@@ -290,25 +310,35 @@ def _channel_bug_ass(
     episode: Optional[str] = None,
     position: Optional[float] = None,
     duration: Optional[float] = None,
+    up_next: bool = False,
 ) -> str:
     """Green digital 'CH 03', the channel name, and the programme on it.
 
     Three sizes descending, so the eye reads number -> channel -> programme.
     The show line is omitted entirely when there is nothing to name, rather
     than left blank - a floating gap under the channel name looks like a fault.
+
+    ``up_next`` heads the programme with UP NEXT, for a commercial break where
+    the episode named has not started yet. Without it the banner read as a
+    straight lie during a break: the right show, over the advert's clock.
     """
     num = f"{number:02d}"
     lines = [
         rf"{{\an9\pos({_IX1},{_IY0}){_style(ui, size=88)}}}CH {num}",
         rf"{{\an9\pos({_IX1},{_IY0 + 104}){_style(ui, size=40)}}}{_escape(name)}",
     ]
+    y = _IY0 + 152
+    if up_next and show:
+        lines.append(rf"{{\an9\pos({_IX1},{y}){_style(ui, size=24)}}}UP NEXT")
+        y += 34
     if show:
         lines.append(
-            rf"{{\an9\pos({_IX1},{_IY0 + 152}){_style(ui, size=32)}}}{_escape(show)}"
+            rf"{{\an9\pos({_IX1},{y}){_style(ui, size=32)}}}{_escape(show)}"
         )
+        y += 40
     if episode:
         lines.append(
-            rf"{{\an9\pos({_IX1},{_IY0 + 192}){_style(ui, size=28)}}}{_escape(episode)}"
+            rf"{{\an9\pos({_IX1},{y}){_style(ui, size=28)}}}{_escape(episode)}"
         )
     if position is not None and duration is not None:
         row = _progress_ass(position, duration, ui, y=_IY0 + 248)

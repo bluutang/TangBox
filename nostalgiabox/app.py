@@ -926,14 +926,21 @@ class TVApp:
         # The timeline rides along on THIS banner only. Channel changes call
         # show_channel_bug without these, so tuning looks exactly as it always
         # has - which is what the children see all evening.
+        #
+        # It is left OFF entirely during a commercial break. The position comes
+        # from the player, which is playing an advert, while the name comes
+        # from the episode being held back - so the two together billed the
+        # coming episode as sixteen seconds in when it had not started.
+        break_now = self.in_break
         self.overlay.show_channel_bug(
             channel.number,
             channel.name,
             show=self._show_name(channel, path),
             episode=episode_label_for(path) if path is not None else None,
-            position=self.player.get_time_pos(),
-            runtime=self.player.get_duration(),
+            position=None if break_now else self.player.get_time_pos(),
+            runtime=None if break_now else self.player.get_duration(),
             duration=duration,
+            up_next=break_now,
         )
         self._draw_banner_artwork(channel, path)
 
@@ -964,10 +971,14 @@ class TVApp:
         channel banner has no timeline, and an expired one has no time left -
         so this only has to decide how often.
         """
-        remaining = self.overlay.live_bug_remaining()
-        if remaining is None:
+        if self.overlay.bug_remaining() is None:
             # The banner has gone; its picture must go with it.
             self.player.clear_image(BANNER_ART_SLOT)
+            return
+        remaining = self.overlay.live_bug_remaining()
+        if remaining is None:
+            # Still up, but with nothing to animate - a break banner has no
+            # timeline. Leave it alone rather than treating it as expired.
             return
         if now < self._info_next_redraw:
             return

@@ -216,7 +216,7 @@ def test_the_banner_omits_the_episode_line_when_absent():
 # -- during a commercial break -----------------------------------------------
 
 
-def _app_with_ads(tmp_path):
+def _app_with_ads(tmp_path, *, artwork=False):
     from nostalgiabox.app import TVApp
     from nostalgiabox.config import config_from_dict
     from nostalgiabox.input.manager import InputManager
@@ -225,6 +225,8 @@ def _app_with_ads(tmp_path):
 
     channel_dir = tmp_path / "Pequenos"
     make_show(channel_dir, "Pocoyo", 4)
+    if artwork:
+        (channel_dir / "Pocoyo" / "tile.jpg").write_bytes(b"not really a jpeg")
     ads = tmp_path / "_ads"
     make_show(ads, "spots", 3)
 
@@ -272,3 +274,81 @@ def test_the_banner_still_names_the_show_during_a_break(tmp_path):
     banner = app.player.overlays[_ID_CHANNEL]
     assert "Los Pequeños" in banner
     assert "Pocoyo" in banner, f"break banner lost the show: {banner!r}"
+
+
+def test_the_break_banner_says_the_show_is_up_next(tmp_path):
+    """Naming the show is right; presenting it as what is ON is not.
+
+    Brian, watching a break: "the info hud still shows the next show. is that
+    proper?" It was half proper - the channel bug SHOULD stay up through the
+    ads so you can see what is coming back, which is what a real broadcaster
+    does. What it must not do is bill the coming episode as the thing playing.
+    """
+    from nostalgiabox.actions import Action, InputEvent
+    from nostalgiabox.overlay import _ID_CHANNEL
+    from nostalgiabox.player import END_EOF
+
+    app = _app_with_ads(tmp_path)
+    app.start()
+    app.player.finish_current(END_EOF)
+    app.step()
+    assert app.in_break, "expected a commercial break"
+
+    app.handle_event(InputEvent(Action.INFO))
+    banner = app.player.overlays[_ID_CHANNEL]
+    assert "UP NEXT" in banner, f"the break banner does not say so: {banner!r}"
+    assert "Pocoyo" in banner
+
+
+def test_the_break_banner_has_no_timeline(tmp_path):
+    """The timeline was the advert's, under the next episode's name.
+
+    That is the mismatch Brian photographed: "Escandalosos S01E01 - 0:16"
+    while an advert was on screen. The position comes from the player, which
+    is playing the advert; the name came from the episode being held back.
+    """
+    from nostalgiabox.actions import Action, InputEvent
+    from nostalgiabox.overlay import _ID_CHANNEL
+    from nostalgiabox.player import END_EOF
+
+    app = _app_with_ads(tmp_path)
+    app.start()
+    app.player.finish_current(END_EOF)
+    app.step()
+
+    app.handle_event(InputEvent(Action.INFO))
+    during = app.player.overlays[_ID_CHANNEL]
+    assert not app.overlay._bug_has_timeline, "the break banner drew a timeline"
+
+    # ...and an ordinary episode still gets one, so this only silences breaks.
+    for _ in range(12):
+        if not app.in_break:
+            break
+        app.player.finish_current(END_EOF)
+        app.step()
+    assert not app.in_break, "the break never ended"
+    app.handle_event(InputEvent(Action.INFO))
+    assert "UP NEXT" not in app.player.overlays[_ID_CHANNEL]
+
+
+def test_the_break_banner_keeps_its_picture(tmp_path):
+    """The picture belongs to the BANNER, not to the timeline.
+
+    Turning the timeline off during a break took the artwork with it: the
+    redraw loop treated "nothing to animate" as "the banner has gone" and
+    cleared the picture on the very next tick, so it flashed and vanished.
+    """
+    from nostalgiabox.actions import Action, InputEvent
+    from nostalgiabox.app import BANNER_ART_SLOT
+    from nostalgiabox.player import END_EOF
+
+    app = _app_with_ads(tmp_path, artwork=True)
+    app.start()
+    app.player.finish_current(END_EOF)
+    app.step()
+    assert app.in_break
+
+    app.handle_event(InputEvent(Action.INFO))
+    assert BANNER_ART_SLOT in app.player.images, "no picture to begin with"
+    app.step()
+    assert BANNER_ART_SLOT in app.player.images, "the picture was cleared"
