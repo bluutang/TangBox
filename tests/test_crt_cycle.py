@@ -11,7 +11,7 @@ from nostalgiabox.crt import crt_ladder, write_ladder_shaders
 # What config.pi.yaml actually sets, so these tests fail if the shipped middle
 # rung ever stops being stronger than SOFT FRAME. Raised with the rest of the
 # ladder on 2026-08-25 - every rung read as too subtle on the television.
-TUNED = CrtConfig(curvature=0.08, vignette=0.25, scanline_intensity=0.08)
+TUNED = CrtConfig(curvature=0.13, vignette=0.36, scanline_intensity=0.17)
 
 
 def test_ladder_names_run_from_nothing_to_heavy():
@@ -109,3 +109,18 @@ def test_the_none_rung_clears_the_shader_entirely(tmp_path):
     send(app, Action.CRT_CYCLE)   # HEAVY CRT
     send(app, Action.CRT_CYCLE)   # NONE
     assert player.crt_shader is None
+
+
+def test_no_rung_blacks_out_the_corners():
+    """Vignette has a hard ceiling at 0.5, and passing it fails silently.
+
+    The shader computes `vig = 1 - VIGNETTE * dist2 * 4`, and dist2 reaches
+    0.5 in the corners - so 0.5 takes them to exactly black, and beyond it an
+    ever-larger ring of the picture clips to nothing. Nothing warns you; the
+    corners just quietly stop being picture.
+    """
+    for rung in crt_ladder(TUNED):
+        if not rung.crt.enabled:
+            continue
+        corner = 1 - rung.crt.vignette * 0.5 * 4
+        assert corner > 0.05, f"{rung.name} crushes its corners ({corner:.2f})"

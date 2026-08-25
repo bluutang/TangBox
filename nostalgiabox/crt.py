@@ -90,13 +90,22 @@ class CrtPreset:
 # Each rung took roughly the character of the rung above it, and HEAVY gained a
 # new top end. Scanlines moved most (3x at the bottom) because they are what
 # vanishes first with distance.
+#
+# Raised AGAIN the same day, once the box was finally running this code rather
+# than a stale copy in site-packages, and it was still too subtle.
+#
+# ⚠️ VIGNETTE HAS A HARD CEILING AT 0.5. The shader computes
+# `vig = 1 - VIGNETTE * dist2 * 4`, and dist2 reaches 0.5 in the corners, so
+# 0.5 takes the corners to exactly black and anything above it clips a growing
+# ring of the picture to nothing. HEAVY sits at 0.45, which leaves the corners
+# at 10% - dark, but still picture.
 _SOFT_FRAME = CrtConfig(
-    curvature=0.04, corner_radius=0.06, vignette=0.17,
-    scanlines=True, scanline_intensity=0.045,
+    curvature=0.07, corner_radius=0.065, vignette=0.26,
+    scanlines=True, scanline_intensity=0.09,
 )
 _HEAVY_CRT = CrtConfig(
-    curvature=0.16, corner_radius=0.07, vignette=0.36,
-    scanlines=True, scanline_intensity=0.20,
+    curvature=0.24, corner_radius=0.08, vignette=0.45,
+    scanlines=True, scanline_intensity=0.32,
 )
 
 #: Which rung `config.yaml` occupies. The box starts here.

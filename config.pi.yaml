@@ -234,11 +234,11 @@ ui:
 # --- CRT picture effect -------------------------------------------------------
 crt:
   enabled: true
-  curvature: 0.08          # "Glass & Grain": a bend you feel, not one you see
-  corner_radius: 0.065
-  vignette: 0.25
+  curvature: 0.13          # "Glass & Grain": a bend you feel, not one you see
+  corner_radius: 0.07
+  vignette: 0.36
   scanlines: true
-  scanline_intensity: 0.08
+  scanline_intensity: 0.17
   # RAISED 2026-08-25, after the first proper viewing on the television. The
   # previous numbers (0.04 / 0.17 / 0.03) came with a warning to "raise gently
   # if at all", written from a computer monitor. From the sofa the opposite was
@@ -247,6 +247,16 @@ crt:
   #
   # Judge this rung on the television, never on a laptop - that is the mistake
   # the old comment encoded.
+  #
+  # Raised a second time the same day. The first raise was judged against a
+  # STALE COPY of the code: the box was running nostalgiabox from the venv's
+  # site-packages, not the repo, so the SOFT and HEAVY rungs on screen were
+  # still the old numbers while this rung (config, not code) had moved. The Pi
+  # is on an editable install now.
+  #
+  # ⚠️ `vignette` has a hard ceiling at 0.5 - the shader darkens the corners by
+  # `vignette * 2`, so 0.5 is exactly black there and beyond it a growing ring
+  # of picture clips away. Nothing warns you.
 
 # --- Audio --------------------------------------------------------------------
 initial_volume: 60
