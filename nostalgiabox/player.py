@@ -264,6 +264,49 @@ def build_mpv_options(
     return options
 
 
+#: How tall the caption text wants to be, as a fraction of its bar. Aims high
+#: and is allowed to shrink, rather than being set low enough for the longest
+#: name anybody might ever add.
+_LABEL_TEXT_RATIO = 0.80
+
+#: Never shrink past this, however long the name. Below it the caption stops
+#: being readable from a sofa, which is the only place it is ever read.
+_LABEL_MIN_SIZE = 24
+
+
+def fit_label_size(
+    measure: Callable[[str, int], float],
+    *,
+    bar_h: int,
+    width: float,
+    text: str,
+    tag: Optional[str],
+    pad: float,
+    gap: float = 20.0,
+) -> int:
+    """The largest font size at which ``text`` and ``tag`` both fit the bar.
+
+    Fitted rather than fixed. A fixed fraction has to be set low enough for the
+    longest channel name in the lineup, which makes every SHORTER name smaller
+    than it needed to be - and silently breaks the first time somebody adds a
+    longer one. Measured at 0.70 of the bar, "Disney Aventuras" came within
+    five pixels of the ON NOW tag.
+
+    ``measure`` reports the width of a string at a size, which is the only part
+    that needs a real font - so the arithmetic here is testable on a machine
+    with no Pillow installed.
+    """
+    size = max(_LABEL_MIN_SIZE, int(bar_h * _LABEL_TEXT_RATIO))
+    while size > _LABEL_MIN_SIZE:
+        needed = pad * 2 + measure(text, size)
+        if tag:
+            needed += gap + measure(tag, size)
+        if needed <= width:
+            break
+        size -= 1
+    return size
+
+
 def _burn_label(picture, label: "TileLabel") -> None:
     """Draw ``label`` onto the top of ``picture``, in place.
 
@@ -295,13 +338,19 @@ def _burn_label(picture, label: "TileLabel") -> None:
         )
 
         draw = ImageDraw.Draw(picture)
-        size = max(11, int(bar_h * 0.62))
-        font = (
-            ImageFont.truetype(str(label.font), size)
-            if label.font and Path(label.font).is_file()
-            else ImageFont.load_default()
-        )
         pad = max(6, int(w * 0.02))
+
+        def _measure(text: str, size: int) -> float:
+            return ImageFont.truetype(str(label.font), size).getlength(text)
+
+        if label.font and Path(label.font).is_file():
+            size = fit_label_size(
+                _measure, bar_h=bar_h, width=w, text=label.text,
+                tag=label.tag, pad=pad,
+            )
+            font = ImageFont.truetype(str(label.font), size)
+        else:
+            font = ImageFont.load_default()
         draw.text((pad, bar_h / 2), label.text, font=font, fill=ink, anchor="lm")
         if label.tag:
             draw.text(
