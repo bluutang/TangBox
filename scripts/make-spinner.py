@@ -74,7 +74,11 @@ subprocess.run([
     "-f", "lavfi", "-i", f"color=c=black:s={W}x{H}:r={FPS}:d={DURATION}",
     "-loop", "1", "-t", str(DURATION), "-i", "/tmp/orange.png",
     "-filter_complex",
-    f"[1:v]rotate={angle}:c=none:ow=iw:oh=ih[spun];"
+    # The angle MUST be single-quoted. clip() takes commas, and an unquoted
+    # comma inside a filter's options is read as the separator between one
+    # filter and the next - ffmpeg then fails with "No option name near ...".
+    # The old comma-free easeOutCubic expression never hit this.
+    f"[1:v]rotate='{angle}':c=none:ow=iw:oh=ih[spun];"
     f"[0:v][spun]overlay={ox}:{oy}:format=auto,format=yuv420p",
     "-c:v", "libx264", "-preset", "medium", "-crf", "18", "-an",
     str(A / "colorbars.mp4"),
