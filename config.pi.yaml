@@ -417,7 +417,26 @@ tv_wake_command: ["sh", "-c", "sleep 2; echo 'on 0' | cec-client -s -d 1 -o Tang
 # A channel naming no network, or a network with no folder, quietly gets the
 # generic pool - so a typo here costs a channel its bumps, never its adverts.
 commercials:
-  path: /media/tangbox/_commercials
+  # ON THE SD CARD, DELIBERATELY - not on the USB library drive.
+  #
+  # Bumpers and adverts are part of the BOX'S CHARACTER; episodes are the
+  # LIBRARY. The library is the thing that gets swapped, regrown and re-sourced,
+  # and the character should not have to travel with it. Keeping them apart means
+  # the box still signs on and cuts to a break with the drive unplugged, and a
+  # library reshuffle can never take the bumps with it.
+  #
+  # This path MUST stay outside /media/tangbox. That folder is where the USB
+  # drive mounts, and a mount HIDES whatever sits beneath it - commercials left
+  # there would silently vanish the moment the drive came up, still occupying the
+  # card. Chosen 2026-08-25.
+  #
+  # Reads do not wear flash out; only writes do, and these are written once and
+  # read forever. The overlay filesystem (README Part J) is what actually keeps
+  # the card alive, and it is unaffected by this.
+  #
+  # `~` is expanded (config._parse_commercials), so this follows whichever user
+  # the service runs as.
+  path: ~/tangbox-commercials
   break_seconds: 75
   # Break length follows the programme. `break_seconds` is the FLOOR, and a
   # longer episode earns roughly this fraction of its own length in adverts.

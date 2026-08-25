@@ -257,6 +257,14 @@ leading underscore matters: it's what stops the folder being treated as a
 channel. No folder means no breaks, and everything behaves as if the feature
 didn't exist.
 
+The folder does not have to live with the shows, though — `commercials: path:`
+in the config points wherever you like, and `~` is expanded. **Keeping it off
+the library drive is worth doing.** Bumpers are part of the box's character
+rather than its library, so the station still signs on and cuts to a break with
+the drive unplugged, and regrowing the library can never take the bumps with it.
+It also avoids a trap: if the folder sits under the drive's mount point, mounting
+the drive *hides* whatever was there before, still occupying the card.
+
 ```
 _commercials/
 ├── cereal-1997.mp4
