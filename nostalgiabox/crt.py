@@ -78,16 +78,25 @@ class CrtPreset:
     crt: CrtConfig
 
 
-# The fixed reference rungs. HEAVY CRT is deliberately the old CrtConfig
-# defaults - the look the box shipped with before it was tuned down - so
-# "heavy" means a real thing somebody once chose, not an invented number.
+# The fixed reference rungs.
+#
+# Raised across the board 2026-08-25, after the first proper viewing on the
+# television: every rung read as too subtle from the sofa. The old numbers were
+# chosen on a computer monitor a foot from someone's face, where a 0.015
+# scanline is visible and a 0.12 curvature looks absurd. At three metres on a
+# 55" panel neither is true, and the gentlest rungs were indistinguishable from
+# no shader at all.
+#
+# Each rung took roughly the character of the rung above it, and HEAVY gained a
+# new top end. Scanlines moved most (3x at the bottom) because they are what
+# vanishes first with distance.
 _SOFT_FRAME = CrtConfig(
-    curvature=0.02, corner_radius=0.06, vignette=0.10,
-    scanlines=True, scanline_intensity=0.015,
+    curvature=0.04, corner_radius=0.06, vignette=0.17,
+    scanlines=True, scanline_intensity=0.045,
 )
 _HEAVY_CRT = CrtConfig(
-    curvature=0.12, corner_radius=0.065, vignette=0.25,
-    scanlines=True, scanline_intensity=0.12,
+    curvature=0.16, corner_radius=0.07, vignette=0.36,
+    scanlines=True, scanline_intensity=0.20,
 )
 
 #: Which rung `config.yaml` occupies. The box starts here.

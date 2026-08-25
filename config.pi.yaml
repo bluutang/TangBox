@@ -114,7 +114,17 @@ channels:
 # NOTE on resume: the position is remembered in memory only, so it survives
 # channel hopping but NOT switching the box off. A film started tonight begins
 # again tomorrow.
-tune_in: random
+# CHOSEN 2026-08-25, after watching it on the television. `random` restarted a
+# programme every time you landed on a channel, which is the one thing a real
+# television never does - and it was what broke the illusion for Brian.
+#
+# `broadcast` runs each channel to a clock whether or not anybody is watching,
+# so tuning in drops you partway through whatever "would" be airing.
+#
+# ⚠️ Broadcast builds its OWN running order - a single shuffle that loops - so
+# it IGNORES `episode_order: sequential` below. The two cannot both apply. That
+# is the price of the schedule, and it was paid knowingly.
+tune_in: broadcast
 
 start_channel: 2         # what it powers on to
 
@@ -224,14 +234,19 @@ ui:
 # --- CRT picture effect -------------------------------------------------------
 crt:
   enabled: true
-  curvature: 0.04          # "Glass & Grain": a bend you feel, not one you see
-  corner_radius: 0.06
-  vignette: 0.17
+  curvature: 0.08          # "Glass & Grain": a bend you feel, not one you see
+  corner_radius: 0.065
+  vignette: 0.25
   scanlines: true
-  scanline_intensity: 0.03 # a quarter of the old 0.12 - on a 1080p TV the
-                           # scanlines scale up with the 480-line source, so
-                           # they land about twice as strong as they look on a
-                           # computer. Raise gently if at all.
+  scanline_intensity: 0.08
+  # RAISED 2026-08-25, after the first proper viewing on the television. The
+  # previous numbers (0.04 / 0.17 / 0.03) came with a warning to "raise gently
+  # if at all", written from a computer monitor. From the sofa the opposite was
+  # true: three metres from a 55" panel, the whole ladder read as too subtle
+  # and the gentlest rungs were hard to tell from no shader at all.
+  #
+  # Judge this rung on the television, never on a laptop - that is the mistake
+  # the old comment encoded.
 
 # --- Audio --------------------------------------------------------------------
 initial_volume: 60

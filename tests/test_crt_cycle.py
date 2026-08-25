@@ -8,6 +8,11 @@ Brian on a look he cannot get back from without restarting the box.
 from nostalgiabox.config import CrtConfig
 from nostalgiabox.crt import crt_ladder, write_ladder_shaders
 
+# What config.pi.yaml actually sets, so these tests fail if the shipped middle
+# rung ever stops being stronger than SOFT FRAME. Raised with the rest of the
+# ladder on 2026-08-25 - every rung read as too subtle on the television.
+TUNED = CrtConfig(curvature=0.08, vignette=0.25, scanline_intensity=0.08)
+
 
 def test_ladder_names_run_from_nothing_to_heavy():
     names = [rung.name for rung in crt_ladder(CrtConfig())]
@@ -15,8 +20,7 @@ def test_ladder_names_run_from_nothing_to_heavy():
 
 
 def test_configured_look_is_the_middle_rung():
-    tuned = CrtConfig(curvature=0.04, vignette=0.17, scanline_intensity=0.03)
-    assert crt_ladder(tuned)[2].crt == tuned
+    assert crt_ladder(TUNED)[2].crt == TUNED
 
 
 def test_none_rung_switches_the_shader_off():
@@ -24,7 +28,7 @@ def test_none_rung_switches_the_shader_off():
 
 
 def test_effect_strengthens_up_the_ladder():
-    rungs = crt_ladder(CrtConfig(curvature=0.04, vignette=0.17))
+    rungs = crt_ladder(TUNED)
     curvature = [r.crt.curvature for r in rungs[1:]]
     vignette = [r.crt.vignette for r in rungs[1:]]
     assert curvature == sorted(curvature), curvature
@@ -32,7 +36,7 @@ def test_effect_strengthens_up_the_ladder():
 
 
 def test_soft_frame_is_gentler_than_the_configured_look():
-    rungs = crt_ladder(CrtConfig(curvature=0.04, scanline_intensity=0.03))
+    rungs = crt_ladder(TUNED)
     assert rungs[1].crt.curvature < rungs[2].crt.curvature
     assert rungs[1].crt.scanline_intensity < rungs[2].crt.scanline_intensity
 
