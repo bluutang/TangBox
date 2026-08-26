@@ -50,6 +50,15 @@ POWER_ON_FILENAME = "power_on.mp4"
 POWER_OFF_FILENAME = "power_off.mp4"
 GLITCH_FILENAME = "glitch.mp4"
 
+# Sound for the idents. These live in a SUB-FOLDER and are committed, unlike
+# the clips beside them: `.gitignore` drops `assets/*.mp4` because every mp4
+# here is generated, but the sound is a recording that cannot be regenerated
+# from anything in the repo. Keeping it in `sounds/` is what lets the ident
+# clips stay disposable while the audio survives a rebuild.
+SOUNDS_DIRNAME = "sounds"
+SIGN_ON_SOUND = "sign-on.m4a"
+SIGN_OFF_SOUND = "sign-off.m4a"
+
 # The bundled retro OSD font, used for the placeholder ident.
 FONTS_DIR = DEFAULT_ASSETS_DIR / "fonts"
 
@@ -81,6 +90,74 @@ def drawtext_available() -> bool:
 def _run(cmd: List[str]) -> None:
     log.info("running: %s", " ".join(cmd))
     subprocess.run(cmd, check=True, capture_output=True, text=True)
+
+
+def has_audio_track(path: Path) -> bool:
+    """Whether ``path`` already carries a sound track.
+
+    Used to decide whether an ident still needs its sound muxed on. Anything
+    that goes wrong here answers True, so a missing or broken ffprobe means we
+    leave a working clip alone rather than rewriting it on a guess.
+    """
+    if shutil.which("ffprobe") is None:
+        return True
+    try:
+        out = subprocess.run(
+            ["ffprobe", "-v", "error", "-select_streams", "a",
+             "-show_entries", "stream=codec_type", "-of", "csv=p=0", str(path)],
+            check=False, capture_output=True, text=True, timeout=20,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return True
+    return "audio" in out.stdout
+
+
+def attach_sound(video_path: Path, sound_path: Path) -> bool:
+    """Mux ``sound_path`` onto ``video_path`` in place. True if it happened.
+
+    The picture is stream-copied, never re-encoded - this runs on ident clips
+    that were just rendered frame by frame, and a second encode would throw
+    away quality for nothing. The sound is copied too: the files in `sounds/`
+    are already AAC in an MP4 container, which is exactly what lands here.
+
+    Each sound is authored to the exact length of the clip it belongs to
+    (including any lead-in silence), so alignment is the file's business and
+    not this function's. That is why there is no offset argument.
+
+    Best-effort on purpose. A box that plays a silent ident is fine; one that
+    will not finish generating its assets is not.
+    """
+    tmp = video_path.with_suffix(".sound.tmp.mp4")
+    try:
+        _run([
+            "ffmpeg", "-y", "-v", "error",
+            "-i", str(video_path), "-i", str(sound_path),
+            "-map", "0:v:0", "-map", "1:a:0",
+            "-c:v", "copy", "-c:a", "copy", "-shortest", str(tmp),
+        ])
+        tmp.replace(video_path)
+        log.info("attached %s to %s", sound_path.name, video_path.name)
+        return True
+    except Exception:  # noqa: BLE001
+        log.warning("could not attach %s; leaving %s silent",
+                    sound_path.name, video_path.name, exc_info=True)
+        tmp.unlink(missing_ok=True)
+        return False
+
+
+def ensure_sound(video_path: Path, sound_name: str, assets_dir: Path) -> None:
+    """Give ``video_path`` its sound, if it has not got one already.
+
+    Silent on every "no": no sound file shipped, or the clip already has
+    audio. The second case is what makes this safe to call on every run - it
+    will not stack a second copy of the sound onto a clip that kept the first.
+    """
+    sound = assets_dir / SOUNDS_DIRNAME / sound_name
+    if not sound.exists() or not video_path.exists():
+        return
+    if has_audio_track(video_path):
+        return
+    attach_sound(video_path, sound)
 
 
 def generate_static(
@@ -727,6 +804,10 @@ def generate_all(assets_dir: Path, *, force: bool = False) -> List[Path]:
         results.append(generate_logo(logo_path))
     else:
         results.append(logo_path)
+    # Outside the exists() check on purpose. The ident is spared above so a
+    # hand-made one is never overwritten, but a logo.mp4 that predates the
+    # sound still wants it - and that includes the one already on the Pi.
+    ensure_sound(logo_path, SIGN_ON_SOUND, assets_dir)
 
     # Also spared by `force`, on the same rule as the logo: never regenerate
     # something a person may have replaced with their own.
@@ -741,6 +822,7 @@ def generate_all(assets_dir: Path, *, force: bool = False) -> List[Path]:
         results.append(generate_power_off(off_path))
     else:
         results.append(off_path)
+    ensure_sound(off_path, SIGN_OFF_SOUND, assets_dir)
 
     return results
 

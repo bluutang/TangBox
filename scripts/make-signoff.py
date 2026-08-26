@@ -101,3 +101,17 @@ subprocess.run([
     "-i", str(tmp / "list.txt"), "-c", "copy", str(A / "power_off.mp4"),
 ], check=True)
 print("wrote", A / "power_off.mp4")
+
+# --- and give it back its sound --------------------------------------------
+# The concat above builds power_off.mp4 from scratch out of two silent pieces,
+# so every run of this script strips whatever sound was on the old file. That
+# is the one way the sign-off audio can silently disappear, hence re-attaching
+# it right here rather than trusting anyone to remember afterwards.
+import sys, logging
+logging.basicConfig(level=logging.INFO, format="%(message)s")
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+try:
+    from nostalgiabox.static_gen import SIGN_OFF_SOUND, ensure_sound
+    ensure_sound(A / "power_off.mp4", SIGN_OFF_SOUND, A)
+except Exception as exc:  # noqa: BLE001 - a silent sign-off still signs off
+    print("could not attach the sign-off sound:", exc)
