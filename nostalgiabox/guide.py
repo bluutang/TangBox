@@ -176,6 +176,7 @@ def page_tiles(
     cursor: int,
     page_cols: int = DEFAULT_PAGE_COLS,
     page_rows: int = DEFAULT_PAGE_ROWS,
+    detail: bool = False,
 ) -> List[TileRect]:
     """Where every tile on the cursor's page sits.
 
@@ -192,6 +193,10 @@ def page_tiles(
     page = max(0, min(pages - 1, cursor // per_page))
     first = page * per_page
     strip = _DOT_STRIP if pages > 1 else 0
+    # The detail row sits below the grid, so the tiles have to give up its
+    # height - otherwise the bottom row would be drawn straight through it.
+    if detail:
+        strip += _DETAIL_STRIP
     tile_h = (CANVAS_H - 2 * _MARGIN_Y - strip - _GAP * (rows - 1)) / rows
 
     # A tile is only as wide as the picture it holds. Stretching it to fill the
@@ -474,6 +479,7 @@ DIM_ALPHA = 150
 # child can read "page 2 of 3", but one lit dot among dim ones is a picture.
 # The strip is reserved out of the tile area, so a name and a dot can never be
 # drawn on top of each other. Nothing is reserved on a single-page lineup.
+_DETAIL_STRIP = 38     # room under the grid for "who it is for / what is on it"
 _DOT_R = 6
 _DOT_GROW = 3          # how much bigger the current page's dot is
 _DOT_AWAY_ALPHA = 205  # dimmer than the tiles: the dots are small and glow
@@ -496,6 +502,8 @@ def guide_ass(
     page_cols: int = DEFAULT_PAGE_COLS,
     page_rows: int = DEFAULT_PAGE_ROWS,
     artwork: Optional[Sequence[bool]] = None,
+    ages: Optional[Sequence[Optional[str]]] = None,
+    shows: Optional[Sequence[Sequence[str]]] = None,
 ) -> str:
     """Draw ONE PAGE of the guide - scrim, tiles, cursor, labels and dots.
 
@@ -533,7 +541,8 @@ def guide_ass(
 
     # Tile positions come from page_tiles, which the PICTURE layer also uses -
     # so a picture cannot end up a few pixels away from the name below it.
-    rects = page_tiles(count, cursor, page_cols, page_rows)
+    detail = bool(ages) or bool(shows)
+    rects = page_tiles(count, cursor, page_cols, page_rows, detail=detail)
     tile_w, tile_h = rects[0].w, rects[0].h
 
     # Text scales with the tile, so four big tiles and twenty small ones both
@@ -600,8 +609,44 @@ def guide_ass(
                     rf"{_style(ui, size=tag_size, alpha=alpha)}}}ON NOW"
                 )
 
+    if detail:
+        parts.extend(_detail_row(cursor, ages, shows, green, ui, pages))
     parts.extend(_page_dots(pages, page, green))
     return "\n".join(parts)
+
+
+def _detail_row(
+    cursor: int,
+    ages: Optional[Sequence[Optional[str]]],
+    shows: Optional[Sequence[Sequence[str]]],
+    color: str,
+    ui: UiConfig,
+    pages: int,
+) -> List[str]:
+    """One centred line under the grid: who the focused channel is for, and
+    which shows are on it.
+
+    It belongs here rather than on the tiles because a tile that has artwork
+    draws no ASS at all - its text is burned into the bitmap - so a per-tile
+    age would have to be written twice, in two rendering paths. One row below
+    the grid is drawn once and reads the same over every kind of tile.
+    """
+    age = ages[cursor] if ages and cursor < len(ages) else None
+    names = list(shows[cursor]) if shows and cursor < len(shows) else []
+    bits = []
+    if age:
+        bits.append(f"ages {age}")
+    if names:
+        bits.append("  ".join(names))
+    if not bits:
+        return []
+    text = "   \u00b7   ".join(bits)
+    # Above the dots when there are dots, otherwise on the bottom margin.
+    y = CANVAS_H - _MARGIN_Y - (_DOT_STRIP if pages > 1 else 0) - _DETAIL_STRIP / 2
+    return [
+        rf"{{\an5\pos({round(CANVAS_W / 2)},{round(y)})"
+        rf"{_style(ui, size=26)}}}{_escape(text)}"
+    ]
 
 
 def _page_dots(pages: int, current: int, color: str) -> List[str]:

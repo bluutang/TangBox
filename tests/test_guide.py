@@ -723,3 +723,35 @@ def test_other_page_dots_are_dimmer_than_the_tiles_are():
 
     _, alpha = dot_style(0, current=2)
     assert alpha > DIM_ALPHA
+
+
+# --- the detail row: who a channel is for, and what is on it ----------------
+_AGES = ["1-2", "4-8", "6-9", "7+"]
+_SHOWS = [["Plaza Sesamo"], ["Arthur", "Clifford"], ["Kim Possible"], ["Avatar"]]
+
+
+def test_detail_row_describes_the_focused_channel():
+    """The row under the grid names the age and shows of the tile you are on."""
+    ass = guide_ass(FOUR, cursor=1, ui=_ui(), ages=_AGES, shows=_SHOWS)
+    assert "4-8" in ass
+    assert "Arthur" in ass and "Clifford" in ass
+
+
+def test_detail_row_follows_the_cursor():
+    """Move the cursor and the row describes the new channel, not the old one."""
+    ass = guide_ass(FOUR, cursor=2, ui=_ui(), ages=_AGES, shows=_SHOWS)
+    assert "6-9" in ass and "Kim Possible" in ass
+    assert "Arthur" not in ass
+
+
+def test_detail_row_absent_leaves_the_guide_untouched():
+    """A lineup that declares nothing draws exactly as it always has."""
+    plain = guide_ass(FOUR, cursor=0, ui=_ui())
+    same = guide_ass(FOUR, cursor=0, ui=_ui(), ages=None, shows=None)
+    assert plain == same
+
+
+def test_detail_row_handles_a_channel_with_no_age():
+    """A channel with shows but no age still lists its shows."""
+    ass = guide_ass(FOUR, cursor=0, ui=_ui(), ages=[None, None, None, None], shows=_SHOWS)
+    assert "Plaza Sesamo" in ass
