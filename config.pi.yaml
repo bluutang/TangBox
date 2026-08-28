@@ -45,54 +45,164 @@
 # Lineup and per-show curation live in the spreadsheet:
 # https://docs.google.com/spreadsheets/d/1fb_Xrny0GPkuBbcgE3VtzWoS1DsKUzRlx3RdoxrERIw/edit
 channels:
+  # THE LINEUP. Rewritten 2026-08-28 from the five channels this file used to
+  # carry, which were designed before there was a library - see
+  # docs/superpowers/specs/2026-08-20-channel-numbering-design.md.
+  #
+  # ONE NETWORK PER CHANNEL, age splitting each block. That combination is what
+  # keeps a 2-year-old off Dragon Ball Z while still letting the box feel like
+  # cable: the numbers run in contiguous network runs, so 5-8 is all Nickelodeon
+  # and 9-12 is all Disney, the way a real dial did.
+  #
+  # FOLDER LAYOUT on the USB drive - the channel is the folder, the shows sit
+  # INSIDE it, and the episodes inside those:
+  #
+  #     /media/tangbox/NickClasico/Rugrats/Season 01/Rugrats - S01E01.mp4
+  #                    ^ path:     ^ one "show" to ShowOrder
+  #
+  # That nesting is not cosmetic. `episode_order: sequential` bags the SHOWS on
+  # a channel, so what counts as a show is exactly "a folder under path:".
+  #
+  # `age:` is a label drawn on the channel banner and under the guide grid. It
+  # is for a parent's eye - the box does not enforce it.
+  #
+  # `path:` IS ASCII ON PURPOSE. macOS writes accents decomposed and Linux
+  # expects them composed, so "Pequeños" typed here can silently fail to match
+  # the folder Finder made on the drive. `name:` is only ever drawn, so it keeps
+  # its accents; `path:` has to survive two operating systems.
+  #
+  # Some channels are THIN today (marked below). Brian is filling them; a
+  # channel with one episode will repeat it until then. Comment one out if the
+  # repetition annoys before the episodes arrive.
+
+  # --- PBS / Scholastic ------------------------------------------------------
   - number: 2
-    name: "Los Pequeños"
-    path: /media/tangbox/Pequenos
-    # Pocoyo, Plaza Sesamo, Backyardigans, Las Tres Mellizas, Bob el
-    # Constructor, Thomas, Barney, Los Lunnis. The 2-year-old's channel.
+    name: "PBS Pequeños"
+    path: /media/tangbox/PBSPequenos
+    age: "1-2"
+    # Plaza Sésamo, Barney, Teletubbies. The youngest channel on the box.
+
+  - number: 3
+    name: "PBS Kids"
+    path: /media/tangbox/PBSKids
+    age: "2-4"
+    # Daniel Tigre, Jorge el Curioso.
 
   - number: 4
-    name: "Caricaturas"
-    path: /media/tangbox/Caricaturas
-    # Dora, El Chavo Animado, Los Picapiedra, Los Supersonicos, Don Gato,
-    # David el Gnomo, Odisea Burbujas, Bizbirije. The 4-year-old's channel.
-    #
-    # Trim a run to the era you actually want. Seasons are detected from names
-    # like S06E01, "Season 6" or 6x01. Uncomment to use:
-    # exclude_seasons: ["6-25"]
-    # exclude: ["*special*"]
+    name: "PBS Escolar"
+    path: /media/tangbox/PBSEscolar
+    age: "4-8"
+    # Arthur, Clifford, El Autobús Mágico - all three are Scholastic book
+    # adaptations that aired on PBS, which is a real identity rather than a
+    # leftovers bucket.
+
+  # --- Nickelodeon -----------------------------------------------------------
+  - number: 5
+    name: "Nick Jr"
+    path: /media/tangbox/NickJr
+    age: "2-5"
+    # Franklin, Pistas de Blue y tú. Franklin is Canadian (Nelvana/CBC) but
+    # aired on Nick Jr in the US, which is why it is filed here and not PBS.
 
   - number: 6
-    name: "Cine"
-    path: /media/tangbox/Cine
-    # Totoro, Toy Story 1 & 2, Bichos, Nemo, Monsters Inc., Kiki, Lilo y Stitch.
-    #
-    # Films RESUME rather than starting part-way in. Without this override every
-    # tune-in would drop you into the middle of a different film. Note the
-    # position is held in memory only: it survives channel hopping but not
-    # switching the box off, so a film started tonight begins again tomorrow.
-    tune_in: resume
+    name: "Nick Clásico"
+    path: /media/tangbox/NickClasico
+    age: "5-8"
+    # Rugrats, ¡Oye Arnold!, Doug. The biggest channel on the box.
 
   - number: 7
-    name: "Apple TV+"
-    path: /media/tangbox/AppleTV
-    # Stillwater / Lago tranquilo. Platform as the axis, which is the streaming
-    # block ("7x") from docs/superpowers/specs/2026-08-20-channel-numbering-design.md
-    # parked on a SINGLE digit: two-digit family blocks are the plan, but only
-    # once the catalogue is big enough to be worth renumbering every channel.
-    #
-    # ONE show today, 16 episodes, so it will feel repetitive until it fills.
-    # The Snoopy Show, Duck & Goose, Interrupting Chicken, Shape Island and
-    # Frog and Toad are all Apple TV+ and all "Wanted" on the Lineup - they
-    # belong in this folder when they arrive.
-    #
-    # Note this one is 1080p 16:9 and made in 2020, unlike every 4:3 rip
-    # elsewhere on the box.
+    name: "Nick Moderno"
+    path: /media/tangbox/NickModerno
+    age: "5-8"
+    # THIN - Bob Esponja and Jimmy Neutron, one episode each today.
 
   - number: 8
-    name: "En Inglés"
-    path: /media/tangbox/Ingles
-    # Dragon Tales, Mister Rogers, Arthur, The Magic School Bus.
+    name: "Nick Acción"
+    path: /media/tangbox/NickAccion
+    age: "7+"
+    # Avatar. Serialised, so it benefits most from sequential order.
+    episode_order: sequential
+
+  # --- Disney ----------------------------------------------------------------
+  - number: 9
+    name: "Disney Jr"
+    path: /media/tangbox/DisneyJr
+    age: "2-5"
+    # THIN - Bluey and Spidey, one episode each today.
+
+  - number: 10
+    name: "Disney"
+    path: /media/tangbox/Disney
+    age: "6-9"
+    # Kim Possible, Recreo, Pepper Ann.
+
+  - number: 11
+    name: "Disney Aventura"
+    path: /media/tangbox/DisneyAventura
+    age: "6-9"
+    # THIN - Patoaventuras, Lilo y Stitch, Tres Caballeros; pilots only.
+
+  - number: 12
+    name: "Disney Acción"
+    path: /media/tangbox/DisneyAccion
+    age: "7+"
+    # THIN - Spider-Man, Jake Long.
+
+  # --- Cartoon Network -------------------------------------------------------
+  - number: 13
+    name: "Cartoon Network"
+    path: /media/tangbox/CartoonNetwork
+    age: "6-10"
+    # Dexter, Ed Edd y Eddy, Escandalosos, KND.
+
+  # --- Apple TV+ -------------------------------------------------------------
+  # Apple and Netflix never carried advertising, so neither block names a
+  # commercials folder - they fall back to the generic pool.
+  - number: 14
+    name: "Apple Snoopy"
+    path: /media/tangbox/AppleSnoopy
+    age: "3-6"
+    # De campamento con Snoopy, Snoopy el astronauta, El show de Snoopy.
+    # A franchise INSIDE one platform, so it does not break the one-network rule.
+
+  - number: 15
+    name: "Apple Cuentos"
+    path: /media/tangbox/AppleCuentos
+    age: "3-6"
+    # Lago tranquilo, Sapo y Sepo, El niño lobo, Pato y Ganso. The calmest
+    # channel here - picture-book adaptations, near-silent in places.
+
+  # --- Netflix ---------------------------------------------------------------
+  - number: 16
+    name: "Netflix Kids"
+    path: /media/tangbox/NetflixKids
+    age: "4-8"
+    # Misterios Animales, My Melody y Kuromi, Concierge Pokémon.
+
+  - number: 17
+    name: "Netflix Cuentos"
+    path: /media/tangbox/NetflixCuentos
+    age: "3-7"
+    # Los guardaespíritus, Tibucán, Maya y los tres, Dr. Seuss.
+
+  # --- Anime -----------------------------------------------------------------
+  - number: 18
+    name: "Anime"
+    path: /media/tangbox/Anime
+    age: "10+"
+    # Sailor Moon (200 eps), Dragon Ball Z, and the three Sailor Moon FILMS in
+    # their own folder alongside the series - the way television ran a TV movie.
+    #
+    # The films are split in half so the box can go to a break inside them.
+    # That works because of the stickiness in playlist.ShowOrder: while a show
+    # is part-way through a "<name> - ptNN" run it is held onto, so pt01 and
+    # pt02 play back to back. Sequential order here also keeps the series in
+    # episode order, which a serialised show wants.
+    episode_order: sequential
+    tune_in: resume
+    # ⚠ The oldest thing on the box. If it should not be reachable by a
+    # 4-year-old at all, comment this channel out rather than relying on `age:`,
+    # which is a label and not a lock.
 
 # --- How a channel behaves when you tune in -----------------------------------
 #   random    - a fresh random episode starts, a few seconds in  [chosen]
