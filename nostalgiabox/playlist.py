@@ -16,6 +16,8 @@ see the same episode back-to-back across a cycle boundary.
 from __future__ import annotations
 
 import random
+import re
+from pathlib import Path
 from typing import Callable, Dict, Generic, List, Optional, Sequence, TypeVar
 
 T = TypeVar("T")
@@ -99,6 +101,24 @@ class ShuffleBag(Generic[T]):
 
 __all__ = ["ShuffleBag"]
 
+# A file that is one part of a longer item: "Sailor Moon R - pt02.mp4". This is
+# the suffix detect-breaks.py writes when it cuts something up, so the naming is
+# load-bearing rather than cosmetic - change it there and change it here.
+_PART = re.compile(r"^(?P<base>.+) - pt(?P<n>\d+)$")
+
+
+def _part_of(item: object) -> Optional[tuple]:
+    """(base name, part number) for a split file, else None."""
+    m = _PART.match(Path(str(item)).stem)
+    return (m.group("base"), int(m.group("n"))) if m else None
+
+
+def _continues(current: object, following: object) -> bool:
+    """Is ``following`` the next part of the same item as ``current``?"""
+    a, b = _part_of(current), _part_of(following)
+    return bool(a and b and a[0] == b[0] and b[1] == a[1] + 1)
+
+
 class ShowOrder(Generic[T]):
     """Shuffles SHOWS; plays each show's episodes in order.
 
@@ -132,6 +152,12 @@ class ShowOrder(Generic[T]):
             name: sorted(eps, key=str) for name, eps in grouped.items()
         }
         self._cursor: Dict[str, int] = {name: 0 for name in self._shows}
+        # While a show is part-way through a multi-part item we hold onto it
+        # rather than drawing a new one. A compilation splits into independent
+        # episodes and can be scattered harmlessly; a film split in half is one
+        # story, and its halves only make sense back to back. This is what lets
+        # the box go to a commercial break inside a film and come back to it.
+        self._sticky: Optional[str] = None
         self._count = sum(len(eps) for eps in self._shows.values())
         self._bag: ShuffleBag[str] = ShuffleBag(sorted(self._shows), rng=rng)
 
@@ -146,11 +172,16 @@ class ShowOrder(Generic[T]):
         """The next episode: a fresh show, at whatever point it had reached."""
         if self.is_empty:
             raise IndexError("cannot draw from an empty ShowOrder")
-        show = self._bag.next()
+        show = self._sticky if self._sticky is not None else self._bag.next()
         episodes = self._shows[show]
         index = self._cursor[show] % len(episodes)
         self._cursor[show] = (index + 1) % len(episodes)
-        return episodes[index]
+        episode = episodes[index]
+        # Stay on this show only while the NEXT file continues the same item.
+        # The cursor wraps, so the last part of a run is followed by the show's
+        # first episode again - which does not continue it, and releases us.
+        self._sticky = show if _continues(episode, episodes[self._cursor[show]]) else None
+        return episode
 
     def peek(self) -> T:
         """What :meth:`next` would hand out, without spending it.
@@ -161,6 +192,6 @@ class ShowOrder(Generic[T]):
         """
         if self.is_empty:
             raise IndexError("cannot draw from an empty ShowOrder")
-        show = self._bag.peek()
+        show = self._sticky if self._sticky is not None else self._bag.peek()
         episodes = self._shows[show]
         return episodes[self._cursor[show] % len(episodes)]

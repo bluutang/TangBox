@@ -169,3 +169,60 @@ def test_a_nonsense_order_is_refused(tmp_path):
             "episode_order": "alphabetical",
             "channels": [{"number": 2, "name": "T", "path": str(tmp_path)}],
         })
+
+
+# --- multi-part items stay together ----------------------------------------
+#
+# A compilation splits into independent episodes, so shuffle order is harmless.
+# A FILM split in half is one story: the halves only make sense back to back.
+# So while a show is part-way through a multi-part run, the bag holds onto that
+# show instead of drawing a new one - which is what lets the box go to a
+# commercial break in the middle of a film and come back to it.
+
+
+def part(show, name, n):
+    return Path(f"/media/Chan/{show}/Season 01/{name} - pt{n:02d}.mp4")
+
+
+F = [part("Peliculas", "Sailor Moon R", n) for n in (1, 2)]
+G = [part("Peliculas", "Sailor Moon S", n) for n in (1, 2, 3)]
+
+
+def test_a_two_part_film_plays_back_to_back():
+    o = order(A + F)
+    seen = [o.next() for _ in range(12)]
+    i = seen.index(F[0])
+    assert seen[i + 1] == F[1], "part 2 must follow part 1 immediately"
+
+
+def test_a_three_part_film_plays_all_three_back_to_back():
+    o = order(A + G)
+    seen = [o.next() for _ in range(16)]
+    i = seen.index(G[0])
+    assert seen[i + 1 : i + 3] == [G[1], G[2]]
+
+
+def test_the_channel_moves_on_after_the_last_part():
+    """Stickiness releases once the run finishes, or the film would loop."""
+    o = order(A + F)
+    seen = [o.next() for _ in range(12)]
+    i = seen.index(F[1])
+    assert show_of(seen[i + 1]) != "Peliculas"
+
+
+def test_ordinary_episodes_still_alternate_shows():
+    """Only multi-part runs stick - normal episodes are unchanged."""
+    o = order(A + B)
+    seen = [show_of(o.next()) for _ in range(12)]
+    assert all(x != y for x, y in zip(seen, seen[1:]))
+
+
+def test_peek_follows_a_sticky_run():
+    """The guide must promise the part that is actually coming next."""
+    o = order(A + F)
+    for _ in range(12):
+        got = o.next()
+        if got == F[0]:
+            assert o.peek() == F[1]
+            return
+    raise AssertionError("part 1 never came up")
