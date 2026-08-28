@@ -75,6 +75,7 @@ class OverlayManager:
         self,
         number: int,
         name: str,
+        age: Optional[str] = None,
         *,
         show: Optional[str] = None,
         episode: Optional[str] = None,
@@ -101,6 +102,7 @@ class OverlayManager:
             number,
             name,
             self._ui,
+            age=age,
             show=show,
             episode=episode,
             position=position,
@@ -306,6 +308,7 @@ def _channel_bug_ass(
     name: str,
     ui: UiConfig,
     *,
+    age: Optional[str] = None,
     show: Optional[str] = None,
     episode: Optional[str] = None,
     position: Optional[float] = None,
@@ -328,6 +331,13 @@ def _channel_bug_ass(
         rf"{{\an9\pos({_IX1},{_IY0 + 104}){_style(ui, size=40)}}}{_escape(name)}",
     ]
     y = _IY0 + 152
+    # Who the channel is for, small and directly under the name. Drawn only when
+    # the channel declares one - an empty line here would look like a fault.
+    if age:
+        lines.append(
+            rf"{{\an9\pos({_IX1},{y}){_style(ui, size=24)}}}{_escape(age)}"
+        )
+        y += 32
     if up_next and show:
         lines.append(rf"{{\an9\pos({_IX1},{y}){_style(ui, size=24)}}}UP NEXT")
         y += 34

@@ -185,3 +185,48 @@ def test_clear_all_takes_the_guide_with_it(tmp_path):
     om.show_guide("SOME GUIDE ASS")
     om.clear_all()
     assert 5 not in player.overlays
+
+
+def test_channel_age_range_is_parsed(tmp_path):
+    """A channel can declare who it is for, e.g. "2-4" or "7+"."""
+    make_show(tmp_path, "a", 1)
+    cfg = config_from_dict(
+        {
+            "channels": [
+                {"number": 3, "name": "Arthur", "path": str(tmp_path / "a"), "age": "4-8"}
+            ]
+        }
+    )
+    assert cfg.channels[0].age == "4-8"
+
+
+def test_channel_age_range_absent_is_none(tmp_path):
+    """Channels that do not declare an age are unchanged."""
+    make_show(tmp_path, "a", 1)
+    cfg = config_from_dict(
+        {"channels": [{"number": 3, "name": "Arthur", "path": str(tmp_path / "a")}]}
+    )
+    assert cfg.channels[0].age is None
+
+
+def test_channel_bug_shows_age_range(tmp_path):
+    """The age range appears on the banner when the channel declares one."""
+    clock = FakeClock()
+    player = MockPlayer()
+    om = OverlayManager(player, _config(tmp_path), clock=clock)
+
+    om.show_channel_bug(3, "Arthur", age="4-8")
+    ass = player.overlays[1]
+    assert "4-8" in ass
+
+
+def test_channel_bug_without_age_has_no_stray_text(tmp_path):
+    """No age means no extra line - a blank gap reads as a fault."""
+    clock = FakeClock()
+    player = MockPlayer()
+    om = OverlayManager(player, _config(tmp_path), clock=clock)
+
+    om.show_channel_bug(3, "Arthur")
+    ass = player.overlays[1]
+    assert "CH 03" in ass and "Arthur" in ass
+    assert "AGE" not in ass.upper()

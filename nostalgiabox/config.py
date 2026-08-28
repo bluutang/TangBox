@@ -176,6 +176,10 @@ class ChannelConfig:
     # network to imitate - and for Netflix and Apple TV+, which never carried
     # advertising at all.
     commercials: Optional[str] = None
+    # Who the channel is for, drawn on the channel banner: "2-4", "7+".
+    # Free text on purpose - it is a label for a parent's eye, not a rule the
+    # box enforces. None means the banner shows no age line at all.
+    age: Optional[str] = None
 
     def __post_init__(self) -> None:
         if self.number < 0:
@@ -380,6 +384,11 @@ def _parse_channels(raw: Any, base: Optional[Path], default_shuffle: bool) -> Li
                 commercials=(
                     str(entry["commercials"]).strip() or None
                     if entry.get("commercials") is not None
+                    else None
+                ),
+                age=(
+                    str(entry["age"]).strip() or None
+                    if entry.get("age") is not None
                     else None
                 ),
             )
