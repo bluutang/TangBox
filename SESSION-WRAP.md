@@ -52,17 +52,22 @@ content means cutting it up. That is safe ONLY when each piece stands alone.
 - **Compilations** (Daniel Tigre, Jorge, Barney) hold several *separate*
   episodes. Cut them and each piece is a whole episode — shuffle order is
   harmless. ✅
-- **A film is one continuous story.** Split it under `shuffle` and part 2 plays
-  days before part 1. `sequential` does not save it either: that bags the SHOWS
-  and hands you the next file of one, so the next draw is a DIFFERENT show —
-  half a film, something else, then the other half. ❌
-- **The exception**: a film CAN be split if it is on a channel where its folder
-  is the ONLY show. Sequential then draws that show every time and walks
-  `pt01 → break → pt02` back to back. This is why the Sailor Moon films were
-  un-merged into `Sailor Moon Películas/`.
-- Their channel therefore NEEDS `episode_order: sequential` and
-  `tune_in: resume`. **Write the channel config BEFORE cutting the films** — split
-  files on a default shuffled channel are worse than unsplit ones.
+- **A film is one continuous story**, so its halves only make sense back to back.
+  This USED to be unsafe on any shuffled channel. **`a74819b` fixed it** — see
+  stickiness below. ✅
+- **Stickiness (`a74819b`)**: while a show is part-way through a multi-part item,
+  `ShowOrder` holds onto that show instead of drawing a new one. The channel
+  plays `pt01 → break → pt02`, then moves on. It releases itself, because the
+  cursor wraps and the last part is followed by the show's first episode, which
+  does not continue the run.
+- **The `" - ptNN"` suffix is now LOAD-BEARING**, not cosmetic. It is what
+  `detect-breaks.py` writes and what `playlist._PART` matches. Change it in one
+  place and films silently stop playing back to back.
+- Consequences: films no longer need a channel of their own, `episode_order:
+  sequential` is no longer required to make them work, and split parts can no
+  longer scatter because someone put them on a shuffled channel.
+- `tune_in: resume` is still worth setting on a film channel so tuning in returns
+  to where you left off — but it is now a nicety, not a prerequisite.
 
 ## Jorge cuts — reviewed, NOT yet correct
 
@@ -132,8 +137,9 @@ untouched; delete and re-cut freely.
    (~22:48) with `mkv2mp4/join_segments.py` — it did Dexter 47→18. Check titles
    first; real broadcast pairs may be reconstructable.
 4. **Blue's Clues**: 56 clips joined *up* into ~52 episodes.
-5. **Sailor Moon films**: split each ~60 min in half at a scene boundary — AFTER
-   their channel exists with sequential + resume.
+5. **Sailor Moon films**: split each ~60 min in half at a scene boundary. No
+   longer blocked on the channel config — stickiness handles the ordering. Name
+   the pieces `<film> - pt01.mp4` / `- pt02.mp4` or they will not stick.
 6. **Name** remaining shows with `name-from-titles.py` (dry-run first).
 7. **Dedupe by content**, especially Daniel Tigre.
 8. **Sheet**: Daniel Tigre (row 40), Barney (row 6) still `Wanted`; Franklin row 74
@@ -165,8 +171,13 @@ Sailor Moon (200) + Dragon Ball Z (57) turn channel 18 from 1 episode into 257.
 | | 15 | Apple Cuentos | AppleCuentos | 3-6 | Lago tranquilo · Sapo y Sepo · El niño lobo · Pato y Ganso |
 | Netflix | 16 | Netflix Kids | NetflixKids | 4-8 | Misterios Animales · My Melody · Concierge Pokémon |
 | | 17 | Netflix Cuentos | NetflixCuentos | 3-7 | Los guardaespíritus · Tibucán · Maya · Dr. Seuss |
-| Anime | 18 | Anime | Anime | 10+ | Sailor Moon · Dragon Ball Z |
-| Cine | 19 | Cine | Cine | 7+ | Sailor Moon Películas — **sequential + resume** |
+| Anime | 18 | Anime | Anime | 10+ | Sailor Moon · Dragon Ball Z · Sailor Moon Películas |
+
+Channel 19 (Cine) is **no longer needed for the films** — stickiness lets them sit
+on 18 with the series, the way television treated a TV movie. They keep their own
+FOLDER (`Sailor Moon Películas/`) because that is what makes them a separate
+"show" to `ShowOrder`; only the separate CHANNEL is redundant. A Cine channel is
+still worth having whenever real films arrive.
 
 `config.pi.yaml` still holds the OLD 5 channels, superseded by
 `docs/superpowers/specs/2026-08-20-channel-numbering-design.md` and never
@@ -182,10 +193,15 @@ live one (`17ZosBycj…`).
   artwork draws no ASS at all** (mpv puts bitmaps above ASS, so its text is burned
   into the picture).
 
-**Both inert until wired.** `app.py` does not pass `ages`/`shows` into
+- `a74819b` — **stickiness**: `ShowOrder` holds a show while it is part-way
+  through a multi-part item, so a split film plays `pt01 → break → pt02` back to
+  back wherever it lives. Ordinary episodes are unaffected. This one is NOT
+  inert — it works as soon as a `- ptNN` file exists.
+
+**The first two are inert until wired.** `app.py` does not pass `ages`/`shows` into
 `guide_ass`, and no channel declares an `age:`. Both light up with the config
 rewrite; `shows` can come from listing each channel folder's subdirectories,
-computed once at start-up. **630 tests pass.**
+computed once at start-up. **635 tests pass.**
 
 ## Gotchas — each of these cost real time
 
