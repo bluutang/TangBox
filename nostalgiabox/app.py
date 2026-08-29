@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Callable, Dict, List, Optional, Sequence
 
 from .actions import Action, InputEvent
+from .browser import Browser, list_ass, tree_from_config
 from .channel import (
     Channel,
     ChannelLineup,
@@ -136,6 +137,14 @@ class TVApp:
         self._info_next_redraw: float = 0.0
         self.bedtime_deadline: Optional[float] = None
         self._bedtime_marks: set[int] = set()
+
+        # Adult mode: browse channel -> show -> episode, no commercial breaks.
+        # `_browser` outlives the list being on screen, because a hand-picked
+        # episode is followed by the next one in order - the box has to remember
+        # where it was after the overlay has gone.
+        self._browser = None
+        self._browser_open = False
+        self._adult_playing = False
 
         # Direct channel entry ("type 1 then 2 -> channel 12").
         self._digit_buffer = ""
@@ -430,6 +439,9 @@ class TVApp:
         # does NOT take - the dedicated channel and volume keys - falls through
         # and works exactly as it does with the guide closed. That is what
         # splitting the d-pad off from those keys bought.
+        if self._browser_open and self._browser_consumes(action):
+            return
+
         if self.guide.is_open and self._guide_consumes(action):
             return
 
@@ -509,6 +521,62 @@ class TVApp:
         self.overlay.show_message(self._crt_ladder[self._crt_index].name)
 
     # -- the channel guide --------------------------------------------------
+    # -- adult mode ---------------------------------------------------------
+
+    @property
+    def adult_open(self) -> bool:
+        """True while the browse list is on screen."""
+        return self._browser_open
+
+    def _open_browser(self) -> None:
+        self._close_guide()
+        self._browser = Browser(tree_from_config(self.config))
+        self._browser_open = True
+        self._draw_browser()
+
+    def _close_browser(self) -> None:
+        self._browser_open = False
+        self._browser = None
+        self.overlay.clear_guide()
+
+    def _draw_browser(self) -> None:
+        if self._browser is None:
+            return
+        self.overlay.show_guide(
+            list_ass(self._browser.title, self._browser.items,
+                     self._browser.cursor, self.config.ui,
+                     dim=self.config.guide.dim)
+        )
+
+    def _browser_consumes(self, action: Action) -> bool:
+        """Offer a press to the open browse list. True means it was used up."""
+        if action == Action.LAST_CHANNEL:          # Back
+            if self._browser is not None and self._browser.back():
+                self._draw_browser()
+            else:
+                self._close_browser()
+            return True
+        if action == Action.HOME:
+            self._close_browser()
+            return True
+        if action == Action.ENTER:
+            chosen = self._browser.enter() if self._browser else None
+            if chosen is not None:
+                self._browser_open = False
+                self.overlay.clear_guide()
+                self._adult_playing = True
+                self._play_request(PlayRequest(path=chosen))
+            else:
+                self._draw_browser()
+            return True
+        moves = {Action.NAV_UP: "up", Action.NAV_DOWN: "down"}
+        name = moves.get(action)
+        if name is None or self._browser is None:
+            return False
+        getattr(self._browser, name)()
+        self._draw_browser()
+        return True
+
     def _guide_consumes(self, action: Action) -> bool:
         """Offer a press to the open guide. True means it was used up."""
         if action in (Action.HOME, Action.LAST_CHANNEL):
@@ -1092,6 +1160,11 @@ class TVApp:
         number = int(self._digit_buffer)
         self._digit_buffer = ""
         self._digit_deadline = 0.0
+        # There is no channel 0, so the code cannot collide with a real one -
+        # and typing it by accident is close to impossible for a small child.
+        if number == 0:
+            self._open_browser()
+            return
         self.select_channel_number(number)
 
     def _maybe_commit_digits(self, now: float) -> None:
@@ -1162,6 +1235,15 @@ class TVApp:
             request, self._pending_episode = self._pending_episode, None
             self._play_request(request)
             return
+
+        # Adult mode plays a show in order and never cuts to advertising.
+        if self._adult_playing and self._browser is not None:
+            nxt = self._browser.advance()
+            if nxt is not None:
+                self._play_request(PlayRequest(path=nxt))
+                return
+            # End of the show: hand back to ordinary television.
+            self._adult_playing = False
 
         request = self.lineup.current.advance()
         if request is None:

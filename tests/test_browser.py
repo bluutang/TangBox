@@ -246,3 +246,103 @@ def test_an_empty_list_says_so_rather_than_drawing_nothing():
     ass = list_ass("Empty", [], 0, _ui())
     assert "Empty" in ass
     assert len(ass) > 0
+
+
+# --- wired into the app ----------------------------------------------------
+
+from nostalgiabox.actions import Action, InputEvent        # noqa: E402
+from nostalgiabox.app import TVApp                          # noqa: E402
+from nostalgiabox.input.manager import InputManager         # noqa: E402
+from nostalgiabox.player import END_EOF, MockPlayer         # noqa: E402
+from tests.helpers import FakeClock                         # noqa: E402
+
+
+def _app(tmp_path):
+    """A box with two channels, adverts available, and shows inside channels."""
+    nick = tmp_path / "NickJr"
+    make_show(nick, "Franklin", 3)
+    disney = tmp_path / "Disney"
+    make_show(disney, "Kim Possible", 2)
+    ads = tmp_path / "_commercials"
+    ads.mkdir()
+    for i in range(1, 5):
+        (ads / f"ad{i}.mp4").write_bytes(b"\x00")
+    cfg = config_from_dict({
+        "start_channel": 5, "start_offset": 0, "power_off_command": [],
+        "commercials": {"path": str(ads), "break_seconds": 60},
+        "channels": [
+            {"number": 5, "name": "Nick Jr", "path": str(nick)},
+            {"number": 10, "name": "Disney", "path": str(disney)},
+        ],
+    })
+    return TVApp(cfg, MockPlayer(), InputManager([]), clock=FakeClock())
+
+
+def _press(app, action, value=None):
+    app.handle_event(InputEvent(action=action, value=value))
+
+
+def _type(app, digits):
+    """Type a code. No ENTER: the app auto-commits once the buffer fills."""
+    for d in digits:
+        _press(app, Action.DIGIT, int(d))
+
+
+def _is_ad(app):
+    return app._playing_path is not None and app._playing_path.parent.name == "_commercials"
+
+
+def test_typing_the_code_opens_adult_mode(tmp_path):
+    app = _app(tmp_path); app.start()
+    _type(app, "000")
+    assert app.adult_open
+
+
+def test_the_code_does_not_tune_to_a_channel(tmp_path):
+    """000 is not a channel - it must not leave the box on a 'no signal'."""
+    app = _app(tmp_path); app.start()
+    before = app.lineup.current.number
+    _type(app, "000")
+    assert app.lineup.current.number == before
+
+
+def test_navigating_and_choosing_plays_that_episode(tmp_path):
+    app = _app(tmp_path); app.start()
+    _type(app, "000")
+    _press(app, Action.ENTER)          # into shows
+    _press(app, Action.ENTER)          # into episodes
+    _press(app, Action.ENTER)          # choose the first
+    assert app._playing_path is not None
+    assert app._playing_path.parent.name == "Franklin"
+
+
+def test_a_chosen_episode_gets_no_advert_before_it(tmp_path):
+    app = _app(tmp_path); app.start()
+    _type(app, "000")
+    _press(app, Action.ENTER); _press(app, Action.ENTER); _press(app, Action.ENTER)
+    assert not _is_ad(app)
+
+
+def test_the_next_episode_follows_with_no_advert(tmp_path):
+    """Adult mode plays a show in order, uninterrupted."""
+    app = _app(tmp_path); app.start()
+    _type(app, "000")
+    _press(app, Action.ENTER); _press(app, Action.ENTER); _press(app, Action.ENTER)
+    first = app._playing_path
+    app._ended.put(END_EOF); app.step()
+    assert not _is_ad(app)
+    assert app._playing_path != first
+
+
+def test_backing_out_of_the_top_closes_adult_mode(tmp_path):
+    app = _app(tmp_path); app.start()
+    _type(app, "000")
+    _press(app, Action.LAST_CHANNEL)   # Back at the channel list
+    assert not app.adult_open
+
+
+def test_normal_channels_still_get_adverts(tmp_path):
+    """Adult mode must not disable breaks for ordinary viewing."""
+    app = _app(tmp_path); app.start()
+    app._ended.put(END_EOF); app.step()
+    assert _is_ad(app)

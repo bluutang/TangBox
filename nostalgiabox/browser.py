@@ -50,6 +50,22 @@ class Browser:
         return _LEVELS[self._depth]
 
     @property
+    def cursor(self) -> int:
+        return self._cursor[self._depth]
+
+    @property
+    def title(self) -> str:
+        """Breadcrumb: where in the tree the list being shown sits."""
+        if self._depth == 0 or not self._tree:
+            return "Todo"
+        chan = self._tree[self._cursor[0]][0]
+        if self._depth == 1:
+            return chan
+        shows = self._shows()
+        show = shows[self._cursor[1]][0] if shows else ""
+        return f"{chan}  >  {show}"
+
+    @property
     def items(self) -> list:
         """The list being shown at the current depth."""
         if self._depth == 0:
