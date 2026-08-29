@@ -193,3 +193,56 @@ def test_working_folders_are_not_shows(tmp_path):
     )
     shows = dict(dict(tree_from_config(cfg))["Chan"])
     assert list(shows) == ["Franklin"]
+
+
+# --- drawing the list ------------------------------------------------------
+
+from nostalgiabox.browser import ROWS_PER_PAGE, list_ass   # noqa: E402
+from nostalgiabox.config import UiConfig                   # noqa: E402
+
+
+def _ui():
+    return UiConfig()
+
+
+def test_the_heading_says_where_you_are():
+    ass = list_ass("Nick Jr", ["Franklin", "Blue"], 0, _ui())
+    assert "Nick Jr" in ass
+
+
+def test_every_item_of_a_short_list_is_drawn():
+    ass = list_ass("Nick Jr", ["Franklin", "Blue"], 0, _ui())
+    assert "Franklin" in ass and "Blue" in ass
+
+
+def test_the_picture_behind_is_dimmed():
+    """A menu over full-brightness video is unreadable."""
+    assert "\\p1" in list_ass("X", ["a"], 0, _ui())
+
+
+def test_a_long_list_draws_only_one_page():
+    items = [f"Episode {n:02d}" for n in range(1, 82)]      # Kim Possible has 81
+    ass = list_ass("Kim Possible", items, 0, _ui())
+    drawn = sum(1 for i in items if i in ass)
+    assert drawn <= ROWS_PER_PAGE
+
+
+def test_the_page_follows_the_cursor():
+    """Selecting episode 70 must not draw episodes 1-12 and hide the cursor."""
+    items = [f"Episode {n:02d}" for n in range(1, 82)]
+    ass = list_ass("Kim Possible", items, 69, _ui())
+    assert "Episode 70" in ass
+    assert "Episode 01" not in ass
+
+
+def test_position_is_shown_for_a_long_list():
+    """Otherwise there is no way to tell 12 of 81 from 12 of 12."""
+    items = [f"Episode {n:02d}" for n in range(1, 82)]
+    ass = list_ass("Kim Possible", items, 69, _ui())
+    assert "70" in ass and "81" in ass
+
+
+def test_an_empty_list_says_so_rather_than_drawing_nothing():
+    ass = list_ass("Empty", [], 0, _ui())
+    assert "Empty" in ass
+    assert len(ass) > 0

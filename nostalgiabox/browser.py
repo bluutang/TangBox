@@ -23,6 +23,8 @@ from pathlib import Path
 from typing import List, Optional, Sequence, Tuple, Union
 
 from .channel import scan_episodes, show_name_for
+from .guide import DEFAULT_DIM, _MARGIN_X, _MARGIN_Y
+from .overlay import CANVAS_H, CANVAS_W, _escape, _filled_rect, _style
 
 # channel name -> shows -> episode paths
 Show = Tuple[str, Sequence[Path]]
@@ -175,3 +177,73 @@ def tree_from_config(config) -> List[Channel]:
         ]
         tree.append((chan.name, shows))
     return tree
+
+
+# How many rows fit on one page. Height, not taste: the rows have to be legible
+# from a sofa, and a 44px row on a 720-tall canvas is about the smallest that
+# is. Kim Possible has 81 episodes, so paging is needed from the first draw
+# rather than as a later addition.
+ROW_H = 44
+ROWS_PER_PAGE = 12
+_HEADING_SIZE = 34
+_ROW_SIZE = 28
+
+
+def list_ass(title: str, items: Sequence, cursor: int, ui, *,
+             dim: float = DEFAULT_DIM) -> str:
+    """Draw ONE PAGE of a list: scrim, heading, rows, and where you are.
+
+    A pure function of (title, items, cursor), like :func:`guide.guide_ass`, so
+    it can be tested without a player or a television.
+
+    Rows rather than tiles. The guide uses tiles because a pre-reader picks a
+    channel by its picture; this is for an adult reading episode names, and a
+    list of names is what reads fastest.
+
+    The page follows the CURSOR rather than starting at the top, or selecting
+    episode 70 of 81 would draw episodes 1-12 and hide the very thing that is
+    selected.
+    """
+    labels = [x.stem if isinstance(x, Path) else str(x) for x in items]
+    page = max(0, cursor) // ROWS_PER_PAGE
+    first = page * ROWS_PER_PAGE
+    window = labels[first:first + ROWS_PER_PAGE]
+
+    parts = [
+        # The programme keeps playing underneath rather than being covered.
+        _filled_rect(x=0, y=0, w=CANVAS_W, h=CANVAS_H, fill="&H00000000",
+                     alpha=round(255 * (1.0 - max(0.0, min(1.0, dim)))))
+    ]
+    y = _MARGIN_Y
+    parts.append(
+        rf"{{\an7\pos({_MARGIN_X},{y}){_style(ui, size=_HEADING_SIZE)}}}{_escape(title)}"
+    )
+    y += int(ROW_H * 1.6)
+
+    if not labels:
+        parts.append(
+            rf"{{\an7\pos({_MARGIN_X},{y}){_style(ui, size=_ROW_SIZE, alpha=140)}}}"
+            + _escape("(nothing here)")
+        )
+        return "\n".join(parts)
+
+    for i, label in enumerate(window):
+        selected = (first + i) == cursor
+        # The cursor row is full brightness with a marker; the rest are dimmed.
+        # A marker as well as brightness, because on a CRT-shaded picture
+        # brightness alone is not always enough to tell which row is which.
+        alpha = 0 if selected else 130
+        text = ("> " if selected else "   ") + label
+        parts.append(
+            rf"{{\an7\pos({_MARGIN_X},{y}){_style(ui, size=_ROW_SIZE, alpha=alpha)}}}"
+            + _escape(text)
+        )
+        y += ROW_H
+
+    if len(labels) > ROWS_PER_PAGE:
+        # Without this there is no way to tell "12 of 81" from "12 of 12".
+        parts.append(
+            rf"{{\an3\pos({CANVAS_W - _MARGIN_X},{CANVAS_H - _MARGIN_Y})"
+            rf"{_style(ui, size=24, alpha=110)}}}{cursor + 1} / {len(labels)}"
+        )
+    return "\n".join(parts)
