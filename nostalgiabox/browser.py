@@ -22,6 +22,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import List, Optional, Sequence, Tuple, Union
 
+from .channel import scan_episodes, show_name_for
+
 # channel name -> shows -> episode paths
 Show = Tuple[str, Sequence[Path]]
 Channel = Tuple[str, Sequence[Show]]
@@ -127,3 +129,49 @@ class Browser:
         if nxt is not None:
             self._cursor[2] += 1
         return nxt
+
+
+def tree_from_config(config) -> List[Channel]:
+    """Build the browse tree from the real lineup.
+
+    ``<channel>/<show>/<episode>`` on disk becomes channel -> show -> episode
+    here, reusing the same two helpers the shuffling side uses so the browser
+    can never disagree with what actually plays: :func:`scan_episodes` applies
+    each channel's own exclude rules, and :func:`show_name_for` decides which
+    programme a file belongs to.
+
+    Two judgements worth stating, because neither is forced by the data:
+
+    * A channel with nothing on it is LEFT OUT. An empty row is useless to
+      someone browsing for something to watch, where on the guide it still has
+      to exist because it holds a number.
+    * An episode sitting loose in a channel folder, with no show folder around
+      it, is grouped under the CHANNEL's name rather than dropped - otherwise
+      it would be unreachable from here while still playing on shuffle.
+    """
+    tree: List[Channel] = []
+    for chan in config.channels:
+        episodes = scan_episodes(
+            chan.path,
+            config.video_extensions,
+            recursive=getattr(config, "scan_recursive", True),
+            exclude=chan.exclude,
+            exclude_seasons=chan.exclude_seasons,
+        )
+        if not episodes:
+            continue
+        grouped: dict = {}
+        for ep in episodes:
+            name = show_name_for(ep, chan.path) or chan.name
+            # _staging, _split, _review and the like hold work in progress.
+            # They are real folders of real video files, so nothing else
+            # filters them out - but a half-processed episode must not be
+            # offered as something to watch.
+            if name.startswith("_"):
+                continue
+            grouped.setdefault(name, []).append(ep)
+        shows: List[Show] = [
+            (name, sorted(eps, key=str)) for name, eps in sorted(grouped.items())
+        ]
+        tree.append((chan.name, shows))
+    return tree
