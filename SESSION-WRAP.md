@@ -58,6 +58,28 @@ tested before anything touched `app.py`. **The remaining part is the only one
 that modifies existing behaviour** — do it carefully and keep the box identical
 when adult mode is closed.
 
+### The wiring does NOT need a television
+
+`tests/test_interstitial.py` already builds a real `TVApp` on a `MockPlayer`,
+`FakeClock` and `InputManager([])`, drives it with `end_episode(app)` and asserts
+what is playing. Everything the last part does can be proven that way:
+
+* `000` on the digit pad opening the browser (`_push_digit` / `_confirm_digits`)
+* NAV / ENTER / BACK routed to the browser, the way `_guide_consumes` routes to
+  the guide
+* the chosen file playing, with **no advert before it**
+* `advance()` giving the next episode when one ends, and the mode closing
+  cleanly at the end of a show
+
+**What genuinely needs the TV is only calibration**, and none of it is logic:
+whether the rows are legible from a sofa, whether `ROW_H`/`_ROW_SIZE` are big
+enough, whether the `>` marker reads at distance, and whether `DEFAULT_DIM`
+works over real moving video under the CRT shader. All of those are constants at
+the top of `browser.py` — tune them on the television without touching a test.
+
+So: build and test the wiring headless next session; save the numbers for when
+the box is in front of you.
+
 Design choices worth not re-litigating:
 - **Lists STOP at their ends, they do not wrap.** The Guide wraps because a
   cursor parked on nothing reads as broken to a 2-year-old; here the user can
@@ -115,13 +137,15 @@ Large ~6 s keyframe jump, may overshoot — `005`, `009`, `010`, `012`, `013`,
 17 channels, one network each, age splitting the blocks, ASCII paths. 38 shows
 already filed by `organize-channels.py`.
 
-**Still to add, all wanting `breaks: false`:** Aprende (Spanish Basics, Aprende
-Peque — 56), Ejercicio (Cosmic Kids Yoga — 11), Cantonés (four playlists, one
-folder — 102). They also need `organize-channels.py` mapping entries.
+**All three added (`d3a1c2f`)** — Aprende (19), Ejercicio (20), Cantonés (21),
+each `breaks: false`, and all three are in the `organize-channels.py` mapping.
+**20 channels now.** Cantonés is the first non-Spanish content; its playlists are
+age-banded by the uploader (0-3, 3-5, 6+, parent-child) in one folder, so
+splitting into separate channels later is a file move.
 
-Cantonés is the first non-Spanish content; its playlists are age-banded by the
-uploader (0-3, 3-5, 6+, parent-child) in one folder, so splitting into separate
-channels later is a file move.
+Note the channel PATH is ASCII (`/media/tangbox/Cantones`) while the show folder
+keeps its accent — macOS and Linux disagree on accent encoding, and only `path:`
+has to survive both.
 
 ## Code shipped this session
 
