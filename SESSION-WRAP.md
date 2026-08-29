@@ -9,12 +9,12 @@ each show's source (YouTube / archive.org) and a bar for the 1 TB drive.
     stop the queue  kill the run-queue pid; then kill yt-dlp BY SHOW NAME
     resume        cd ~/Downloads/Converted && nohup ./_tools/run-queue15.sh >> _queue.log 2>&1 &
 
-## State — 440 / 982 videos, 17 shows, 260 GB (26% of the drive)
+## State — 523 / 982 videos, 17 shows, 275 GB (28% of the drive)
 
 **Seven complete:** Franklin 78, Barney 41, Pistas de Blue y tú 82, Clifford 77,
 El Autobús Mágico 50, Daniel Tigre 61, Sailor Moon Películas 2/2.
 
-Downloading: **Sailor Moon 20/200**. Then Dora 32, Cosmic Kids Yoga 11, Spanish
+Downloading: **Sailor Moon 103/200** — the blocked seasons finish at 127. Then Dora 32, Cosmic Kids Yoga 11, Spanish
 Basics 22, Aprende Peque 34, Cantonés 102, then **archive.org last** —
 Arthur 65, Dragon Ball Z 57, Bear 34. Jorge sits at 29/34 (5 geo-blocked).
 
@@ -138,6 +138,57 @@ Large ~6 s keyframe jump, may overshoot — `005`, `009`, `010`, `012`, `013`,
 | Barney | 11 | split — SAMPLE DONE, needs a different method |
 | Dora | 6 | split — up to 4:26 with ~11-min episodes, so MANY cuts each. The 18-min floor that suited Jorge is wrong here. |
 | Pistas de Blue y tú | 82 | **join** 60 clips up into ~52 episodes |
+
+### 🔴 START HERE NEXT SESSION — the Jorge repair
+
+Brian reviewed all 29 Jorge splits. **17 have problems**, in three distinct kinds
+(my automated flags only caught 10 — his review is the authority):
+
+| | Files | Symptom |
+|---|---|---|
+| **A** | 006, 008, 014, 016, 018, 020, 021, 023, 024, 025, 027 | `pt02` opens with 4-7 s of the previous episode's credits |
+| **B** | 007, 010, 012, 013 | `pt01` runs long carrying the NEXT episode; `pt02` is missing that start |
+| **C** | 011 (to 4:17), 026 (to 3:05) | `pt02` carries MINUTES of the previous episode |
+| **D** | 028, 029 | uncertain — may be geo-blocked sources; revisit when the missing 5 arrive |
+
+**Group A is solved and proven.** The cause was the seek, not the detection:
+`-c copy` used `-ss` BEFORE `-i`, which rounds to the nearest keyframe *at or
+before* the requested time - so even after snapping the cut forward onto a
+keyframe, ffmpeg could round back down, landing 4-7 s early. That interval is
+exactly Jorge's keyframe spacing.
+
+`--reencode` (added to `detect-breaks.py`) seeks with `-ss` AFTER `-i`, which is
+frame-accurate and has no keyframe constraint. Measured on file 006:
+
+    _split/ (copy)   t=0.5s yellow credits  t=2s yellow  t=4s yellow
+    _reenc/          t=0.5s TITLE CARD      t=2s TITLE   t=4s TITLE
+
+**Next session: re-encode the 11 group A files** (~45 min, ~9 GB), then diagnose
+B and C. Re-encoding will NOT fix B or C - their cuts are at the wrong boundary,
+so it would only place a wrong cut precisely. **Measure those, do not reason
+about them** (I was wrong twice today doing the latter).
+
+**Do not re-encode by default.** Daniel's 4 pieces are 460 MB copied and 1.6 GB
+re-encoded - 3.5x - and copying is lossless. Re-encoding is a REPAIR for broken
+cuts, not the normal path.
+
+### Daniel and Barney — approved
+
+Brian reviewed both and they are **fine as they are**; a split-second of frames
+at some starts, acceptable for a young child's show. The remaining **18 Daniel
+and 10 Barney** files can be batch-split with the same settings, stream-copied.
+
+Barney correction: the 30:04 file that refused to split was the SHORTEST of its
+set - the other ten run 42:43 to 85:12 and will split normally. "Barney needs a
+different method" was a sampling artifact.
+
+### Why the cut is the MIDDLE of the fade, not its end
+
+Tried and reverted. Cutting at the fade's end is better in theory but lands
+between keyframes: measured on Daniel, the midpoint snaps 0.04-0.15 s while the
+fade-end snaps 4.09-4.17 s, dropping ~4 s of the NEXT episode onto the previous
+piece. The midpoint leaves ~1 s of closing fade on the next piece, which is the
+far smaller error. Recorded in the code so it is not re-tried.
 
 ### Sample splits, for assessment (in each show's `_split/`)
 
