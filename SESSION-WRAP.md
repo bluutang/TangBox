@@ -51,7 +51,14 @@ finishes, **browse-and-play only** for v1.
 | State machine | `2a8c5c7` | `Browser` — cursors, descend/back, `next_episode()` |
 | Tree builder | `d85299e` | `tree_from_config` — reads the real lineup |
 | List renderer | `7f361db` | `list_ass` — rows, paging, scrim, position |
-| **Wiring** | TODO | `000` to enter, route NAV/ENTER/BACK, play with breaks off |
+| Wiring | `?` | `000` to enter, NAV/ENTER/BACK routed, plays with breaks off |
+
+**ADULT MODE IS COMPLETE AND TESTED.** Type `000`, browse channel → show →
+episode, choose one; it plays with no advert and the next episode of that show
+follows until the show ends, then the box hands back to ordinary television.
+Built entirely on the MockPlayer harness — **no television was needed**. What
+still wants a screen is only calibration: `ROW_H`, `_ROW_SIZE`, the `>` marker
+and `DEFAULT_DIM`, all constants at the top of `browser.py`.
 
 All three are pure (no player, clock or drawing), which is why each was fully
 tested before anything touched `app.py`. **The remaining part is the only one
@@ -127,10 +134,26 @@ Large ~6 s keyframe jump, may overshoot — `005`, `009`, `010`, `012`, `013`,
 
 | Show | Files | Job |
 |---|---:|---|
-| Daniel Tigre | 19 | split (42 singles already named) |
-| Barney | 11 | split (30 singles already named) |
+| Daniel Tigre | 19 | split — SAMPLE DONE, see below |
+| Barney | 11 | split — SAMPLE DONE, needs a different method |
 | Dora | 6 | split — up to 4:26 with ~11-min episodes, so MANY cuts each. The 18-min floor that suited Jorge is wrong here. |
 | Pistas de Blue y tú | 82 | **join** 60 clips up into ~52 episodes |
+
+### Sample splits, for assessment (in each show's `_split/`)
+
+Jorge's settings were used as a baseline. They do NOT transfer:
+
+* **Daniel Tigre** 82:13 → **4 pieces of 20:31-20:36**, very uniform, so the
+  boundaries are real. BUT `0 with a credit roll` — no near-white title card was
+  found, so the cuts sit on the RAW FADES. That is exactly the state Jorge was in
+  when the credits landed on the following piece. **Check the head of pt02.**
+* **Barney** 30:04 → **1 piece, no split**. 14 black intervals and 4 joins, all
+  rejected by the 18-minute floor — arithmetic, since a 30-minute file cannot
+  have a cut with 18 minutes either side. Either it is one 30-minute episode, or
+  two ~15-minute ones the floor forbids. Barney also had **1 silence in 30
+  minutes** against Daniel's 156, so any silence-based rule is useless there.
+
+`--min-episode` and the credits refinement are per-show settings, not global.
 
 ## Channels — config written (`06b17c7`), three still missing
 
