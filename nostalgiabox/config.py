@@ -180,6 +180,11 @@ class ChannelConfig:
     # Free text on purpose - it is a label for a parent's eye, not a rule the
     # box enforces. None means the banner shows no age line at all.
     age: Optional[str] = None
+    # Whether this channel goes to a commercial break between episodes. Some
+    # channels are not pretending to be television - the yoga, Aprende and
+    # Cantonese-learning ones are short YouTube pieces, and a cereal advert
+    # between two five-minute lessons reads as a fault rather than nostalgia.
+    breaks: bool = True
 
     def __post_init__(self) -> None:
         if self.number < 0:
@@ -391,6 +396,7 @@ def _parse_channels(raw: Any, base: Optional[Path], default_shuffle: bool) -> Li
                     if entry.get("age") is not None
                     else None
                 ),
+                breaks=bool(entry.get("breaks", True)),
             )
         )
     return channels

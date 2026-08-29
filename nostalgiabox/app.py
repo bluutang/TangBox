@@ -1168,7 +1168,8 @@ class TVApp:
             self._show_no_signal(self.lineup.current)
             return
 
-        clips = self.commercials.build_break(
+        # A channel can opt out of advertising altogether.
+        clips = [] if not self.lineup.current.config.breaks else self.commercials.build_break(
             episode_seconds=self._finished_episode_seconds(),
             network=self.lineup.current.config.commercials,
         )

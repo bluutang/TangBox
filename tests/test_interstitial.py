@@ -493,3 +493,51 @@ def test_a_ceiling_never_leaves_a_break_empty(tmp_path):
         folder, break_seconds=75, break_max_seconds=60, probe=fixed_probe(300.0)
     )
     assert pool.build_break(episode_seconds=1230)
+
+
+# --- a channel can opt out of breaks entirely -------------------------------
+#
+# Some channels are not television. The yoga, Aprende and Cantonese-learning
+# channels are short YouTube pieces, and cutting to a cereal advert between two
+# five-minute lessons reads as a fault rather than as nostalgia.
+
+
+def test_channel_breaks_flag_defaults_to_true(tmp_path):
+    make_show(tmp_path, "a", 1)
+    cfg = config_from_dict(
+        {"channels": [{"number": 2, "name": "A", "path": str(tmp_path / "a")}]}
+    )
+    assert cfg.channels[0].breaks is True
+
+
+def test_channel_breaks_flag_is_parsed(tmp_path):
+    make_show(tmp_path, "a", 1)
+    cfg = config_from_dict(
+        {"channels": [
+            {"number": 2, "name": "A", "path": str(tmp_path / "a"), "breaks": False}
+        ]}
+    )
+    assert cfg.channels[0].breaks is False
+
+
+def test_a_channel_that_opts_out_gets_no_adverts(tmp_path):
+    """Episode ends, next episode starts - no advert in between."""
+    app = build_app(tmp_path, ads=6, channels=[
+        {"number": 2, "name": "Aprende", "path": str(tmp_path / "dragon"),
+         "breaks": False},
+    ])
+    app.start()
+    end_episode(app)
+    assert not is_ad(app)
+
+
+def test_other_channels_still_get_adverts(tmp_path):
+    """Opting one channel out must not disable breaks everywhere."""
+    app = build_app(tmp_path, ads=6, channels=[
+        {"number": 2, "name": "Dragon Tales", "path": str(tmp_path / "dragon")},
+        {"number": 3, "name": "Aprende", "path": str(tmp_path / "arthur"),
+         "breaks": False},
+    ])
+    app.start()
+    end_episode(app)
+    assert is_ad(app)
