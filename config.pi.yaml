@@ -204,6 +204,36 @@ channels:
     # 4-year-old at all, comment this channel out rather than relying on `age:`,
     # which is a label and not a lock.
 
+  # --- Not television -------------------------------------------------------
+  # These three are YouTube teaching material, not broadcast shows. They carry
+  # `breaks: false`: cutting to a cereal advert between two five-minute lessons
+  # reads as a fault rather than as nostalgia. They also have no network, which
+  # is why they sit outside the network blocks above rather than inside one.
+  - number: 19
+    name: "Aprende"
+    path: /media/tangbox/Aprende
+    age: "2-6"
+    breaks: false
+    # Spanish Basics, Aprende Peque con Isa.
+
+  - number: 20
+    name: "Ejercicio"
+    path: /media/tangbox/Ejercicio
+    age: "3-8"
+    breaks: false
+    # Cosmic Kids Yoga, in Spanish. Get-up-and-move rather than sit-and-watch.
+
+  - number: 21
+    name: "Cantonés"
+    path: /media/tangbox/Cantones
+    age: "0-6"
+    breaks: false
+    # The FIRST non-Spanish content on the box - four Cantonese learning
+    # playlists in one folder. The uploader has already age-banded them
+    # (0-3, 3-5, 6+, parent-child), so splitting this into separate channels
+    # later is a matter of moving files, not re-downloading. Worth revisiting
+    # once there is a sense of which bands actually get watched.
+
 # --- How a channel behaves when you tune in -----------------------------------
 #   random    - a fresh random episode starts, a few seconds in  [chosen]
 #   resume    - picks up where you left that channel last time
