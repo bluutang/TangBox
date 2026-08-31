@@ -1,77 +1,76 @@
-# Session Wrap — 2026-08-30
+# Session Wrap — 2026-08-31
 
 ## What we worked on
-Finished the Jorge el Curioso repair (all 19 broken splits fixed, plus the 5
-geo-blocked files that finally arrived), then spent most of the session
-recovering a download pipeline that was silently failing, and added six new
-shows. **No code in this repo changed** — everything lives in
-`~/Downloads/Converted/`.
+Finished the Jorge repair, downloaded ten new shows, and organised the whole
+library into channel folders. **2,428 playable episodes across 24 channels**,
+60 GB free. Media lives in `~/Downloads/Converted/`; the repo only changed in
+`config.pi.yaml`.
 
 ## Status right now
-The **off-VPN queue is running unattended** (`_tools/offvpn-queue.sh`, log
-`_offvpn.log`), ~12 hours of work at the measured 2.87 MB/s:
-Journey to the West (42) → Rocket Power (62) → Digimon (105) → tokyvideo (353).
-Check progress at `~/Downloads/Converted/_status.html` (refreshes itself).
+Three jobs running unattended, watched by one monitor:
+- **Dora** cutting 6 marathons into 36 pieces (`_dora-cut.log`)
+- **Pistas de Blue** bundling 59 clips into 13 blocks (`_bundle.log`)
+- **Ms. Nenna** fetching its last 6 videos at 360p (`_nenna.log`)
 
-Everything else is **done**: every YouTube show is complete except 6 Spanish
-Basics episodes (see blockers).
+Both folders open automatically when their job finishes, for review.
 
 ## Next 1-3 steps
-1. Let the off-VPN queue finish. Nothing to do.
-2. Look at `Spanish Basics/_360p/001-OpC5Q90bxd4.mp4` and decide if 360p is
-   acceptable. If yes, the remaining 6 need the VPN back on briefly.
-3. Split `NA-XBSF8xSNt2g` (the one Jorge file with no findable boundary).
-
-## Files touched this session (all in `~/Downloads/Converted/_tools/`)
-- `get-archive.py` — **added `-L`** and exFAT filename sanitising
-- `status.py` — 3 fixes: order by mtime, smoothed speed/ETA, archive.org shows
-  no longer read "stopped"
-- `get-playlist.sh` — filenames now carry the video title
-- `detect-breaks.py` — re-encode bitrate 2500k → 800k
-- `find-title-cards.py`, `cut-at.py`, `sailor-seasons.py`, `tokyvideo-plan.py`,
-  `tokyvideo-get.py`, `backfill-titles.py`, `digimon-file.py` — new tools
-- `shows.json` — 24 shows, each with a `source`; Digimon and Sailor Moon merged
+1. Review Dora's 36 pieces and Pistas' 13 blocks when they open.
+2. **Daniel Tigre's 17 compilations still need split timemarks** — the only show
+   left needing them.
+3. `NA-XBSF8xSNt2g` (Jorge) has no findable boundary and is still unsplit.
 
 ## Decisions made
-- **Jorge boundaries are found three ways**: white title card (27 files), black
-  gap (028), yellow "¡No te vayas!" bumper (029). One detector will always miss some.
-- **The 5 late Jorge files are a different edit** — 66 min, six stories, three
-  episodes, no title cards. Not the same shape as the other 29.
-- **Cut at the fade's END when re-encoding.** The old "cut at the middle" rule
-  only existed because `-c copy` snapped backwards; it does not apply now.
-- **Re-encode is a repair, not the default** — 800k (~2x source) is plenty.
-- **Titles from YouTube/source URLs are safe.** The no-titles rule bans
-  *looked-up* database titles matched by guesswork, not ones shipped with the file.
-- **Cantonés is now "Uncle Calvin"** (the channel's creator). Channel path stays
-  ASCII `Cantones`.
-- **Sailor Moon is one show**: 5 seasons + Movies, 202 files. Third film is a
-  genuine takedown — 2 of 3 is the ceiling.
-- **Digimon Tamers skipped** — 85 GB for a 1080p upscale of SD material.
+- **Channels 19-23 added/renumbered**: Anime Kids (Digimon+Pokémon, 6+, split off
+  the 10+ Anime block), then Aprende/Ejercicio/Cantonés/Journey at the end.
+- **Commercial breaks are 30-60s**, down from up to 3m45. Live on the box.
+- **Spanish Basics renamed Ms. Nenna** (the creator).
+- **Street Sharks → Disney Acción**; Gargoyles and Mighty Ducks too (146 eps).
+- **Pistas de Blue has no real episodes** — 60 clips + compilations. Clips are
+  bundled into ~22-min blocks; the 30-min compilations stay whole.
+- **Barney's long pieces get no invented commercial breaks.** Brian scrubbed the
+  playback himself; automated detection could not match it (see below).
 
-## Bugs found (each cost real time — do not reintroduce)
-- **`curl` without `-L`** wrote 65 zero-byte Arthur files that a file-count check
-  called "complete". `--fail` does not catch redirects.
-- **No folder, no download**: `run_show` redirects into `$name/_download.log`
-  before anything creates `$name`; seven shows silently downloaded nothing.
-- **Editing a running bash script** breaks it — bash reads by byte offset. This
-  killed the queue mid-run.
-- **`pgrep -f` matched my own monitor**, idling a job for 47 minutes.
-- **A 0.3s black-gap threshold hid two real boundaries** (both 0.28s).
-- **"Video unavailable" ≠ removed.** YouTube says the same thing for
-  region-locked content. Two Sailor Moon episodes I called permanently gone came
-  down fine from Romania.
-- **The VPN throttles ~29x.** Check it before blaming a server.
+## Bugs found — do not reintroduce
+- **ffmpeg concat truncates SILENTLY on an apostrophe in a filename.** The list
+  format is `file '...'`, so `Blue's Clues & You!` ends the string early: valid
+  short file, exit code 0, no error. Escape with `'\''`. Cost two rebuilds.
+- **`curl` without `-L`** wrote 65 zero-byte Arthur files that matched the target
+  count exactly. `--fail` does not catch redirects.
+- **`get-archive.py` picked ONE archive.org format label** and fetched 1 episode
+  of 50 while reporting success. Dedupe by episode name, not by label.
+- **No folder, no download**: a redirect into `$show/_download.log` fails if the
+  folder does not exist, so the fetch never runs and the pass reports 0.
+- **Editing a running bash script** breaks it - bash reads by byte offset.
+- **`pgrep -f` matches your own monitor**, and a `bash -c` wrapper naming three
+  shows marks all three busy. Match real workers only.
+- **exFAT forbids `?`** and archive.org names contain it.
+- **A filename check is not a duration check** - Dora's 4h26m "episode" filed
+  itself because the NAME matched. `file-shows.py` now refuses anything >45 min.
+- **"ffmpeg decodes it" ≠ "it plays"** - two Barney files decoded clean and would
+  not play for Brian. The person watching is the authority.
+
+## Detection notes worth keeping
+- **Jorge boundaries come three ways**: white title card (27 files), black gap
+  (028), yellow bumper (029). One detector always misses some.
+- **Dora marks boundaries with CREDITS, not black** - 2 black frames in 45 min.
+  Credits are pale blue, and so is sky: 8-second matches are noise, real credit
+  rolls run 20-34s. Eight of ten first-pass suggestions were false positives.
+- **Barney compilations have no act breaks at all** - 2 black frames in 85 min,
+  no credit roll, 54 scene changes per 10 min against 4 silences. Continuous
+  montage. Scrubbing is the only reliable way to mark these.
+- **Rocket Power's specials self-confirmed**: three files never compared with
+  each other produced boundaries agreeing within 2 seconds.
 
 ## Open questions / blockers
-- 6 Spanish Basics episodes are owner-restricted (360p only) and need the VPN.
-- `NA-XBSF8xSNt2g` has no black gap near 1979 or 2638 — needs a human eye.
-- Jorge's repaired files are in `_reenc/`; the broken originals are still in
-  `_split/`. **Nothing has been swapped in yet** — worth eyeballing one first.
-- Files 012 and 013 share an 11-minute story. The other 27 are unchecked.
-- The Google Sheet has not been updated: Jorge 29→38 pieces, and rows are
-  missing for every new show.
-- `/wrap` fails from this folder: the command lives at
-  `~/BluuClaude/.claude/commands/wrap.md` (workspace), not in `tang-box/.claude/`.
+- Daniel Tigre timemarks (17 files). File 076 is HALF duplicate - cut ~22:26,
+  keep the first piece only.
+- Pistas `S01E09` is 9.3 min: the tail of the 23.976 fps group, and the rest of
+  the clips are 25 fps so nothing can pad it without a re-encode.
+- The Google Sheet now has a `show` column - keep it, it made adding 5 shows
+  trivial where the previous sheet needed five separate URL parsers.
+- Two tokyvideo user pages (more Gargoyles etc.) still need the Chrome extension
+  or a CSV export; the site has no URL pagination, 24 videos is the fetch ceiling.
 
 ## How to resume
 Start a fresh session (don't click "Keep full session"). Then say:
