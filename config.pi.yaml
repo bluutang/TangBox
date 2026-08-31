@@ -45,6 +45,11 @@
 # Lineup and per-show curation live in the spreadsheet:
 # https://docs.google.com/spreadsheets/d/1fb_Xrny0GPkuBbcgE3VtzWoS1DsKUzRlx3RdoxrERIw/edit
 channels:
+  # EVERY channel excludes underscore folders. The library keeps working space
+  # beside the finished episodes - _staging (downloads), _split and _reenc (cut
+  # pieces), _untrimmed-source (the original compilations), _360p - and the
+  # scanner is recursive, so without this the box would treat 37 superseded
+  # broken cuts and 34 raw 45-minute compilations in Jorge's folder as episodes.
   # THE LINEUP. Rewritten 2026-08-28 from the five channels this file used to
   # carry, which were designed before there was a library - see
   # docs/superpowers/specs/2026-08-20-channel-numbering-design.md.
@@ -80,18 +85,21 @@ channels:
     name: "PBS Pequeños"
     path: /media/tangbox/PBSPequenos
     age: "1-2"
+    exclude: ["_*", "*/_*"]
     # Plaza Sésamo, Barney, Teletubbies. The youngest channel on the box.
 
   - number: 3
     name: "PBS Kids"
     path: /media/tangbox/PBSKids
     age: "2-4"
+    exclude: ["_*", "*/_*"]
     # Daniel Tigre, Jorge el Curioso.
 
   - number: 4
     name: "PBS Escolar"
     path: /media/tangbox/PBSEscolar
     age: "4-8"
+    exclude: ["_*", "*/_*"]
     # Arthur, Clifford, El Autobús Mágico - all three are Scholastic book
     # adaptations that aired on PBS, which is a real identity rather than a
     # leftovers bucket.
@@ -101,6 +109,7 @@ channels:
     name: "Nick Jr"
     path: /media/tangbox/NickJr
     age: "2-5"
+    exclude: ["_*", "*/_*"]
     # Franklin, Pistas de Blue y tú. Franklin is Canadian (Nelvana/CBC) but
     # aired on Nick Jr in the US, which is why it is filed here and not PBS.
 
@@ -108,18 +117,21 @@ channels:
     name: "Nick Clásico"
     path: /media/tangbox/NickClasico
     age: "5-8"
+    exclude: ["_*", "*/_*"]
     # Rugrats, ¡Oye Arnold!, Doug. The biggest channel on the box.
 
   - number: 7
     name: "Nick Moderno"
     path: /media/tangbox/NickModerno
     age: "5-8"
+    exclude: ["_*", "*/_*"]
     # THIN - Bob Esponja and Jimmy Neutron, one episode each today.
 
   - number: 8
     name: "Nick Acción"
     path: /media/tangbox/NickAccion
     age: "7+"
+    exclude: ["_*", "*/_*"]
     # Avatar. Serialised, so it benefits most from sequential order.
     episode_order: sequential
 
@@ -128,24 +140,28 @@ channels:
     name: "Disney Jr"
     path: /media/tangbox/DisneyJr
     age: "2-5"
+    exclude: ["_*", "*/_*"]
     # THIN - Bluey and Spidey, one episode each today.
 
   - number: 10
     name: "Disney"
     path: /media/tangbox/Disney
     age: "6-9"
+    exclude: ["_*", "*/_*"]
     # Kim Possible, Recreo, Pepper Ann.
 
   - number: 11
     name: "Disney Aventura"
     path: /media/tangbox/DisneyAventura
     age: "6-9"
+    exclude: ["_*", "*/_*"]
     # THIN - Patoaventuras, Lilo y Stitch, Tres Caballeros; pilots only.
 
   - number: 12
     name: "Disney Acción"
     path: /media/tangbox/DisneyAccion
     age: "7+"
+    exclude: ["_*", "*/_*"]
     # THIN - Spider-Man, Jake Long.
 
   # --- Cartoon Network -------------------------------------------------------
@@ -153,6 +169,7 @@ channels:
     name: "Cartoon Network"
     path: /media/tangbox/CartoonNetwork
     age: "6-10"
+    exclude: ["_*", "*/_*"]
     # Dexter, Ed Edd y Eddy, Escandalosos, KND.
 
   # --- Apple TV+ -------------------------------------------------------------
@@ -162,6 +179,7 @@ channels:
     name: "Apple Snoopy"
     path: /media/tangbox/AppleSnoopy
     age: "3-6"
+    exclude: ["_*", "*/_*"]
     # De campamento con Snoopy, Snoopy el astronauta, El show de Snoopy.
     # A franchise INSIDE one platform, so it does not break the one-network rule.
 
@@ -169,6 +187,7 @@ channels:
     name: "Apple Cuentos"
     path: /media/tangbox/AppleCuentos
     age: "3-6"
+    exclude: ["_*", "*/_*"]
     # Lago tranquilo, Sapo y Sepo, El niño lobo, Pato y Ganso. The calmest
     # channel here - picture-book adaptations, near-silent in places.
 
@@ -177,12 +196,14 @@ channels:
     name: "Netflix Kids"
     path: /media/tangbox/NetflixKids
     age: "4-8"
+    exclude: ["_*", "*/_*"]
     # Misterios Animales, My Melody y Kuromi, Concierge Pokémon.
 
   - number: 17
     name: "Netflix Cuentos"
     path: /media/tangbox/NetflixCuentos
     age: "3-7"
+    exclude: ["_*", "*/_*"]
     # Los guardaespíritus, Tibucán, Maya y los tres, Dr. Seuss.
 
   # --- Anime -----------------------------------------------------------------
@@ -190,6 +211,7 @@ channels:
     name: "Anime"
     path: /media/tangbox/Anime
     age: "10+"
+    exclude: ["_*", "*/_*"]
     # Sailor Moon (200 eps), Dragon Ball Z, and the three Sailor Moon FILMS in
     # their own folder alongside the series - the way television ran a TV movie.
     #
@@ -216,11 +238,13 @@ channels:
     name: "Anime Kids"
     path: /media/tangbox/AnimeKids
     age: "6+"
+    exclude: ["_*", "*/_*"]
 
   - number: 20
     name: "Aprende"
     path: /media/tangbox/Aprende
     age: "2-6"
+    exclude: ["_*", "*/_*"]
     breaks: false
     # Spanish Basics, Aprende Peque con Isa.
 
@@ -228,6 +252,7 @@ channels:
     name: "Ejercicio"
     path: /media/tangbox/Ejercicio
     age: "3-8"
+    exclude: ["_*", "*/_*"]
     breaks: false
     # Cosmic Kids Yoga, in Spanish. Get-up-and-move rather than sit-and-watch.
 
@@ -235,6 +260,15 @@ channels:
     name: "Cantonés"
     path: /media/tangbox/Cantones
     age: "0-6"
+    exclude: ["_*", "*/_*"]
+
+  # Cantonese TVB live action from 1998 - not animation and not a learning
+  # channel, so it sits at the end with the other non-television blocks.
+  - number: 23
+    name: "Journey to the West"
+    path: /media/tangbox/JourneyWest
+    age: "6+"
+    exclude: ["_*", "*/_*"]
     breaks: false
     # The FIRST non-Spanish content on the box - four Cantonese learning
     # playlists in one folder. The uploader has already age-banded them
@@ -273,13 +307,6 @@ channels:
 # it IGNORES `episode_order: sequential` below. The two cannot both apply. That
 # is the price of the schedule, and it was paid knowingly.
 tune_in: broadcast
-
-  # Cantonese TVB live action from 1998 - not animation and not a learning
-  # channel, so it sits at the end with the other non-television blocks.
-  - number: 23
-    name: "Journey to the West"
-    path: /media/tangbox/JourneyWest
-    age: "6+"
 
 
 start_channel: 2         # what it powers on to
