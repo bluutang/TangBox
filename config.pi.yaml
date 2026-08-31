@@ -209,21 +209,29 @@ channels:
   # `breaks: false`: cutting to a cereal advert between two five-minute lessons
   # reads as a fault rather than as nostalgia. They also have no network, which
   # is why they sit outside the network blocks above rather than inside one.
+  # Digimon and Pokemon are anime, but they skew far younger than Sailor Moon and
+  # Dragon Ball Z. Age splits the block rather than network: 18 stays 10+, this
+  # one takes the 6+ audience.
   - number: 19
+    name: "Anime Kids"
+    path: /media/tangbox/AnimeKids
+    age: "6+"
+
+  - number: 20
     name: "Aprende"
     path: /media/tangbox/Aprende
     age: "2-6"
     breaks: false
     # Spanish Basics, Aprende Peque con Isa.
 
-  - number: 20
+  - number: 21
     name: "Ejercicio"
     path: /media/tangbox/Ejercicio
     age: "3-8"
     breaks: false
     # Cosmic Kids Yoga, in Spanish. Get-up-and-move rather than sit-and-watch.
 
-  - number: 21
+  - number: 22
     name: "Cantonés"
     path: /media/tangbox/Cantones
     age: "0-6"
@@ -265,6 +273,14 @@ channels:
 # it IGNORES `episode_order: sequential` below. The two cannot both apply. That
 # is the price of the schedule, and it was paid knowingly.
 tune_in: broadcast
+
+  # Cantonese TVB live action from 1998 - not animation and not a learning
+  # channel, so it sits at the end with the other non-television blocks.
+  - number: 23
+    name: "Journey to the West"
+    path: /media/tangbox/JourneyWest
+    age: "6+"
+
 
 start_channel: 2         # what it powers on to
 
