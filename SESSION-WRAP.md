@@ -7,9 +7,22 @@ box. Media lives in `~/Downloads/Converted/`; the repo only changed in
 `config.pi.yaml`.
 
 ## Status right now
-**Dora is still cutting** — 6 marathons into 36 pieces, ~19 done. The folder
+**Dora is still cutting** — 6 marathons into 36 pieces, ~22 done. The folder
 `NickJr/Dora la Exploradora/_reenc` opens by itself when it finishes. Nothing
 else is running.
+
+**The tracker and Finder now agree.** `_status.html` shows each show's CHANNEL
+before its source, plus badges that mirror the Finder colour tags: purple
+"no tile", red "incomplete". Two independent taggers, both re-runnable and each
+clearing only its own colour:
+
+    python3 _tools/tag-incomplete.py --apply   # red = barely started, orange = partial
+    python3 _tools/tag-artwork.py --apply      # purple = no tile.jpg
+
+**19 shows have no tile picture**, across 12 channels - almost all of them added
+in the last two sessions. This matters more than it sounds: `artwork.py` notes
+the guide draws one tile per channel and neither child can read, so the picture
+IS the tile. A show without one is a blank on the dial while it plays.
 
 ## Next 1-3 steps
 1. **Daniel Tigre: 17 compilations need split timemarks.** The only show still
