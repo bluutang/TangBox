@@ -1,99 +1,115 @@
-# Session Wrap — 2026-08-31 (late)
+# Session Wrap — 2026-08-31 (morning)
 
 ## What we worked on
-Organised the whole library into channel folders, added ten shows, split and
-joined a great deal of video, and cut commercial breaks to 30-60s on the box.
-Media lives in `~/Downloads/Converted/`; the repo only changed in
-`config.pi.yaml`.
+Filed the three shows the last session left cut but unfiled, added two new shows
+from 123 Andrés YouTube playlists, took in a batch of Jimmy Neutron episodes, and
+retired the purple artwork tag. Media lives in `~/Downloads/Converted/`; the repo
+itself was not touched this session.
 
 ## Status right now
-**Daniel Tigre is cutting** — 12 files into 30 pieces, from Brian's timemarks.
-`Daniel Tigre/_reenc` opens by itself when it finishes. Nothing else is running.
+**Nothing is running.** Everything below is filed and verified.
 
 ## Next 1-3 steps
-1. **Review and file three shows.** All cut and verified, none filed yet:
-   - `Daniel Tigre/_reenc` — 30 pieces (when it finishes)
-   - `NickJr/Dora la Exploradora/_reenc` — 35 pieces, 17.698 h in and out
-   - `Pistas de Blue y tú/_bundled` — 12 episodes, 4.911 h in and out
-2. **Daniel 076 pt02 is a DUPLICATE of S01E85.** Brian's cut is at 21:36 and the
-   duplicate starts ~22:26, so pt02 contains it from ~50s in. Check before
-   keeping.
-3. **Pistas: 22 compilations in `_compilations/` need split points** (18.7 to
-   62.4 min, four near an hour). Brian is finding them. Two things to spot:
-   `40 MIN de fiesta con Blue y Josh` appears TWICE at exactly 40.0 min, and
-   `¡30 minutos de las canciones…` actually runs 18.7 min.
+1. **Pistas: 21 compilations need split points.** Brian is reviewing them now;
+   the folder is open. `Pistas de Blue y tú/_compilations`, 14.5 h, 18.7-62.4 min
+   each. Two already-known traps, BOTH now confirmed:
+   - `027` and `028` "40 MIN de fiesta con Blue y Josh" are THE SAME VIDEO -
+     identical to the millisecond (2401.663 s) and pixel-identical mid-file
+     (mse 0.00, PSNR inf). Keep **028** (187.8 MB vs 187.3). 027 not yet deleted.
+   - `035` "¡30 minutos de las canciones…" actually runs **18.7 min**.
+2. **More Jimmy Neutron episodes arriving today.** Same handling as below - the
+   filer is a ~20-line script, not a saved tool. Existing episodes:
+   S01 {1,5,12,13,17,20}, S02 {1,2,5,7,9,19}, S03 {2,3,5,6,7,11,14,15,18,19}.
+3. **Two registry/reality mismatches** left in `_tools/shows.json` - see below.
 
 ## Where things stand
-- **2,428+ episodes across 24 channels.** 92 GB free; another ~20 GB frees once
-  the three shows above are filed and their working folders swept.
-- **Colour tags live in Finder AND on the tracker.** `_status.html` shows each
-  show's channel before its source, plus badges matching the tags.
-      python3 _tools/tag-incomplete.py --apply   # red = barely started, orange = partial
-      python3 _tools/tag-artwork.py --apply      # purple = no tile.jpg
-- **19 shows have no tile picture**, across 12 channels - almost all added in the
-  last two sessions. `artwork.py`: the guide draws one tile per channel and
-  neither child can read, so the picture IS the tile. No tile = a blank on the dial.
-- Daniel left 5 files whole as episodes (024, 030, 033, 035, 061 — 31-37 min).
+- **2,549 episodes across 63 shows. 103 GB free** (14.8 GB swept this session).
+- **Every show has a tile.** All 63 verified as decodable 1024x768 images, not
+  merely present - a tile that exists but will not render is still a blank.
+- **Colour tags: 19 red, nothing else.** Purple is retired.
 
 ## Decisions made
-- **Channels 19-23**: Anime Kids (Digimon+Pokémon, 6+, off the 10+ Anime block);
-  Aprende/Ejercicio/Cantonés/Journey moved to the end of the dial.
-- **Commercial breaks 30-60s** (was up to 3m45). LIVE on the Pi — its own
-  `config.yaml` at `/home/brian/TangBox/`, service `tangbox.service`.
-- **Spanish Basics renamed Ms. Nenna**, complete at 22 (one video unavailable).
-- **Pistas de Blue has no real episodes** — clips bundled into ~22-min blocks;
-  the short tail was folded into E08 (32.8 min) rather than left as a stub.
-- **Barney and Dora get NO invented commercial breaks.** Brian scrubs playback;
-  automated detection cannot match it (see below).
-- Jorge's `NA-XBSF8xSNt2g` has no findable boundary — preserved in `_unsplit/`.
+- **Purple (no-artwork) tags are RETIRED.** Only incomplete flags remain.
+  `tag-incomplete.py --apply` REPLACES every tag, so one run does the whole job.
+- **Cut pieces number PAST the highest episode, they do not fill gaps.** Daniel
+  E86-E115, Dora E177-E211. These shows number by DOWNLOAD INDEX, not broadcast
+  order, so a gap exists *because* that source was cut up. This is the opposite
+  call to Ms. Nenna, where the gaps genuinely were the episodes' places.
+- **Dora's 12 double-length pieces (42-47 min) were filed as-is** - two episodes
+  joined, boundary marked only by credits, no reliable cut point after real
+  effort.
+- **Short clips are bundled into ~21-min blocks, not filed individually.** A
+  2-minute alphabet clip would be shorter than the commercial break after it.
+  Same precedent as Pistas and Rolie Polie Olie.
+- **123 Andrés is TWO shows under Aprende**, Letras (4) and Canciones (6).
+- **Jimmy Neutron S01E01 stays at 768x576.** The new batch is 360p throughout;
+  the better original was kept and the batch's Cap.101 discarded.
+- **Jimmy Neutron S02E19 (44.2 min) is KEPT AS IS**, not split.
+- **Seasons/Total episodes are left BLANK on Lineup for bundled-clip shows**
+  (Pistas, both 123 Andrés). A percentage against a real series count would be
+  meaningless. Era is blank for 123 Andrés too - playlists span years.
 
 ## Bugs found — do not reintroduce
-- **ffmpeg concat truncates SILENTLY on an apostrophe in a filename.** The list
-  format is `file '...'`, so `Blue's Clues & You!` ends the string early: valid
-  short file, exit 0, no error. Escape as `'\''`. Cost three rebuilds; the first
-  "fix" had one backslash too many and looked identical.
-- **`curl` without `-L`** wrote 65 zero-byte files matching the target count.
-- **`get-archive.py` picked ONE format label** and fetched 1 episode of 50.
-- **No folder, no download** — a redirect into a missing folder makes the fetch
-  never run; the pass reports 0 and moves on.
-- **Editing a running bash script** breaks it (bash reads by byte offset).
-- **A filename check is not a duration check** — Dora's 4h26m "episode" filed
-  itself. `file-shows.py` now refuses anything over 45 min.
-- **"ffmpeg decodes it" is not "it plays"** — two Barney files decoded clean and
-  would not play. The person watching is the authority.
-- **Appending new episodes past the highest number ignores the gaps.** Ms. Nenna's
-  ten went in as E24-E33 when the gaps at E07-E17 were their real positions.
+- **The tracker is registry-driven.** `_tools/shows.json` lists every show
+  status.py will display; a show absent from it is INVISIBLE no matter how
+  healthy the download. This is why 123 Andrés "did not appear".
+- **A registry "videos" count means source CLIPS, not filed BLOCKS.** After
+  bundling, leaving the clip count makes a finished show read 4/41 = 10% and tags
+  it red. Fixed for both 123 Andrés shows; **Pistas still holds 82 against its 12
+  episodes** and only escapes a false red flag by accident (below).
+- **`ú` is stored DECOMPOSED on this disk.** `Pistas de Blue y tú` written with a
+  precomposed ú matches nothing - `find -name`, globs and dict lookups all fail
+  silently. Normalise to NFC before comparing. This hid the folder from a search
+  and is why the Pistas registry lookup misses.
+- **ffmpeg's concat DEMUXER cannot join clips of differing frame rate.** It
+  assumes a shared timebase and drifts audio - a fault NO duration check catches.
+  Use the concat FILTER for mixed input. 123 Andrés' 41 alphabet clips carry 8
+  encodes interleaved across 20 runs.
+- **Grouping clips by encode destroys playlist order.** The alphabet playlist is
+  alphabetical; grouping would have put D, W, X, Z, CH in one block and A, B, C,
+  E in another, and the blocks would still have looked fine.
+- **Editing a running bash script breaks it** (bash reads by byte offset). To add
+  a skip mid-run: stop it, edit, restart. `_archive.txt` makes the resume free.
+- **`status.py` speed reads "stalled" for ~2 min after a show is added** - a cold
+  start with no byte history, not a fault.
+- **zsh does not word-split unquoted `$VAR`**; `for x in $LIST` silently iterates
+  once. Cost several mangled command outputs. Use python or an explicit array.
 
 ## The lesson that kept repeating
-**A tool reporting success is not evidence it did the job.** Five times today:
-zero-byte files matching the expected count, 1 episode of 50, a 4h26m "episode"
-filing itself, concat dropping 19 minutes, and a credit-detection "match" that
-cut mid-episode. Every one had a clean exit code. Only comparing input duration
-against output duration — or looking at an actual frame — caught them.
+**Verify by content, never by name or exit code.** Every check that mattered this
+session was total-minutes-in against total-minutes-out, or an actual frame:
+- Daniel's 30 cuts: 10.903 h in, 10.903 h out, 0.4 s across all of them.
+- Jimmy Neutron's three 44-46 min files looked like joined episodes *by duration
+  alone*. Contact sheets showed two are legitimate double-length specials - one a
+  Jimmy Timmy Power Hour crossover that switches to 2D Fairly OddParents midway.
+- The two identical Pistas compilations are provably identical by PSNR, not by
+  their matching titles.
+- All 63 tiles were probed as images, not just tested for existence.
 
-**And verify every result, not a sample.** Two credit breaks survived the strict
-threshold for Dora; I frame-checked one (correct) and offered the other on the
-score alone. Brian found it cut an episode in half. It has been merged back.
+    ffmpeg -i EP.mp4 -vf "fps=1/45,scale=200:-1,tile=6x5" -frames:v 1 -y sheet.jpg
+    ffmpeg -ss N -t 90 -i A -ss N -t 90 -i B -filter_complex "[0:v][1:v]psnr" -f null -
 
-## Detection notes
-- **Jorge boundaries come three ways**: white title card (27), black gap (028),
-  yellow bumper (029). One detector always misses some.
-- **Dora marks boundaries with CREDITS** (2 black frames in 45 min). Credits are
-  pale blue and so is sky: 8s matches are noise, real rolls run 20-34s. Eight of
-  ten first-pass suggestions were false positives; of the two survivors, one was
-  also wrong. 11 Dora pieces remain over 30 min with no reliable break found.
-- **Barney compilations have NO act breaks** — 54 scene changes per 10 min
-  against 4 silences. Continuous montage.
-- **Rocket Power self-confirmed**: three files never compared produced boundaries
-  agreeing within 2 seconds.
-- **The tracker's process check has been widened five times** — yt-dlp, then
-  archive.org, curl, ffmpeg ("splitting"), and finally the process WORKING
-  DIRECTORY, because a job that `cd`s into a show folder never names it.
+## Tools changed (all in `~/Downloads/Converted/_tools/`)
+- `file-cut-pieces.py` **NEW** - filed Daniel/Dora/Pistas. `file-shows.py` could
+  not: it reads `_staging`, expects top-level shows, and has no rule for these.
+  Its 45-min guard was left alone deliberately - that guard caught Dora's 4h26m
+  "episode".
+- `bundle-clips.py` **PARAMETERISED** - `--show`, `--target`, `--max-clip`,
+  `--no-group`. Pistas defaults unchanged. Backup `.bak-20260831`.
+- `get-123andres.sh` **NEW** - fetches 4 playlists into 2 shows. Dedupes with no
+  new code by seeding the second show's `_archive.txt` from the first; skips are
+  pre-seeded ids.
+- `shows.json` - 2 entries added. Backup `.bak-20260831`.
 
 ## Open questions
-- Two tokyvideo user pages need the Chrome extension or a CSV export — the site
-  has no URL pagination, so 24 videos is the fetch ceiling.
-- The Google Sheet's `show` column made adding five shows trivial. Keep it.
+- `tag-artwork.py` still exists and **will re-add purple** the moment a show
+  arrives without a tile. Harmless today; a landmine later. Retire it?
+- CLAUDE.md describes a **`Seasons breakdown` tab that no longer exists** - the
+  sheet has only Lineup, Cine, Sheet1, Episodes.
+- CLAUDE.md says Lineup col Q is "Named"; in practice most rows carry a leftover
+  `=O/M` percentage formula and HAVE rows carry a literal 0.
+- Two empty folders could not be removed (permission classifier blocked `rmdir`):
+  `NickJr/Dora la Exploradora/_reenc`, `Pistas de Blue y tú/_bundled`.
 - Deletions used `rm -rf`, which bypasses the Trash.
 
 ## How to resume
