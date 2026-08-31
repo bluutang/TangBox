@@ -620,7 +620,13 @@ commercials:
   # `~` is expanded (config._parse_commercials), so this follows whichever user
   # the service runs as.
   path: ~/tangbox-commercials
-  break_seconds: 75
+  # 30 SECONDS TO A MINUTE, set 2026-08-31. It was 75s floor / 18% / 225s cap,
+  # which gave a 23-minute episode 3 minutes 45 of adverts - longer than a real
+  # station sold, and long enough that the box feels like it has stalled.
+  #
+  # Now: 30s floor, 60s ceiling, 4.5% in between. A 7-minute segment gets the
+  # floor, a 22-minute episode about 59s, anything longer is capped at a minute.
+  break_seconds: 30
   # Break length follows the programme. `break_seconds` is the FLOOR, and a
   # longer episode earns roughly this fraction of its own length in adverts.
   # 0.18 is the ratio a 75s break has to a seven-minute cartoon segment, so a
@@ -630,7 +636,7 @@ commercials:
   # chosen when it fits the time the break has LEFT, so a two-minute clip can
   # air after a full episode and never after a short one. Leave it at 0 and
   # every break is exactly `break_seconds`, as it was before this existed.
-  break_ratio: 0.18
+  break_ratio: 0.045
   # A HARD CEILING on a break, whatever the ratio asks for. Measured on the box
   # 2026-08-25: breaks were running 2:21 to 4:43, and the long tail was the
   # problem rather than the typical length.
@@ -641,7 +647,7 @@ commercials:
   #
   # 0 turns it off. For scale, a real broadcast half-hour carried six to eight
   # minutes of advertising, so even this is gentler than the thing it imitates.
-  break_max_seconds: 225
+  break_max_seconds: 60
   enabled: true
 
 # --- Playback -----------------------------------------------------------------
