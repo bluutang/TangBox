@@ -12,12 +12,46 @@ Media lives in `~/Downloads/Converted/`; the repo itself was not touched.
 `tangbox.service` active, running the new commercial pool.
 
 ## Next 1-3 steps
-1. **Convert the two Kim Possible `.mkv` files** still sitting in `~/Downloads` —
+1. 🔴 **DECIDE WHICH CHANNEL SCHEME WINS** — see "The two channel schemes" below.
+   The Mac library and the running box are filed to DIFFERENT schemes. Nothing
+   plays until they agree, and the failure is silent.
+2. **Convert the two Kim Possible `.mkv` files** still sitting in `~/Downloads` —
    S02E20 and S04E07, the two the catalog records as damaged. They need
    `mkv2mp4`, not a rename. Takes the show 81 -> 83 of 87.
-2. **Kim Possible's real gap is S03E11-E14.** Corrected today: Season 3 has
+3. **Kim Possible's real gap is S03E11-E14.** Corrected today: Season 3 has
    **14** episodes, not the 10 the sheet claimed were complete.
-3. Nothing else is blocked or half-done.
+
+## 🔴 The two channel schemes — unresolved
+**The repo's `config.pi.yaml` is NOT what the box runs.** The Pi reads its own
+`/home/brian/TangBox/config.yaml`. The two describe different libraries:
+
+| | Repo template `config.pi.yaml` | Live box `~/TangBox/config.yaml` |
+|---|---|---|
+| Channels | ~23 fine-grained | **10 broad** |
+| Names | PBS Kids, Nick Jr, Nick Clásico, Disney Jr… | Preescolar, Nickelodeon, Disney Clásico, Mayores… |
+| Media root | `/media/tangbox/` (USB) | `/home/brian/media/` (SD card) |
+
+**The Mac library at `~/Downloads/Converted/` is filed to the TEMPLATE's scheme.**
+All ten of the live box's channel folders are **EMPTY (0 mp4 each)** and the USB
+drive is not mounted, so the box currently plays commercials and sign-on only.
+
+When the drive is connected, the folder names must match whichever config the Pi
+loads or every channel reads empty — which is exactly what it does today, and it
+gives no error. Pick one scheme and make the other match before blaming the
+drive.
+
+## Root-level shows — fixed 2026-09-01
+Three shows sat OUTSIDE any channel folder, so 158 episodes were not on any
+channel. Moved to where the template says they belong:
+
+    Pistas de Blue y tú  -> NickJr/        (43)
+    Daniel Tigre         -> PBSKids/       (70)
+    Barney el Dinosaurio -> PBSPequenos/   (45)
+
+Renames on the same disk, so nothing copied; tiles and `_archive.txt` travelled
+with them. Episode and show counts unchanged (2,666 / 64). **No show is at the
+root any more** — worth re-checking after any future bulk add, since a show
+dropped at the root looks completely normal in Finder.
 
 ## Where things stand
 - **2,666 episodes across 64 shows. 60 GB free.**
@@ -123,6 +157,8 @@ ffmpeg -ss N -t 90 -i A -ss N -t 90 -i B -filter_complex "[0:v][1:v]psnr" -f nul
 - Backups kept: `bundle-clips.py.bak-20260831`, `shows.json.bak-20260831`
 
 ## Open questions
+- **Which channel scheme wins** (see the red section above). Until that is
+  settled, connecting the USB drive will not make the box play anything.
 - Retire `tag-artwork.py`, or leave it to resurrect purple later?
 - CLAUDE.md describes a **`Seasons breakdown` tab that no longer exists**; and
   says Lineup col Q is "Named" when most rows carry a leftover `=O/M` formula.
