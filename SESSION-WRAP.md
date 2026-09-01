@@ -1,198 +1,105 @@
-# Session Wrap — 2026-08-31 / 09-01 (long session)
+# Session Wrap — 2026-09-01 (afternoon)
 
 ## What we worked on
-Filed five shows the previous session left cut, added three new shows, took
-Jimmy Neutron from 1 episode to 56, finished Pistas and Xiaolin Showdown,
-retired the purple artwork tag, cleaned ~25 GB of working files, and rebuilt the
-commercial pool from 61 clips to 146 — synced live to the Pi.
-Media lives in `~/Downloads/Converted/`; the repo itself was not touched.
+Closed the red "two channel schemes" item from the last wrap — the Pi now runs
+the repo's 22-channel lineup and its folder names match the Mac library exactly.
+Then filed four shows into Cartoon Network: Jackie Chan (new), Powerpuff (new),
+and replacement sets for Ed Edd y Eddy and Dexter.
 
 ## Status right now
-**Nothing is running.** Everything below is filed and verified. The Pi is up,
-`tangbox.service` active, running the new commercial pool.
+**Nothing is running for me.** Everything below is filed and verified. The Pi is
+up, `tangbox.service` active, 22 channels loaded, 146 commercials.
+
+Two downloads of Brian's own are STILL RUNNING in `~/Downloads/Cartoons/` —
+`KND_Los_Chicos_Del_Barrio` (71 files) and `Lilo_and_Stitch` (24). **Left
+untouched on his instruction; he will ping when they finish.**
 
 ## Next 1-3 steps
-1. 🔴 **DECIDE WHICH CHANNEL SCHEME WINS** — see "The two channel schemes" below.
-   The Mac library and the running box are filed to DIFFERENT schemes. Nothing
-   plays until they agree, and the failure is silent.
-2. Nothing else is blocked or half-done. `~/Downloads` is empty.
+1. File KND and Lilo when Brian says they're done (same method as below).
+2. Google Sheet is owed FOUR rows — see blockers, the tool was down all session.
+3. `Las Chicas Superpoderosas` needs a `tile.jpg` (1024x768). Only show of 61
+   without one; `tag-artwork.py` will tag it purple if it runs.
 
-## 🔴 The two channel schemes — unresolved
-**The repo's `config.pi.yaml` is NOT what the box runs.** The Pi reads its own
-`/home/brian/TangBox/config.yaml`. The two describe different libraries:
+## The channel scheme — RESOLVED, do not re-litigate
+The repo's `config.pi.yaml` (22 channels) won. It is newer (2026-08-28, written
+against a design spec) and the Mac library already matched it byte-for-byte —
+proven, not eyeballed. The Pi's old 10-channel `config.yaml` predated the library.
 
-| | Repo template `config.pi.yaml` | Live box `~/TangBox/config.yaml` |
-|---|---|---|
-| Channels | ~23 fine-grained | **10 broad** |
-| Names | PBS Kids, Nick Jr, Nick Clásico, Disney Jr… | Preescolar, Nickelodeon, Disney Clásico, Mayores… |
-| Media root | `/media/tangbox/` (USB) | `/home/brian/media/` (SD card) |
+Done on the Pi: backed up to `config.yaml.bak-20260901-084639`, `git pull`
+(it was 13 files behind), copied `config.pi.yaml` over `config.yaml` with the
+`assets_dir` line carried across, restarted. Log said "on the air. 22 channels."
 
-**The Mac library at `~/Downloads/Converted/` is filed to the TEMPLATE's scheme.**
-All ten of the live box's channel folders are **EMPTY (0 mp4 each)** and the USB
-drive is not mounted, so the box currently plays commercials and sign-on only.
+⚠️ `episode_order` is a RED HERRING on this box. Both configs set
+`tune_in: broadcast`, which builds its own running order and **ignores
+`episode_order` entirely** (`config.pi.yaml:306`, `channel.py:307`). Don't
+spend time choosing between shuffle and sequential — nothing reads it.
 
-When the drive is connected, the folder names must match whichever config the Pi
-loads or every channel reads empty — which is exactly what it does today, and it
-gives no error. Pick one scheme and make the other match before blaming the
-drive.
+## What was filed — Cartoon Network is now 294 eps across 6 shows
+| Show | Before | After | Note |
+|---|---|---|---|
+| Las Aventuras de Jackie Chan | — | **73** | of 95; S1 + S4 complete |
+| Ed Edd y Eddy | 5 | **66** | all 5 seasons COMPLETE, no gaps |
+| El laboratorio de Dexter | 18 | **30** | 5.7 h -> 10.8 h of content |
+| Las Chicas Superpoderosas | — | **72** | 71 episodes + 1 film |
 
-## Stub shows pruned — 2026-09-01
-Five shows holding a SINGLE episode each were removed (not by me — they were
-gone when I next looked). All five had been on the red "barely started" list:
+**Library: 61 shows, 2,884 episodes, 530 GB. 54 GB free on the Mac.**
 
-    Dr Seuss Pez rojo pez azul · El show de Snoopy · Escandalosos
-    Maya y los tres · Tu amigo y vecino Spider-Man
-
-Took the library 2,668 -> 2,663 episodes and 64 -> 59 shows, freeing ~2 GB, and
-dropped the red tags from 19 to 13.
-
-**SEVEN single-episode shows remain** if the same pruning is wanted:
-KND Los chicos del barrio, Jake Long, La Leyenda de los Tres Caballeros,
-Lilo y Stitch La Serie, Patoaventuras, Bluey, Tibucán. A one-episode show is a
-thin thing to give a channel — it repeats immediately.
-
-⚠️ If any of these are wanted back, their ids are still in the show's
-`_archive.txt`, so a re-fetch will SKIP them. Remove the id from that file first
-or nothing downloads.
-
-## Root-level shows — fixed 2026-09-01
-Three shows sat OUTSIDE any channel folder, so 158 episodes were not on any
-channel. Moved to where the template says they belong:
-
-    Pistas de Blue y tú  -> NickJr/        (43)
-    Daniel Tigre         -> PBSKids/       (70)
-    Barney el Dinosaurio -> PBSPequenos/   (45)
-
-Renames on the same disk, so nothing copied; tiles and `_archive.txt` travelled
-with them. Nothing was lost in the move. **No show is at the
-root any more** — worth re-checking after any future bulk add, since a show
-dropped at the root looks completely normal in Finder.
-
-## Where things stand
-- **2,663 episodes across 59 shows. 62 GB free.**
-- **146 commercials** (128 generic + Disney 7, Nickelodeon 9, CartoonNetwork 2),
-  identical on the Mac and the Pi's SD card.
-- Every show has a verified tile; **13 red tags, nothing else.** Purple retired.
-- The Google Sheet is **fully current** — every show below, plus 52 Xiaolin rows
-  and 31 Pistas rows on the Episodes tab.
-
-| Show | Now | Missing |
-|---|---|---|
-| Xiaolin Showdown | **52 — COMPLETE** | — |
-| Daniel Tigre | 70 | — |
-| Dora la Exploradora | 61 | — |
-| Pistas de Blue y tú | **43 — COMPLETE** | — |
-| Jimmy Neutron | 56 | S01E14, S01E15, S02E08, S02E20 |
-| Kim Possible | **83 — PARKED at 83** | S03E11-E14, unobtainable (below) |
-| 123 Andrés - Letras / Canciones | 4 / 6 | — |
-
-## Kim Possible — parked at 83/87 (2026-09-01)
-S1 21/21, S2 30/30, S3 10/14, S4 22/22. **The four missing Season 3 episodes
-(E11-E14) could not be sourced and are PARKED.** Treat the show as done unless
-Brian raises it; do not go hunting for them again.
-
-The two damaged files WERE replaced: S02E20 (had an unreadable EBML header) and
-S04E07 (claimed 22:48, only 6:06 decoded — it sat in the catalog as a 6-minute
-stub for weeks). Remuxed losslessly from `.mkv` with `mkv2mp4`, then verified by
-a **full software decode** — 22:50 and 22:49, zero errors — not by the
-container's duration, which is exactly what let the old S04E07 look healthy.
-Both are 1920x1080 against the show's usual 492x360-768x576.
+Every filing verified minutes-in against minutes-out: 25.809 h, 24.611 h,
+27.826 h all exact; Dexter's 90 clips -> 30 blocks differed by 0.00004 s.
+One bundled Dexter block was also fully decoded end to end, clean.
 
 ## Decisions made
-- **Purple (no-artwork) tags are RETIRED.** ⚠️ `tag-artwork.py` still exists and
-  **will re-add purple** the moment a show arrives without a tile.
-- **Cut pieces number PAST the highest episode, they do not fill gaps** (Daniel
-  E86-E115, Dora E177-E211). These shows number by DOWNLOAD INDEX, so a gap
-  exists *because* that source was cut up. Opposite call to Ms. Nenna.
-- **Short clips bundle into ~21-min blocks**; bundled-clip shows get BLANK
-  Seasons/Total on Lineup (Pistas, both 123 Andrés).
-- **Jimmy Neutron S01E01 stays at 768x576**; S02E19 (44.2 min) kept unsplit.
-- **Commercials: 15-45 s, toys/snacks/food/kid brands, nothing before 1995**, no
-  theme songs, intros, network idents or brand logos. Curated by READING every
-  title — 448 playlist entries down to 78.
+- **Dexter's 90 files are SHORTS (6-11 min), not episodes.** Bundled with
+  `bundle-clips.py --target 20` into 30 blocks averaging 21.7 min. Target 20,
+  not 22 — 22 overshoots to 4-clip/28-min blocks, 19 leaves an 11-min stub.
+  All 90 shared identical stream format, so the joins were lossless copies.
+- **Dexter's `S01E01-30` numbering is NOT canonical.** They are bundles. The
+  source had no season data, only a running segment index. Don't read it as
+  "season 1 complete".
+- **Powerpuff's season structure is unknown.** Its filenames carried a
+  within-season episode number but not the season, so all 71 are `S01E01-E71`
+  in sorted order. Also not canonical.
+- English source titles preserved in `_source-titles.json` inside the Ed,
+  Powerpuff and Dexter show folders — filenames stay numbers-only per the rule.
+- **The Powerpuff film goes in `Las Chicas Superpoderosas/Movies/`**, unsplit,
+  keeping its name. Matches how the Sailor Moon films actually sit on disk
+  (the config comment claims films are split into `ptNN`; they are not).
+- Show named **Las Chicas Superpoderosas** (official Spanish, one word).
 
-## Bugs found — do not reintroduce
-- 🔴 **`rsync --delete` to the Pi would have destroyed the CartoonNetwork
-  bumpers.** They existed ONLY on the Pi, and config makes a missing network
-  folder fall back to generic adverts SILENTLY — the channel would just stop
-  sounding like itself with nothing to show why. Pull Pi-only content to the Mac
-  first; sync additions without `--delete` and remove unwanted files explicitly.
-- **A long rsync exceeds the 120 s foreground limit and appears to do nothing** —
-  worse when piped through `grep`, which hides it. Check the REMOTE file count,
-  never the command's apparent success.
-- **`gdown --id` was REMOVED in gdown 6.x** (pass the id positionally). Using it
-  exits on a usage error and writes ZERO bytes — 52 of them, silently.
-  **`gdown --folder` caps at 50 files**, so a 52-episode series loses two.
-- **Google Drive's download quota is per-FILE, not per-IP** — proven by moving
-  the VPN exit to Tokyo and getting the identical refusal on the same files.
-  Browser downloads keep working while the API path is blocked.
-- **The tracker is registry-driven** (`_tools/shows.json`); a show absent from it
-  is INVISIBLE however healthy the download. Its "videos" count means source
-  CLIPS, not filed BLOCKS — leaving the clip count makes a finished show read
-  10% and tags it red.
-- **`_commercials` breaks the tracker's size estimate.** It computes
-  `folder_bytes / done × expected`, which assumes the folder holds only what the
-  archive counted. 273 MB of pre-existing ads made it read "~10.8 GB". Converges
-  as the fetch completes; the episode count stays correct throughout.
-- **`ú` is stored DECOMPOSED on this disk.** A precomposed `ú` matches nothing —
-  `find -name`, globs and dict lookups all fail silently. Normalise to NFC.
-- **ffmpeg's concat DEMUXER cannot join clips of differing frame rate** (drifts
-  audio, no duration check catches it). Use the concat FILTER.
-- **`-c copy` cuts round BACKWARDS to a keyframe**, silently, by up to ~5 s.
-  `cut-at.py` always re-encodes for exactly this reason.
-- **A gap-check cannot find a missing SEASON TAIL.** Kim Possible S3 runs 1-10
-  with no internal hole, so it read as complete for weeks.
-- **`timeout` does not exist on macOS**; **zsh does not word-split unquoted
-  `$VAR`**, and an unmatched glob aborts the whole command.
+## Bugs / traps found this session
+- **A blind "replace" would have destroyed Ed Edd S01E02.** The new 65-file set
+  is missing it and the old set had it. Kept the old 720p copy; season is now
+  complete at 13. **Always diff old against new before deleting a replacement set.**
+- **Ed's `download_log.jsonl` carries the REAL `SxxExx`** in its `stream_title`
+  field — authoritative source data, not a lookup. All 65 mapped, no collisions.
+  Powerpuff and Dexter shipped no such log, which is the whole reason their
+  numbering is guesswork.
+- **Audio language tags are worth reading.** Ed = `spa`, Powerpuff = `eng`
+  (single track, no Spanish alternative), Dexter and Jackie Chan = `und`.
+  Brian confirmed Powerpuff is Spanish and the tag is wrong; filed on his word.
+- A "no audio streams" error in Ed's log pointed at a discarded intermediate
+  file, not a real episode. All 65 were checked individually and have audio.
+- **`find ... -print0 | xargs -0` for anything with spaces.** An unquoted
+  `$(find)` in a `for` loop split "Las Aventuras de Jackie Chan" into six words
+  and produced pages of parse errors mid-verification.
+- `find -newermt '-30 minutes'` is rejected by this machine's `find` (bfs);
+  `-mmin -15` works.
 
-## The lesson that kept repeating
-**Verify by content, never by name or exit code.** Every filing verified as
-minutes-in against minutes-out — 13.626 h, 17.698 h, 9.616 h, 3.583 h, 18.326 h,
-9.278 h, 7.330 h — each exact. Byte-size checks caught 72 zero-byte gdown
-failures. PSNR (mse 0.00 / psnr inf) proved seven "duplicate" commercials, a
-Jimmy Neutron S02E19/E20 pair and two Pistas compilations were genuinely
-identical. Contact sheets showed two Jimmy Neutron 44-46 min files were real
-double-length specials, not joined episodes. All 64 tiles were probed as images.
-
-```
-ffmpeg -i EP.mp4 -vf "fps=1/45,scale=200:-1,tile=6x5" -frames:v 1 -y sheet.jpg
-ffmpeg -ss N -t 90 -i A -ss N -t 90 -i B -filter_complex "[0:v][1:v]psnr" -f null -
-```
-
-## Commercials — how the pool is now built
-- Pool: **146 clips, 488 MB**, mirrored Mac ↔ Pi (`~/tangbox-commercials`, on the
-  SD card DELIBERATELY, outside `/media/tangbox` so a USB mount cannot hide it).
-- **The Pi's overlay filesystem is OFF**, so writes persist. Check
-  `grep boot=overlay /proc/cmdline` before writing — if it is ever ON, changes
-  vanish on reboot.
-- `CommercialPool` is built at STARTUP, so new clips need
-  `sudo systemctl restart tangbox.service`. The startup log prints the pool size
-  per network — that line is the proof the sync worked.
-- Over-long adverts are already handled: `_draw_that_fits` passes over anything
-  too long for the break. A 9-minute compilation cannot become the whole break.
-- One clip with a self-harm title was found in the pre-existing 61 and removed
-  from BOTH machines. It got in because an earlier pass took a playlist without
-  reading every title. The remaining 61 were reviewed; nothing else.
-
-## Tools (all in `~/Downloads/Converted/_tools/`)
-- **NEW**: `file-cut-pieces.py`, `get-123andres.sh`, `get-xiaolin.py`,
-  `xiaolin-resume.sh`, `pistas-cut.sh`, `get-commercials.py`
-- **CHANGED**: `bundle-clips.py` parameterised (`--show/--target/--max-clip/
-  --no-group`; Pistas defaults unchanged), `shows.json` +3 entries
-- **NEW**: `_tools/.venv/` holds gdown 6.1.0 — Homebrew Python blocks pip
-  (PEP 668), so a venv was used rather than `--break-system-packages`
-- Backups kept: `bundle-clips.py.bak-20260831`, `shows.json.bak-20260831`
-
-## Open questions
-- **Which channel scheme wins** (see the red section above). Until that is
-  settled, connecting the USB drive will not make the box play anything.
-- Retire `tag-artwork.py`, or leave it to resurrect purple later?
-- CLAUDE.md describes a **`Seasons breakdown` tab that no longer exists**; and
-  says Lineup col Q is "Named" when most rows carry a leftover `=O/M` formula.
-- `_commercials` still holds a for-profit college advert and a Disney Channel
-  theme song — off-brief but harmless.
-- Episodes tab was extended to 1,200 rows; 1,025 used.
-- Deletions used `rm -rf`, which bypasses the Trash.
+## Open questions / blockers
+- 🔴 **STILL THE REAL BLOCKER: there is no USB drive.** The library is 530 GB;
+  the Pi's SD card has 22 GB free and nothing is mounted at `/media`. Every
+  channel reads empty until a drive exists. Needs **1 TB, formatted exFAT,
+  mounted at `/media/tangbox`**. The config is ready and waiting.
+- 🔴 **The Google Sheet is owed four `Lineup` rows and ~240 `Episodes` rows.**
+  `workspace-mcp` timed out at session start and never reconnected; the Drive
+  connector that did load can read Sheets but not write them.
+- ⚠️ **22 old files were deleted with `rm` (no Trash, unrecoverable):** 4 Ed
+  episodes and all 18 Dexter. The Ed four were each replaced by a 1080p version
+  of the same episode. The old Dexter 18 had stripped titles, so it was never
+  knowable which segments they held — the new 90 segments are probably a
+  superset of the old ~54, but that could not be proven and now cannot be checked.
+- `/Users/briantang/BluuClaude/SESSION-WRAP.md` is a SECOND, stale wrap file
+  (Aug 26) — the location `/wrap` points at. TangBox wraps live in this repo now.
 
 ## How to resume
 Start a fresh session (don't click "Keep full session"). Then say:
