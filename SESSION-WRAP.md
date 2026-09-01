@@ -1,22 +1,25 @@
-# Session Wrap — 2026-09-01 (afternoon)
+# Session Wrap — 2026-09-01 (afternoon + evening)
 
 ## What we worked on
 Closed the red "two channel schemes" item from the last wrap — the Pi now runs
 the repo's 22-channel lineup and its folder names match the Mac library exactly.
-Then filed four shows into Cartoon Network: Jackie Chan (new), Powerpuff (new),
-and replacement sets for Ed Edd y Eddy and Dexter.
+Then filed FIVE shows into Cartoon Network: Jackie Chan (new), Powerpuff (new),
+KND (1 -> 71), and replacement sets for Ed Edd y Eddy and Dexter.
 
 ## Status right now
 **Nothing is running for me.** Everything below is filed and verified. The Pi is
 up, `tangbox.service` active, 22 channels loaded, 146 commercials.
 
-Two downloads of Brian's own are STILL RUNNING in `~/Downloads/Cartoons/` —
-`KND_Los_Chicos_Del_Barrio` (71 files) and `Lilo_and_Stitch` (24). **Left
-untouched on his instruction; he will ping when they finish.**
+**KND finished and is filed.** `Lilo_and_Stitch` is still parked in
+`~/Downloads/Cartoons/` — 27 mp4 plus **3 orphaned `.part` files** and no
+download process running, so it either finished or stalled. **Left untouched;
+Brian will ping.** It DOES have a `download_log.jsonl`, so it should file as
+cleanly as Ed Edd did.
 
 ## Next 1-3 steps
-1. File KND and Lilo when Brian says they're done (same method as below).
-2. Google Sheet is owed FOUR rows — see blockers, the tool was down all session.
+1. File Lilo when Brian says it's done — check its `download_log.jsonl` for
+   real `SxxExx` first, the way Ed Edd's was used.
+2. Google Sheet is owed FIVE rows — see blockers, the tool was down all session.
 3. `Las Chicas Superpoderosas` needs a `tile.jpg` (1024x768). Only show of 61
    without one; `tag-artwork.py` will tag it purple if it runs.
 
@@ -41,12 +44,14 @@ spend time choosing between shuffle and sequential — nothing reads it.
 | Ed Edd y Eddy | 5 | **66** | all 5 seasons COMPLETE, no gaps |
 | El laboratorio de Dexter | 18 | **30** | 5.7 h -> 10.8 h of content |
 | Las Chicas Superpoderosas | — | **72** | 71 episodes + 1 film |
+| KND Los chicos del barrio | 1 | **71** | 70 new + the original, kept |
 
-**Library: 61 shows, 2,884 episodes, 530 GB. 54 GB free on the Mac.**
+**Library: 61 shows, 2,954 episodes, 543 GB. 48 GB free on the Mac.**
 
 Every filing verified minutes-in against minutes-out: 25.809 h, 24.611 h,
 27.826 h all exact; Dexter's 90 clips -> 30 blocks differed by 0.00004 s.
-One bundled Dexter block was also fully decoded end to end, clean.
+KND 26.501 h exact. One bundled Dexter block was also fully decoded end to end,
+clean.
 
 ## Decisions made
 - **Dexter's 90 files are SHORTS (6-11 min), not episodes.** Bundled with
@@ -65,6 +70,13 @@ One bundled Dexter block was also fully decoded end to end, clean.
   keeping its name. Matches how the Sailor Moon films actually sit on disk
   (the config comment claims films are split into `ptNN`; they are not).
 - Show named **Las Chicas Superpoderosas** (official Spanish, one word).
+- **KND numbering is also NOT canonical** — `S01E01-E71`, same situation as
+  Powerpuff (within-season number in the filename, season missing).
+- **KND's pre-existing episode was KEPT, parked at `S01E71`.** PSNR against all
+  70 new files scored 13.1 at best (identical content scores 40+), so it is
+  probably an episode the new set does not have. It may still be a duplicate the
+  test could not see if the two rips do not line up at the sample point — but
+  keeping a possible duplicate is cheaper than losing a unique episode.
 
 ## Bugs / traps found this session
 - **A blind "replace" would have destroyed Ed Edd S01E02.** The new 65-file set
@@ -98,6 +110,18 @@ One bundled Dexter block was also fully decoded end to end, clean.
   of the same episode. The old Dexter 18 had stripped titles, so it was never
   knowable which segments they held — the new 90 segments are probably a
   superset of the old ~54, but that could not be proven and now cannot be checked.
+- ⚠️ **One KND file is SHORT: `S01E50` is 14.9 min against a 22.6 min norm.**
+  It decodes clean with no errors and the container agrees with the decode, so
+  it is not corrupt — it is simply missing about a third of the episode. Filed
+  anyway; re-download if it bothers anyone.
+- **Titles: Ed Edd (65), Powerpuff (72) and KND (71) have `_source-titles.json`
+  in their show folders. DEXTER DOES NOT — those 90 segment titles were lost**
+  when `_staging` was deleted after bundling. Nothing depends on them, but they
+  are not recoverable.
+- KND's titles arrived mangled by the downloader (`Operaci_n_F_U_T_U_R_O`).
+  They are de-mangled in the JSON (`Operación F.U.T.U.R.O.`) with the raw
+  filename kept beside each. Two are imperfect where accents were destroyed at
+  download time: `P.R.A.C.T.Ic.A.` and `H.O.S.P.I.Ta.L.`
 - `/Users/briantang/BluuClaude/SESSION-WRAP.md` is a SECOND, stale wrap file
   (Aug 26) — the location `/wrap` points at. TangBox wraps live in this repo now.
 
