@@ -4,23 +4,27 @@
 Closed the red "two channel schemes" item from the last wrap — the Pi now runs
 the repo's 22-channel lineup and its folder names match the Mac library exactly.
 Then filed FIVE shows into Cartoon Network: Jackie Chan (new), Powerpuff (new),
-KND (1 -> 71), and replacement sets for Ed Edd y Eddy and Dexter.
+KND (1 -> 71), and replacement sets for Ed Edd y Eddy and Dexter. Finally
+replaced Dragon Ball Z on the Anime channel: 58 -> 291, the complete series.
 
 ## Status right now
 **Nothing is running for me.** Everything below is filed and verified. The Pi is
 up, `tangbox.service` active, 22 channels loaded, 146 commercials.
 
-**KND finished and is filed.** `Lilo_and_Stitch` is **STILL DOWNLOADING** in
+**KND and DBZ are filed.** `Lilo_and_Stitch` is **STILL DOWNLOADING** in
 `~/Downloads/Cartoons/` — confirmed by watching the file count climb, not by
 `ps` (a process check came back empty while it was plainly still working, so
 trust changing file counts over process lists here). **Left untouched; Brian
 will ping when it is done.** It DOES have a `download_log.jsonl`, so it should
 file as cleanly as Ed Edd did — check that for real `SxxExx` first.
 
+🔴 **DO NOT TOUCH LILO OR THE DISK.** Brian is handling both in Codex
+(2026-09-01). Stopped at 33 of 65 episodes when last seen.
+
 ## Next 1-3 steps
-1. File Lilo when Brian says it's done — check its `download_log.jsonl` for
-   real `SxxExx` first, the way Ed Edd's was used.
-2. Google Sheet is owed FIVE rows — see blockers, the tool was down all session.
+1. File Lilo ONLY when Brian says so — he is managing it in Codex. Check its
+   `download_log.jsonl` for real `SxxExx` first, the way Ed Edd's was used.
+2. Google Sheet is owed SIX rows — see blockers, the tool was down all session.
 3. `Las Chicas Superpoderosas` needs a `tile.jpg` (1024x768). Only show of 61
    without one; `tag-artwork.py` will tag it purple if it runs.
 
@@ -46,13 +50,14 @@ spend time choosing between shuffle and sequential — nothing reads it.
 | El laboratorio de Dexter | 18 | **30** | 5.7 h -> 10.8 h of content |
 | Las Chicas Superpoderosas | — | **72** | 71 episodes + 1 film |
 | KND Los chicos del barrio | 1 | **71** | 70 new + the original, kept |
+| Dragon Ball Z (Anime ch.) | 58 | **291** | COMPLETE series, sagas as seasons |
 
-**Library: 61 shows, 2,954 episodes, 543 GB. 48 GB free on the Mac.**
+**Library: 61 shows, 3,187 episodes, 573 GB. Only 18 GB free — see blockers.**
 
 Every filing verified minutes-in against minutes-out: 25.809 h, 24.611 h,
 27.826 h all exact; Dexter's 90 clips -> 30 blocks differed by 0.00004 s.
-KND 26.501 h exact. One bundled Dexter block was also fully decoded end to end,
-clean.
+KND 26.501 h and DBZ 116.552 h exact. One bundled Dexter block was also fully
+decoded end to end, clean.
 
 ## Decisions made
 - **Dexter's 90 files are SHORTS (6-11 min), not episodes.** Bundled with
@@ -80,6 +85,21 @@ clean.
   test could not see if the two rips do not line up at the sample point — but
   keeping a possible duplicate is cheaper than losing a unique episode.
 
+## Dragon Ball Z — the one show whose numbering IS trustworthy
+Filed from a SECOND Google Sheet of Brian's (id `16q9Jcpb...`, a DBZ tab with
+Episode # / Title / Saga columns; it also holds source URLs — leave those alone).
+All 291 filenames and all 291 sheet rows agreed on both number and title, from
+two independent sources, so unlike Powerpuff and KND this numbering is real.
+
+Sagas became seasons, each restarting at E01:
+`S01 Saiyan 35 · S02 Frieza 72 · S03 Garlick Jr. 10 · S04 Cell 82 · S05 Buu 92`.
+No gaps in any season. Titles (properly accented, from the sheet) plus saga and
+absolute episode number are in `_source-titles.json`; filenames stay numbers-only.
+
+**`S01E01` is the old 1080p alternate rip (803 MB), deliberately kept** — the new
+set is 848x480 throughout and that was the only high-res DBZ file Brian had. Its
+480p replacement was dropped. The other 57 old episodes were 480x360 and removed.
+
 ## Bugs / traps found this session
 - **A blind "replace" would have destroyed Ed Edd S01E02.** The new 65-file set
   is missing it and the old set had it. Kept the old 720p copy; season is now
@@ -100,7 +120,12 @@ clean.
   `-mmin -15` works.
 
 ## Open questions / blockers
-- 🔴 **STILL THE REAL BLOCKER: there is no USB drive.** The library is 543 GB;
+- 🔴🔴 **THE MAC IS NEARLY FULL: 18 GB free of 926 GB (98% used).** Lilo needs
+  ~24 GB for its remaining 32 episodes at ~740 MB each and was downloading at
+  ~13 GB/hour. **Brian is handling this in Codex — do not act on it.** Nothing
+  Claude did consumed the space: every filing this session was a move within one
+  disk. The library simply reached 573 GB.
+- 🔴 **STILL THE REAL BLOCKER: there is no USB drive.** The library is 573 GB;
   the Pi's SD card has 22 GB free and nothing is mounted at `/media`. Every
   channel reads empty until a drive exists. Needs **1 TB, formatted exFAT,
   mounted at `/media/tangbox`**. The config is ready and waiting.
