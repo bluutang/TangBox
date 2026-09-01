@@ -10,11 +10,12 @@ KND (1 -> 71), and replacement sets for Ed Edd y Eddy and Dexter.
 **Nothing is running for me.** Everything below is filed and verified. The Pi is
 up, `tangbox.service` active, 22 channels loaded, 146 commercials.
 
-**KND finished and is filed.** `Lilo_and_Stitch` is still parked in
-`~/Downloads/Cartoons/` — 27 mp4 plus **3 orphaned `.part` files** and no
-download process running, so it either finished or stalled. **Left untouched;
-Brian will ping.** It DOES have a `download_log.jsonl`, so it should file as
-cleanly as Ed Edd did.
+**KND finished and is filed.** `Lilo_and_Stitch` is **STILL DOWNLOADING** in
+`~/Downloads/Cartoons/` — confirmed by watching the file count climb, not by
+`ps` (a process check came back empty while it was plainly still working, so
+trust changing file counts over process lists here). **Left untouched; Brian
+will ping when it is done.** It DOES have a `download_log.jsonl`, so it should
+file as cleanly as Ed Edd did — check that for real `SxxExx` first.
 
 ## Next 1-3 steps
 1. File Lilo when Brian says it's done — check its `download_log.jsonl` for
