@@ -15,11 +15,7 @@ Media lives in `~/Downloads/Converted/`; the repo itself was not touched.
 1. 🔴 **DECIDE WHICH CHANNEL SCHEME WINS** — see "The two channel schemes" below.
    The Mac library and the running box are filed to DIFFERENT schemes. Nothing
    plays until they agree, and the failure is silent.
-2. **Convert the two Kim Possible `.mkv` files** still sitting in `~/Downloads` —
-   S02E20 and S04E07, the two the catalog records as damaged. They need
-   `mkv2mp4`, not a rename. Takes the show 81 -> 83 of 87.
-3. **Kim Possible's real gap is S03E11-E14.** Corrected today: Season 3 has
-   **14** episodes, not the 10 the sheet claimed were complete.
+2. Nothing else is blocked or half-done. `~/Downloads` is empty.
 
 ## 🔴 The two channel schemes — unresolved
 **The repo's `config.pi.yaml` is NOT what the box runs.** The Pi reads its own
@@ -54,7 +50,7 @@ root any more** — worth re-checking after any future bulk add, since a show
 dropped at the root looks completely normal in Finder.
 
 ## Where things stand
-- **2,666 episodes across 64 shows. 60 GB free.**
+- **2,668 episodes across 64 shows. 60 GB free.**
 - **146 commercials** (128 generic + Disney 7, Nickelodeon 9, CartoonNetwork 2),
   identical on the Mac and the Pi's SD card.
 - Every show has a verified tile; **19 red tags, nothing else.** Purple retired.
@@ -68,8 +64,20 @@ dropped at the root looks completely normal in Finder.
 | Dora la Exploradora | 61 | — |
 | Pistas de Blue y tú | **43 — COMPLETE** | — |
 | Jimmy Neutron | 56 | S01E14, S01E15, S02E08, S02E20 |
-| Kim Possible | 81 | S02E20, S04E07 (mkv in hand), **S03E11-E14** |
+| Kim Possible | **83 — PARKED at 83** | S03E11-E14, unobtainable (below) |
 | 123 Andrés - Letras / Canciones | 4 / 6 | — |
+
+## Kim Possible — parked at 83/87 (2026-09-01)
+S1 21/21, S2 30/30, S3 10/14, S4 22/22. **The four missing Season 3 episodes
+(E11-E14) could not be sourced and are PARKED.** Treat the show as done unless
+Brian raises it; do not go hunting for them again.
+
+The two damaged files WERE replaced: S02E20 (had an unreadable EBML header) and
+S04E07 (claimed 22:48, only 6:06 decoded — it sat in the catalog as a 6-minute
+stub for weeks). Remuxed losslessly from `.mkv` with `mkv2mp4`, then verified by
+a **full software decode** — 22:50 and 22:49, zero errors — not by the
+container's duration, which is exactly what let the old S04E07 look healthy.
+Both are 1920x1080 against the show's usual 492x360-768x576.
 
 ## Decisions made
 - **Purple (no-artwork) tags are RETIRED.** ⚠️ `tag-artwork.py` still exists and
