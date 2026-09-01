@@ -37,7 +37,7 @@ Done on the Pi: backed up to `config.yaml.bak-20260901-084639`, `git pull`
 `episode_order` entirely** (`config.pi.yaml:306`, `channel.py:307`). Don't
 spend time choosing between shuffle and sequential — nothing reads it.
 
-## What was filed — Cartoon Network is now 294 eps across 6 shows
+## What was filed — Cartoon Network is now 363 eps across 6 shows
 | Show | Before | After | Note |
 |---|---|---|---|
 | Las Aventuras de Jackie Chan | — | **73** | of 95; S1 + S4 complete |
@@ -65,7 +65,8 @@ clean.
   within-season episode number but not the season, so all 71 are `S01E01-E71`
   in sorted order. Also not canonical.
 - English source titles preserved in `_source-titles.json` inside the Ed,
-  Powerpuff and Dexter show folders — filenames stay numbers-only per the rule.
+  Powerpuff and KND show folders — filenames stay numbers-only per the rule.
+  **Dexter's were lost; see blockers.**
 - **The Powerpuff film goes in `Las Chicas Superpoderosas/Movies/`**, unsplit,
   keeping its name. Matches how the Sailor Moon films actually sit on disk
   (the config comment claims films are split into `ptNN`; they are not).
@@ -98,11 +99,11 @@ clean.
   `-mmin -15` works.
 
 ## Open questions / blockers
-- 🔴 **STILL THE REAL BLOCKER: there is no USB drive.** The library is 530 GB;
+- 🔴 **STILL THE REAL BLOCKER: there is no USB drive.** The library is 543 GB;
   the Pi's SD card has 22 GB free and nothing is mounted at `/media`. Every
   channel reads empty until a drive exists. Needs **1 TB, formatted exFAT,
   mounted at `/media/tangbox`**. The config is ready and waiting.
-- 🔴 **The Google Sheet is owed four `Lineup` rows and ~240 `Episodes` rows.**
+- 🔴 **The Google Sheet is owed five `Lineup` rows and ~312 `Episodes` rows.**
   `workspace-mcp` timed out at session start and never reconnected; the Drive
   connector that did load can read Sheets but not write them.
 - ⚠️ **22 old files were deleted with `rm` (no Trash, unrecoverable):** 4 Ed
@@ -110,7 +111,7 @@ clean.
   of the same episode. The old Dexter 18 had stripped titles, so it was never
   knowable which segments they held — the new 90 segments are probably a
   superset of the old ~54, but that could not be proven and now cannot be checked.
-- ⚠️ **One KND file is SHORT: `S01E50` is 14.9 min against a 22.6 min norm.**
+- ⚠️ **One KND file is SHORT: `S01E49` is 14.8 min against a 22.6 min norm.**
   It decodes clean with no errors and the container agrees with the decode, so
   it is not corrupt — it is simply missing about a third of the episode. Filed
   anyway; re-download if it bothers anyone.
