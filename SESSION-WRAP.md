@@ -36,6 +36,25 @@ loads or every channel reads empty — which is exactly what it does today, and 
 gives no error. Pick one scheme and make the other match before blaming the
 drive.
 
+## Stub shows pruned — 2026-09-01
+Five shows holding a SINGLE episode each were removed (not by me — they were
+gone when I next looked). All five had been on the red "barely started" list:
+
+    Dr Seuss Pez rojo pez azul · El show de Snoopy · Escandalosos
+    Maya y los tres · Tu amigo y vecino Spider-Man
+
+Took the library 2,668 -> 2,663 episodes and 64 -> 59 shows, freeing ~2 GB, and
+dropped the red tags from 19 to 13.
+
+**SEVEN single-episode shows remain** if the same pruning is wanted:
+KND Los chicos del barrio, Jake Long, La Leyenda de los Tres Caballeros,
+Lilo y Stitch La Serie, Patoaventuras, Bluey, Tibucán. A one-episode show is a
+thin thing to give a channel — it repeats immediately.
+
+⚠️ If any of these are wanted back, their ids are still in the show's
+`_archive.txt`, so a re-fetch will SKIP them. Remove the id from that file first
+or nothing downloads.
+
 ## Root-level shows — fixed 2026-09-01
 Three shows sat OUTSIDE any channel folder, so 158 episodes were not on any
 channel. Moved to where the template says they belong:
@@ -45,15 +64,15 @@ channel. Moved to where the template says they belong:
     Barney el Dinosaurio -> PBSPequenos/   (45)
 
 Renames on the same disk, so nothing copied; tiles and `_archive.txt` travelled
-with them. Episode and show counts unchanged (2,666 / 64). **No show is at the
+with them. Nothing was lost in the move. **No show is at the
 root any more** — worth re-checking after any future bulk add, since a show
 dropped at the root looks completely normal in Finder.
 
 ## Where things stand
-- **2,668 episodes across 64 shows. 60 GB free.**
+- **2,663 episodes across 59 shows. 62 GB free.**
 - **146 commercials** (128 generic + Disney 7, Nickelodeon 9, CartoonNetwork 2),
   identical on the Mac and the Pi's SD card.
-- Every show has a verified tile; **19 red tags, nothing else.** Purple retired.
+- Every show has a verified tile; **13 red tags, nothing else.** Purple retired.
 - The Google Sheet is **fully current** — every show below, plus 52 Xiaolin rows
   and 31 Pistas rows on the Episodes tab.
 
