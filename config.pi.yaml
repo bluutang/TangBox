@@ -164,18 +164,37 @@ channels:
     exclude: ["_*", "*/_*"]
     # THIN - Spider-Man, Jake Long.
 
-  # --- Cartoon Network -------------------------------------------------------
+  # --- Cartoon Network ---------------------------------------------------------
+  # SPLIT 2026-09-03. Every other network on this box is age-split; Cartoon
+  # Network was the one exception, one bucket running from Tom y Jerry to
+  # Coraje - which meant a 6-year-old landing here could hit either. Tone,
+  # not just age, is what actually separates them.
   - number: 13
-    name: "Cartoon Network"
-    path: /media/tangbox/CartoonNetwork
-    age: "6-10"
+    name: "Cartoon Comedia"
+    path: /media/tangbox/CartoonComedia
+    age: "6-9"
     exclude: ["_*", "*/_*"]
-    # Dexter, Ed Edd y Eddy, Escandalosos, KND.
+    # Tom y Jerry, Dexter, Ed Edd y Eddy, Scooby-Doo. The gentler half.
+
+  - number: 14
+    name: "Cartoon Acción"
+    path: /media/tangbox/CartoonAccion
+    age: "7-10"
+    exclude: ["_*", "*/_*"]
+    # Jackie Chan, Xiaolin Showdown, Las Chicas Superpoderosas, KND.
+
+  - number: 15
+    name: "Coraje"
+    path: /media/tangbox/Coraje
+    age: "8+"
+    exclude: ["_*", "*/_*"]
+    # Coraje el Perro Cobarde on its own - horror-comedy, tonally apart from
+    # both halves above and the highest floor of the three.
 
   # --- Apple TV+ -------------------------------------------------------------
   # Apple and Netflix never carried advertising, so neither block names a
   # commercials folder - they fall back to the generic pool.
-  - number: 14
+  - number: 16
     name: "Apple Snoopy"
     path: /media/tangbox/AppleSnoopy
     age: "3-6"
@@ -183,7 +202,7 @@ channels:
     # De campamento con Snoopy, Snoopy el astronauta, El show de Snoopy.
     # A franchise INSIDE one platform, so it does not break the one-network rule.
 
-  - number: 15
+  - number: 17
     name: "Apple Cuentos"
     path: /media/tangbox/AppleCuentos
     age: "3-6"
@@ -192,22 +211,18 @@ channels:
     # channel here - picture-book adaptations, near-silent in places.
 
   # --- Netflix ---------------------------------------------------------------
-  - number: 16
-    name: "Netflix Kids"
-    path: /media/tangbox/NetflixKids
-    age: "4-8"
+  # MERGED 2026-09-03. Netflix Cuentos never grew past one show; folded into
+  # the Kids channel rather than leave a near-empty one on the dial.
+  - number: 18
+    name: "Netflix"
+    path: /media/tangbox/Netflix
+    age: "3-8"
     exclude: ["_*", "*/_*"]
-    # Misterios Animales, My Melody y Kuromi, Concierge Pokémon.
-
-  - number: 17
-    name: "Netflix Cuentos"
-    path: /media/tangbox/NetflixCuentos
-    age: "3-7"
-    exclude: ["_*", "*/_*"]
-    # Los guardaespíritus, Tibucán, Maya y los tres, Dr. Seuss.
+    # Misterios Animales, My Melody y Kuromi, Concierge Pokémon,
+    # Los guardaespíritus del bosque.
 
   # --- Anime -----------------------------------------------------------------
-  - number: 18
+  - number: 19
     name: "Anime"
     path: /media/tangbox/Anime
     age: "10+"
@@ -232,15 +247,15 @@ channels:
   # reads as a fault rather than as nostalgia. They also have no network, which
   # is why they sit outside the network blocks above rather than inside one.
   # Digimon and Pokemon are anime, but they skew far younger than Sailor Moon and
-  # Dragon Ball Z. Age splits the block rather than network: 18 stays 10+, this
+  # Dragon Ball Z. Age splits the block rather than network: 19 stays 10+, this
   # one takes the 6+ audience.
-  - number: 19
+  - number: 20
     name: "Anime Kids"
     path: /media/tangbox/AnimeKids
     age: "6+"
     exclude: ["_*", "*/_*"]
 
-  - number: 20
+  - number: 21
     name: "Aprende"
     path: /media/tangbox/Aprende
     age: "2-6"
@@ -248,7 +263,7 @@ channels:
     breaks: false
     # Spanish Basics, Aprende Peque con Isa.
 
-  - number: 21
+  - number: 22
     name: "Ejercicio"
     path: /media/tangbox/Ejercicio
     age: "3-8"
@@ -256,7 +271,7 @@ channels:
     breaks: false
     # Cosmic Kids Yoga, in Spanish. Get-up-and-move rather than sit-and-watch.
 
-  - number: 22
+  - number: 23
     name: "Cantonés"
     path: /media/tangbox/Cantones
     age: "0-6"
@@ -264,7 +279,7 @@ channels:
 
   # Cantonese TVB live action from 1998 - not animation and not a learning
   # channel, so it sits at the end with the other non-television blocks.
-  - number: 23
+  - number: 24
     name: "Journey to the West"
     path: /media/tangbox/JourneyWest
     age: "6+"
