@@ -1,140 +1,119 @@
-# Session Wrap — 2026-09-01 (long evening session)
+# Session Wrap — 2026-09-02/03 (continuation of the long evening session)
 
 ## What we worked on
-Put the repo's 22-channel lineup live on the Pi, filed **eleven shows** into the
-library, fixed silent audio on 60 files across 8 shows, and built a reusable
-ok.ru resolver. Media lives in `~/Downloads/Converted/`; the repo itself only
-gained this file (`_tools/okru.py` lives with the media, not in git).
+Filed six more shows (Padrinos Mágicos, Bluey, Tres Caballeros, Scooby-Doo,
+Coraje, a YouTube Play Break playlist), then reorganized channels: split
+Cartoon Network by tone (it was the only network never age-split) and merged
+the two thin Netflix channels into one. Parked Danny Phantom for good; started
+Patoaventuras resuming from episode 5.
 
 ## Status right now
-**Nothing of mine is running.** Everything below is filed and verified.
-The Pi is up, `tangbox.service` active, 22 channels, 146 commercials.
+**Patoaventuras is running, detached, 7/73** — via Antigravity's own pipeline
+(`uv run --with curl_cffi patoaventuras_complete_pipeline.py`), downloads
+full-size sources then re-encodes to 480p. It survives this session ending.
+Nothing else is running. Tracker sync (`track_two.sh`) may still be alive;
+harmless if so, just re-generates `_status.html` every minute.
 
-`~/Downloads/Cartoons/` is empty except **Danny_Phantom** — 12 finished episodes
-against **175 orphaned `.part` fragments**, i.e. a download that died partway.
-Not mine, untouched. Those partials are dead weight if that run is not resuming.
-
-## Library: 63 shows, 3,441 episodes, 600 GB. 43 GB free.
-**Every show has a tile. Every file is AAC. Zero unreadable files.**
+## Library: 66 shows, 3,810 episodes, 638 GB. 28 GB free.
+Every file AAC, zero unreadable. One tile missing: `Ejercicio/Disney Jr Play
+Break` (1024x768 needed).
 
 ## Next 1-3 steps
-1. 🔴 **USB drive** — still the only thing between this library and a working TV.
-   600 GB now. Needs **1 TB, exFAT, mounted at `/media/tangbox`**.
-2. **Sheet owed ~11 `Lineup` rows and ~900 `Episodes` rows.** `workspace-mcp`
-   timed out at session start and never reconnected all evening.
-3. Decide the re-pulls below (Jake Long, Winnie, Lilo) — they need disk headroom.
+1. Check Patoaventuras: `find ~/Downloads/Cartoons/Patoaventuras_2017 -name '*.mp4' | wc -l`
+   (target 73; it downloads the full source then scales to 480p, so it's slow).
+   When done, file into DisneyAventura/Patoaventuras — but FIRST diff against
+   the existing S01E01 (1280x720, 2525 kbps) the same way every other show
+   tonight was diffed; do not blind-replace.
+2. 🔴 **USB drive** — still the only thing between 638 GB and a working TV.
+3. Sheet owed rows for ~15 shows filed across tonight (see prior wrap too).
+4. Coraje's channel placement: Brian wants to revisit later, not urgent.
 
-## The channel scheme — RESOLVED, do not re-litigate
-The repo's `config.pi.yaml` (22 channels) won; the Pi's old 10-channel config
-predated the library. Backed up to `config.yaml.bak-20260901-084639`, `git pull`
-(it was 13 files behind), copied over with the `assets_dir` line carried across.
+## Channels — RESTRUCTURED tonight, now 23 (was 22)
+🔴 **Cartoon Network was the only network never age-split** — one bucket
+running Tom y Jerry to Coraje. Split by TONE:
+```
+13  Cartoon Comedia   6-9    Tom y Jerry, Dexter, Ed Edd y Eddy, Scooby-Doo (186)
+14  Cartoon Acción    7-10   Jackie Chan, Xiaolin, Powerpuff, KND (268)
+15  Coraje            8+     Coraje solo (48) — Brian may reconsider this
+```
+Netflix Cuentos (1 show, 10 eps) never grew — merged into Netflix Kids,
+channel renamed to plain `Netflix` (18, age 3-8, 4 shows/42 eps). Cantonés
+(Uncle Calvin's proposed new home, 學) stays its OWN dedicated channel:
+merging into Aprende would drop Cantonese from 100% on-demand to ~20% of
+plays, since `ShowOrder` bags SHOWS not episodes. Renumbered 13-24 to stay
+contiguous, no gaps. **Pushed, validated with `load_config` and live on the
+Pi** (`bfd8a10`) — 23 channels confirmed in the startup log.
 
-⚠️ `episode_order` is a RED HERRING. Both configs set `tune_in: broadcast`, which
-builds its own running order and **ignores `episode_order` entirely**
-(`config.pi.yaml:306`, `channel.py:307`). Nothing reads it.
-
-## What was filed tonight
-| Show | Before | After | Numbering |
+## What was filed since the last wrap (`e71ba9a`)
+| Show | Eps | Channel | Numbering |
 |---|---|---|---|
-| Dragon Ball Z (Anime) | 58 | **291** | REAL — sagas as seasons |
-| Las Aventuras de Jackie Chan | — | **73** | real |
-| Ed Edd y Eddy | 5 | **66** | REAL, from its download log |
-| El laboratorio de Dexter | 18 | **30** | bundles, NOT canonical |
-| Las Chicas Superpoderosas | — | **72** | flat, NOT canonical |
-| KND Los chicos del barrio | 1 | **71** | flat, NOT canonical |
-| Tom y Jerry | — | **48** | bundles, NOT canonical |
-| Doug | 26 | **72** | REAL for the 46 added |
-| Jake Long El Dragón occidental | 1 | **51** | REAL |
-| Winnie the Pooh (DisneyJr) | — | **46** | REAL |
-| Lilo y Stitch La Serie | 1 | **65 — COMPLETE** | REAL |
+| Los Padrinos Mágicos | 120/126 | Nick Moderno | REAL (cross-checked ?t= vs Capítulo) |
+| Bluey | 150/152 | Disney Jr | REAL, manifest-validated "Latino (AAC stereo)" |
+| La Leyenda de los Tres Caballeros | 9/13 | Disney Aventura | REAL |
+| ¿Qué hay de nuevo, Scooby-Doo? | 42/42 | Cartoon Comedia | flat (source lists all under ?t=1) |
+| Coraje El Perro Cobarde | 48/51 | Coraje (own channel) | REAL, 4 seasons x 13 |
+| Disney Jr Play Break (YouTube) | 3 | Ejercicio | bundled: 2 blocks + 1 standalone |
 
-Every filing verified minutes-in against minutes-out, all exact.
+Every filing verified minutes-in against minutes-out. Six-for-six on the
+"diff quality before replacing" rule tonight (Ed Edd, Jake Long, Lilo, Doug,
+Bluey, Tres Caballeros) — every existing episode that was better got kept.
 
-## 🔴 The rule that saved the library FOUR times
-**Never replace an existing episode without diffing quality first.** "Replace the
-old ones" nearly destroyed better copies on four shows tonight:
-- **Ed Edd S01E02** — the new 65-file set lacked it; the old copy was the only one.
-- **Jake Long S01E01** — existing 1280x720 vs the new batch's 426x240.
-- **Lilo S01E01** — existing 1920x1080 (2888 kbps) vs new 852x480.
-- **Doug** — a blanket replace would have deleted **13 episodes that exist nowhere
-  else** and downgraded 21 more from ~3135 kbps to ~750 kbps.
+## Danny Phantom — PARKED PERMANENTLY, swept
+VidHide (dhtpre.com) serves pages and playlists fine; every media SEGMENT
+returns 522 (Cloudflare can't reach origin) or 502. Verified repeatedly across
+three days. Not an IP/VPN issue - a fresh connection fails identically to an
+old one. 12 of 49 episodes were downloaded; staging swept (1.7 GB freed).
+**Preserved for a future retry:**
+- `_tools/dhtpre.py` — the VidHide unpacker (only existed in scratchpad before)
+- `_tools/_records/danny_phantom_episodes.tsv` + `_download_log.jsonl` + README
+Registered in `shows.json` with source noted as parked.
 
-## Audio matching beats picture matching for finding duplicates
-Doug's catalog copies carry no titles, so duplicates had to be found by content.
-**Picture fingerprinting FAILED** — percentage-sampled frame hashes gave a smear
-(483-710 of 1536) with no bimodal split, unstable thresholds, and ten existing
-files each claimed by two new ones. A threshold picked from that would have been
-fiction. **Audio envelope cross-correlation worked**: matches 0.982-0.997,
-non-matches 0.09-0.19, a 0.354 gap, clean 1:1 mapping. The same method identified
-Lilo's 1080p S01E01 at 0.997 against a 0.190 runner-up. Reuse this approach.
-
-## Decisions made
-- **`_tools/okru.py` is new and reusable** — resolves an ok.ru video id to its best
-  direct rendition, with an optional quality cap. Adapted from Codex's
-  `download_jackie_spanish.py` with one fix: that version required
-  `hlsManifestUrl` in `data-options`, which older progressive uploads lack, so
-  every Tom y Jerry video looked unresolvable.
-- **Dexter's 90 shorts and Tom y Jerry's 161 shorts were BUNDLED** into ~21-min
-  blocks (`bundle-clips.py --target 20`). Their `S01Exx` numbers are bundles.
-- **Tom y Jerry's block composition WAS recorded and verified** (all 48 computed
-  durations matched the files on disk). **Dexter's was NOT** — lost when
-  `_staging` was deleted. Its 90 segment titles were later recovered from Brian's
-  sheet, but which segments went into which block is gone for good.
-- **Powerpuff and KND are numbered flat** — their sources carried no season data.
-- **Doug: kept all 26 existing, added only the 46 genuinely new**; 13 duplicate
-  downloads discarded.
-- **Lilo renumbered to real seasons** (39 + 26) from its log's `source_title`.
+## Listos Para El Preescolar — filed, then SWEPT on Brian's call
+44-video YouTube playlist, filed 7 episodes into Aprende (Parts 1-4 split into
+two halves per Brian's request). Brian judged it too fast/high-energy for
+Aprende's calm-education role and asked for a full sweep. Done — catalog copy
+and staging both removed (2.8 GB), Aprende back to its original 4 shows.
+Not a failure of the pipeline; a content-fit call made after seeing it filed.
 
 ## Bugs found — do not reintroduce
-- 🔴 **`okru.py` RANK was missing `full`.** ok.ru calls 1080p `full`, not
-  `full_hd`, so it scored as unknown and lost to `hd` — silently taking about half
-  the bitrate. Fixed 2026-09-01. **Winnie was pulled BEFORE this fix.** Lilo's
-  repaired S02E21 came down at 713 MB / 1920x1080 after it, vs 350 MB before.
-- 🔴 **mp3 audio inside MP4 plays SILENT** on QuickTime and many hardware decoders.
-  60 files across 8 shows (Teletubbies 17, Snoopy 26, El niño lobo 6, Sapo y Sepo
-  5, Avatar 3, Pato y Ganso 2, Tibucán 1). All converted to AAC with video
-  stream-copied, each verified on duration, loudness and decode.
-- **`-v error` SUPPRESSES `volumedetect` and `psnr` output** — they log at info
-  level. Cost two wrong "no output" readings before it was spotted.
-- **`pgrep` reported dead processes that were plainly alive**, at least three
-  times. **Judge by file growth and timestamps, not `pgrep`.**
-- **A VPN coming up mid-session is poison for long downloads.** ProtonVPN
-  connecting mid-run wedged three workers for 11 minutes past a 45 s socket
-  timeout, and dropped Doug from 11 MiB/s to 80 KB/s. It also caused the truncated
-  Winnie files: all six repairs failed repeatedly with it on and succeeded
-  **first attempt** with it off. The tell is a *fresh* connection working while
-  old ones hang.
-- **zsh arrays are 1-indexed.** A bash-style `for i in 0 1` loop built an empty
-  path and moved a whole temp folder into a Season directory. Nothing was lost,
-  but use explicit paths and assert every file exists before touching anything.
-- **The Drive connector TRUNCATES large sheets** — it returned 924 lines of a
-  1,708-row tab, which is why Tom y Jerry "did not exist". Export the workbook as
-  xlsx and parse that instead.
-- **This machine's `find` rejects `-newermt '-30 minutes'`**; use `-mmin`.
+- 🔴 **`finish_playbreak.py` (and its clone pattern) never cleaned up SRC.**
+  It COPIES clips into a bundling `_staging` inside the show folder and
+  cleans THAT, but the original source folder in `~/Downloads/Cartoons/` was
+  never touched — 716 MB of already-bundled raw clips sat there looking like
+  unfinished work. Verified duration-match before deleting by hand. If this
+  bundle-then-file pattern is reused, add a source cleanup step.
+- **A killed background task orphans its children** — yt-dlp subprocesses
+  kept "running" (visible in `ps`) for 6+ minutes after their Python parent
+  died, writing zero bytes the whole time. Killed by pattern-match on the
+  playlist ID, stale fragments cleared, downloads resumed cleanly (yt-dlp
+  skips files that already exist).
+- **Process counts lie; file growth doesn't.** Recurred at least 6 times this
+  session — `pgrep`/`ps` showing a process as alive while it had stalled, or
+  matching the grep's own command line. Judge everything by `du`/`find`
+  growth over a real time window.
+- The `okru.py` RANK fix (missing `full` tier) and the mp3-audio fix from the
+  prior wrap both still hold; nothing regressed them tonight.
+
+## Tools/tracker
+`shows.json` gained: Los Padrinos Mágicos, ¿Qué hay de nuevo Scooby-Doo?,
+Coraje El Perro Cobarde, Danny Phantom (parked), Patoaventuras. Backed up
+before each edit (`shows.json.bak-*`). `_tools/dhtpre.py` is new and
+reusable for any future VidHide/dhtpre.com source.
 
 ## Open questions / blockers
-- 🔴 **No USB drive.** 600 GB library, Pi SD card has 22 GB free. Every channel
-  reads empty until one exists.
-- 🔴 **Sheet owed ~11 rows + ~900 episode rows** (`workspace-mcp` down all evening).
-- ⚠️ **RE-PULL CANDIDATES**, each recorded in its own `_source-titles.json`:
-  - **Jake Long** — 426x240 at ~296 kbps, the worst in the library; source offers
-    `hd` at ~325 MB/ep. S02E25 is 8.1 min (short); S02E26 was never obtainable.
-  - **Winnie the Pooh** — pulled at `low` (~107 MB/ep) to fit a full disk, and
-    before the RANK fix. `full` is available and would be a large gain.
-  - **Lilo** — 852x480 ~1100 kbps except S02E21; `full` is ~3.7 Mbps.
-- ⚠️ **Doug's `Season 05` labels look WRONG.** 13 of those episodes audio-match
-  episodes the source numbers as S01-S03. Left alone; the folder now carries two
-  conventions. **S05E22 is corrupt** (384 kbps, fails decode) and has **no
-  replacement in the new set**.
-- ⚠️ **Danny_Phantom: 175 orphaned partials** in `~/Downloads/Cartoons/`.
-- **Deletions used `rm` (no Trash).** Swept tonight: 13 Doug duplicates, Lilo's
-  staging, and each show's staging folder after filing.
-- 🔴 **Sources are dying in real time.** 4 Winnie episodes, 7 Doug episodes, 2
-  Avatar direct URLs (410/403) and Jake Long S02E26 all went unavailable **today**.
-  This library is **not re-downloadable**. One copy on one USB drive is not a
-  backup — and exFAT has no journaling, so a power cut on the Pi can corrupt it.
-  The 13 MB of metadata (`_source-titles.json`, `_download-log.jsonl`, tiles,
-  `_tools/`) is the irreplaceable part and should stay on the Mac regardless.
+- 🔴 **No USB drive.** 638 GB library, Pi SD card ~22 GB. Unchanged blocker.
+- 🔴 **Sheet owed rows** for everything filed since the last sheet update —
+  `workspace-mcp` has been down the entire session.
+- Coraje's channel: Brian flagged he'll reconsider placement later — don't
+  re-litigate on his behalf, wait for him to raise it.
+- Patoaventuras source re-encodes 720p source down to 480p per episode
+  (slow, one quality generation lost) — Antigravity's pipeline choice, not
+  something built fresh tonight.
+- Sources keep dying in real time: Danny Phantom's host, 4 Winnie episodes,
+  7 Doug episodes, 3 Coraje episodes, 2 Avatar URLs, Jake Long S02E26 — all
+  gone from their sources across this session alone. Confirms the standing
+  point: **this library cannot be re-downloaded. One copy on one drive is
+  not a backup.**
 
 ## How to resume
 Start a fresh session (don't click "Keep full session"). Then say:
