@@ -30,7 +30,7 @@ _SEASON_PATTERNS = (
 
 from .config import ChannelConfig, Config
 from .playlist import ShowOrder, ShuffleBag
-from .probe import DEFAULT_EPISODE_SECONDS, probe_duration
+from .probe import DEFAULT_EPISODE_SECONDS, flush_cache, probe_duration
 
 log = logging.getLogger(__name__)
 
@@ -357,6 +357,12 @@ class Channel:
         for path in self.episodes:
             dur = probe_duration(path)
             durations.append(dur if dur else DEFAULT_EPISODE_SECONDS)
+        # One write per channel, not one per episode. probe_duration() caches to
+        # disk, so this loop is a 57-second ffprobe storm on a 493-episode
+        # channel the FIRST time only - after that every lookup is a dict hit.
+        # See the note at the top of probe.py: that storm blocks the main loop
+        # and makes the remote appear to lag, then cascade.
+        flush_cache()
 
         # Count from a FIXED origin shared by every channel, not from the
         # moment this one happened to be built.
