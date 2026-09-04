@@ -134,7 +134,27 @@ a single-episode stub, so it is the one most worth recovering.
   EOD-sync bug: a script that reports success while failing.
 
 ## Open
-- 🔴 **USB drive.** 23 channels on the dial, no media on the Pi. Unchanged.
+- ✅ **USB drive DONE (2026-09-04).** 1 TB SanDisk, exFAT + GPT, label TANGBOX,
+  659 GB copied. Mounted READ-ONLY at `/media/tangbox` by UUID `6A9A-7E45` via
+  `/etc/fstab` (`ro,nofail,x-systemd.device-timeout=10,uid=1000,gid=1000,umask=022`)
+  — read-only because the box only ever reads, which removes exFAT's
+  no-journal corruption risk when the box is switched off at the wall; `nofail`
+  so the Pi still boots without the drive. Verified: all 23 channels populated,
+  **4,018 playable episodes, no empty channels.**
+  - exFAT (not ext4) because macOS cannot WRITE ext4 without paid software,
+    and the Mac has to put 659 GB on it.
+  - `_commercials` deliberately NOT copied — it lives on the SD card at
+    `~/tangbox-commercials` (146 clips). A mount HIDES what is beneath it, so a
+    copy on the drive would silently do nothing. `_tools` skipped as pointless.
+  - macOS wrote 4,019 `._*.mp4` AppleDouble sidecars (62 MB). HARMLESS —
+    `channel.py:146` skips anything starting with a dot. Do not panic at a
+    doubled file count.
+  - Formatting and reading the volume FAILED from the Bash tool
+    (`restricted by Sandbox ... -69464`); Disk Utility had to do it. Expect
+    that for any removable-volume operation from this harness.
+  - 4,018 not 4,019: `PBSKids/Jorge el Curioso/_unsplit/NA-XBSF8xSNt2g.mp4` is
+    an unsplit raw source, correctly excluded by `exclude: ["_*", "*/_*"]`.
+    A raw `find` over-counts it; the box is right.
 - 🔴 **Sheet rows owed** for all four shows — `workspace-mcp` failed to connect
   the entire session (CONNECT_TIMEOUT), so this is blocked, not skipped.
 - Octonautas 360p re-pull (above), once YouTube lets us back in.
