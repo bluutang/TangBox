@@ -42,6 +42,11 @@ CACHE_PATH = Path.home() / ".cache" / "tangbox" / "durations.json"
 _cache: Optional[Dict[str, list]] = None
 _dirty = False
 
+# New entries probed since the last write. Batched so a lazy caller probing one
+# file at a time still persists, without writing the whole cache 146 times.
+_since_flush = 0
+_FLUSH_EVERY = 20
+
 
 def _load_cache() -> Dict[str, list]:
     """Read the cache once per process. Any failure just means an empty cache."""
@@ -73,7 +78,8 @@ def flush_cache() -> None:
     temporary file and replaced atomically, so an interrupted write cannot
     leave a corrupt cache behind.
     """
-    global _dirty
+    global _dirty, _since_flush
+    _since_flush = 0
     if not _dirty or _cache is None:
         return
     try:
@@ -109,6 +115,16 @@ def probe_duration(path: Path, *, timeout: float = 15.0) -> Optional[float]:
     if value is not None and stat is not None:
         cache[key] = [value, stat[0], stat[1]]
         _dirty = True
+        # Persist without the caller having to know the cache exists. The
+        # channel schedule flushes explicitly after its loop, but the two LAZY
+        # callers - interstitial.py drawing a break clip, app.py timing the
+        # current episode - probe one file at a time and never flushed, so
+        # every advert was re-probed on every boot (~102 ms each, 146 clips).
+        # A hitch mid-break is exactly where it would be felt.
+        global _since_flush
+        _since_flush += 1
+        if _since_flush >= _FLUSH_EVERY:
+            flush_cache()
     return value
 
 
