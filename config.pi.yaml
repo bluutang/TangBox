@@ -258,6 +258,15 @@ channels:
     path: /media/tangbox/AnimeKids
     age: "6+"
     exclude: ["_*", "*/_*"]
+    # Added 2026-09-04, Brian's call, after Anime and Nick Acción. Digimon
+    # Adventure (104) is one continuous story - arguably more serialised than
+    # Dragon Ball Z next door. Pokémon (115) shares the channel and does not
+    # care, but this is a CHANNEL setting so both get it; in order simply means
+    # Pokémon starts at Kanto, which costs nothing.
+    #
+    # The two are close in length, so _sequential_order() interleaves them
+    # roughly evenly rather than proportionally.
+    episode_order: sequential
 
   - number: 22
     name: "Anime"
