@@ -270,21 +270,24 @@ channels:
     # The films are split in half so the box can go to a break inside them.
     # That works because of the stickiness in playlist.ShowOrder: while a show
     # is part-way through a "<name> - ptNN" run it is held onto, so pt01 and
-    # pt02 play back to back. Sequential order here also keeps the series in
-    # episode order, which a serialised show wants.
-    episode_order: sequential
-    # `random`, NOT `resume` - changed 2026-09-04 on Brian's call after watching
-    # it. `resume` dropped him back into the middle of a Dragon Ball Z episode at
-    # the exact second he had left, which is not what he wants from standby: he
-    # wants the CHANNEL back, then an episode from its start.
+    # pt02 play back to back.
     #
-    # It is not `broadcast` either, because broadcast builds its own shuffled
-    # running order and IGNORES `episode_order: sequential` above - which a
-    # serialised show cannot have. `random` falls through to the shuffle bag
-    # (channel.tune_in -> _next_shuffled), and with sequential order that hands
-    # back the NEXT episode in sequence, played from the beginning. Both things
-    # at once, which is why this channel does not simply use the global default.
-    tune_in: random
+    # ⚠️ `episode_order: sequential` is INERT while this channel runs on the
+    # global `broadcast`, which builds its own shuffled running order and
+    # ignores it (see the tune_in notes above). It is kept because it is what
+    # this channel wants the moment it stops being a broadcast channel, and
+    # because losing the setting would lose the intent with it.
+    episode_order: sequential
+    # NO tune_in OVERRIDE - takes the global `broadcast`, 2026-09-04, Brian's
+    # call: "for simplicity, let's treat the anime channel like the rest".
+    #
+    # This channel had been through `resume` (dropped him mid-episode at the
+    # second he left, which is not what standby should do) and then `random`
+    # (next episode in sequence, from its start). Broadcast is neither: the
+    # channel runs to a clock whether or not anybody is watching, so tuning in
+    # lands partway through whatever "would" be airing - and DBZ and Sailor
+    # Moon no longer play in episode order. That is the accepted cost of
+    # having every channel behave the same way.
     # ⚠ The oldest thing on the box. If it should not be reachable by a
     # 4-year-old at all, comment this channel out rather than relying on `age:`,
     # which is a label and not a lock.
