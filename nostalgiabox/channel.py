@@ -19,7 +19,7 @@ import re
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import AbstractSet, Dict, List, Optional, Sequence
+from typing import AbstractSet, Callable, Dict, List, Optional, Sequence
 
 # Patterns for pulling a season number out of a file/folder path.
 _SEASON_PATTERNS = (
@@ -186,6 +186,45 @@ BROADCAST_EPOCH = 1767225600.0
 _PHASE_STRIDE = 1009.0
 
 
+def _sequential_order(
+    episodes: Sequence[Path],
+    show_key: Callable[[Path], str],
+    rng: random.Random,
+) -> List[int]:
+    """A running order that keeps each SHOW in episode order but interleaves
+    the shows at random - the broadcast equivalent of playlist.ShowOrder.
+
+    ShowOrder itself cannot be used here. It is a live generator: draw a show,
+    hand back its next episode, forever. A broadcast schedule needs a FINITE
+    order that covers every episode exactly once before it loops, and drawing
+    from ShowOrder would not give one - its show bag hands each show out once
+    per cycle regardless of length, so on the Anime channel Sailor Moon (202)
+    would wrap and start repeating while Dragon Ball Z (291) was still two
+    thirds through, and the loop would both repeat and omit episodes.
+
+    So the pick is WEIGHTED BY EPISODES REMAINING. Both shows then run out
+    together, every episode airs exactly once per cycle, and which show comes
+    next is still a surprise. A channel whose shows are wildly different
+    lengths interleaves them proportionally rather than alternating, which is
+    also what a real station did with a long-running series against a short one.
+    """
+    groups: Dict[str, List[int]] = {}
+    for index, path in enumerate(episodes):
+        groups.setdefault(show_key(path), []).append(index)
+    # Sorted so the running order depends only on the seed, not on whatever
+    # order the filesystem happened to hand back.
+    remaining = {name: list(idx) for name, idx in sorted(groups.items())}
+    order: List[int] = []
+    while remaining:
+        names = sorted(remaining)
+        weights = [len(remaining[n]) for n in names]
+        name = rng.choices(names, weights=weights, k=1)[0]
+        order.append(remaining[name].pop(0))
+        if not remaining[name]:
+            del remaining[name]
+    return order
+
+
 class BroadcastSchedule:
     """A never-ending, always-running shuffled running order for a channel.
 
@@ -202,11 +241,15 @@ class BroadcastSchedule:
         *,
         epoch: float,
         rng: random.Random,
+        show_key: Optional[Callable[[Path], str]] = None,
     ) -> None:
         if len(episodes) != len(durations):
             raise ValueError("episodes and durations must be the same length")
-        order = list(range(len(episodes)))
-        rng.shuffle(order)
+        if show_key is not None:
+            order = _sequential_order(episodes, show_key, rng)
+        else:
+            order = list(range(len(episodes)))
+            rng.shuffle(order)
         self._episodes = [episodes[i] for i in order]
         self._durations = [max(1.0, float(durations[i])) for i in order]
         self._epoch = epoch
@@ -395,8 +438,20 @@ class Channel:
         # number, so it is stable across restarts too.
         cycle = sum(durations) or 1.0
         phase = (self.number * _PHASE_STRIDE) % cycle
+        # `episode_order: sequential` used to be IGNORED by broadcast - it built
+        # one flat shuffle of every episode, so a serialised show aired out of
+        # order. Now the running order keeps each show in sequence and
+        # interleaves the shows instead, which is what the setting always meant.
         self._broadcast = BroadcastSchedule(
-            self.episodes, durations, epoch=BROADCAST_EPOCH - phase, rng=self._rng
+            self.episodes,
+            durations,
+            epoch=BROADCAST_EPOCH - phase,
+            rng=self._rng,
+            show_key=(
+                (lambda p: show_name_for(p, self.config.path) or p.parent.name)
+                if self.episode_order == "sequential"
+                else None
+            ),
         )
         return self._broadcast
 

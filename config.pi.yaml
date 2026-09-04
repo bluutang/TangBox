@@ -308,6 +308,12 @@ channels:
     age: "6+"
     exclude: ["_*", "*/_*"]
     breaks: false
+    # Added 2026-09-04, Brian's call, alongside Anime and Nick Acción. It is one
+    # continuous story, so episode order is the whole point. Under `broadcast`
+    # this used to be ignored - the schedule was a flat shuffle of every episode
+    # - until _sequential_order() taught it to keep each show in sequence and
+    # interleave the shows instead.
+    episode_order: sequential
     # The FIRST non-Spanish content on the box - four Cantonese learning
     # playlists in one folder. The uploader has already age-banded them
     # (0-3, 3-5, 6+, parent-child), so splitting this into separate channels
