@@ -326,14 +326,19 @@ alternating, which is what a real station did.
 | 10 | Nick Acción | Avatar 61 · Korra 48 |
 | 21 | Anime Kids | Pokémon 115 · Digimon Adventure 104 |
 | 22 | Anime | Dragon Ball Z 291 · Sailor Moon 202 |
+| 14 | Disney Acción | Gargoyles 78 · Jake Long 51 · Street Sharks 40 · Mighty Ducks 26 |
 | 24 | Journey to the West | 42 (single show, nothing to interleave) |
+
+Disney Acción is the one set for a SINGLE show's benefit — only Gargoyles has
+arcs; the other three are episodic and come along. Cost: each now opens at its
+own episode 1 rather than anywhere in its run. Watch Mighty Ducks (26, the
+shortest) for repetitiveness.
 
 Each verified: every episode exactly once per cycle, every show in sequence,
 shows interleaved randomly.
 
-Still available if wanted: **Gargoyles** (ch 14, real arcs, but shares a channel
-with three episodic shows), Kim Possible, Rocket Power. NOT the preschool
-channels — no continuity there, and sequential would make each show always open
+Still available if wanted: Kim Possible, Rocket Power (light continuity only).
+NOT the preschool channels — no continuity there, and sequential would make each show always open
 on episode 1 rather than anywhere in its run.
 
 ## The cache does NOT pin the box to one episode
@@ -342,6 +347,60 @@ plays is `schedule.at(now)`, a function of the clock, built from a FIXED epoch
 long before the box existed. Demonstrated on Anime: now, +25 min, +60 min,
 +3 h and +24 h each gave a different episode. Turn the box off for an hour and
 the channel has moved on an hour, as a real station would.
+
+## `scripts/audit-agreement.py` — the regression guard (`9b6c0bf`)
+Every bug this session had one shape: something claimed success, or two paths
+that should have agreed quietly did not, and nothing logged a word.
+
+🔴 **Static checks CANNOT find this class.** `episode_order` WAS referenced —
+just in one path and not the other. A grep for "config fields never used
+outside config.py" returned four hits and ALL FOUR were false positives
+(`default_shuffle`, `media_root`, `start_number` belong to the auto-discovery
+path this config deliberately does not use; `seasons` is a local variable).
+Comparing ANSWERS is the only method that worked.
+
+Seven read-only checks, safe while the box is playing:
+
+| | Check |
+|---|---|
+| A | guide tile == the episode tuning actually plays |
+| B | `peek_next()` does not consume |
+| C | `advance()` follows the same schedule as tuning |
+| D | each channel's declared `episode_order` is genuinely honoured |
+| E | the cycle covers every episode exactly once |
+| F | the schedule moves with the clock |
+| G | no episode on disk is unreachable |
+
+`cd ~/TangBox && python3 scripts/audit-agreement.py` — currently **7/7 pass**.
+A found 23/23 disagreeing three hours earlier; D is what would have caught
+`sequential` being silently ignored. Passing now proves the fixes hold; it has
+not discovered anything new, and that is the point of a guard.
+
+## `media-tools/` IS `~/Downloads/Converted/_tools` (`0f77dfa`)
+The tools that built the whole library were UNTRACKED — no history, no second
+copy, and deliberately kept off the USB drive. One folder on one Mac.
+
+Now 87 files (38 shell, 28 Python, 15 JSON, plus `_records`), 0.4 MB, in git.
+
+**MOVED, not copied**, with the old path symlinked to it:
+```
+~/Downloads/Converted/_tools -> tang-box/media-tools
+```
+A copy would drift while still looking version-controlled — the exact failure
+this project keeps producing. Several tools hardcode
+`/Users/briantang/Downloads/Converted/...` and still resolve through the
+symlink; verified, including `get-xiaolin.py`'s absolute path to
+`.venv/bin/gdown`.
+
+⚠️ `.venv` (20 MB, 98% of the folder) is gitignored but must stay PHYSICALLY
+there for that hardcoded path. Recreate:
+`python3 -m venv .venv && .venv/bin/pip install beautifulsoup4 requests gdown`
+
+If the symlink is ever lost:
+```sh
+ln -s /Users/briantang/BluuClaude/tang-box/media-tools \
+      /Users/briantang/Downloads/Converted/_tools
+```
 
 ## Bugs and lessons (recurring)
 - **VPN FIRST.** A Rotterdam datacenter exit made every Lucas/Numberblocks URL
