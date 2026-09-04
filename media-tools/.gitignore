@@ -1,0 +1,16 @@
+# The virtualenv is 20MB of installed packages and 98% of this folder's size.
+# It must stay PHYSICALLY here - get-xiaolin.py hardcodes
+# /Users/briantang/Downloads/Converted/_tools/.venv/bin/gdown - but it does not
+# belong in git. Recreate with: python3 -m venv .venv && .venv/bin/pip install
+# beautifulsoup4 requests gdown
+.venv/
+__pycache__/
+*.pyc
+
+# Backups. Git is the backup now.
+*.bak
+*.bak-*
+
+# Runtime state, rewritten constantly by status.py
+.status-state.json
+.DS_Store

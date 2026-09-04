@@ -1,0 +1,257 @@
+{
+ "Franklin": {
+  "videos": 78,
+  "seconds": 107465,
+  "est_bytes": 15671979166,
+  "source": "YouTube"
+ },
+ "Daniel Tigre": {
+  "videos": 61,
+  "seconds": 102002,
+  "est_bytes": 14875291666,
+  "source": "YouTube"
+ },
+ "Barney el Dinosaurio": {
+  "videos": 41,
+  "seconds": 83031,
+  "est_bytes": 12108687500,
+  "source": "YouTube"
+ },
+ "Jorge el Curioso": {
+  "videos": 34,
+  "seconds": 98822,
+  "est_bytes": 14411541666,
+  "source": "YouTube"
+ },
+ "Pistas de Blue y tú": {
+  "videos": 82,
+  "seconds": 70528,
+  "est_bytes": 10285333333,
+  "source": "YouTube"
+ },
+ "Clifford": {
+  "videos": 77,
+  "seconds": 88803,
+  "est_bytes": 7400250000,
+  "source": "YouTube"
+ },
+ "El Autobús Mágico": {
+  "videos": 50,
+  "seconds": 74043,
+  "est_bytes": 6170249999,
+  "source": "YouTube"
+ },
+ "Arthur": {
+  "videos": 65,
+  "seconds": 104040,
+  "est_bytes": 10200000000,
+  "source": "archive.org"
+ },
+ "Sailor Moon": {
+  "videos": 202,
+  "seconds": 299460,
+  "est_bytes": 20795833332,
+  "source": "YouTube",
+  "seasons": {
+   "1": 46,
+   "2": 43,
+   "3": 38,
+   "4": 39,
+   "5": 34
+  },
+  "movies": 2
+ },
+ "Dragon Ball Z": {
+  "videos": 57,
+  "seconds": 80394,
+  "est_bytes": 2153993954,
+  "source": "archive.org"
+ },
+ "Dora la Exploradora": {
+  "videos": 32,
+  "seconds": 81725,
+  "est_bytes": 5675347222,
+  "source": "YouTube"
+ },
+ "Bear in the Big Blue House": {
+  "videos": 34,
+  "seconds": 49036,
+  "est_bytes": 4833514461,
+  "source": "archive.org"
+ },
+ "Cosmic Kids Yoga": {
+  "videos": 11,
+  "seconds": 13919,
+  "est_bytes": 966597222,
+  "source": "YouTube"
+ },
+ "Ms. Nenna": {
+  "videos": 22,
+  "seconds": 51002,
+  "est_bytes": 3541805555,
+  "source": "YouTube"
+ },
+ "Aprende Peque con Isa": {
+  "videos": 34,
+  "seconds": 105065,
+  "est_bytes": 7296180555,
+  "source": "YouTube"
+ },
+ "Uncle Calvin": {
+  "videos": 102,
+  "seconds": 63207,
+  "est_bytes": 4389375000,
+  "source": "YouTube"
+ },
+ "Journey to the West": {
+  "videos": 42,
+  "seconds": 108341,
+  "est_bytes": 23987658510,
+  "source": "archive.org"
+ },
+ "Digimon Adventure": {
+  "videos": 104,
+  "seconds": 145376,
+  "est_bytes": 7583758581,
+  "source": "archive.org",
+  "seasons": {
+   "1": 54,
+   "2": 50
+  }
+ },
+ "Rocket Power": {
+  "videos": 62,
+  "seconds": 97772,
+  "est_bytes": 10759109076,
+  "source": "archive.org"
+ },
+ "Avatar La Leyenda de Aang": {
+  "videos": 61,
+  "seconds": 80520,
+  "est_bytes": 22844647742,
+  "source": "tokyvideo",
+  "seasons": {
+   "1": 20,
+   "2": 20,
+   "3": 21
+  }
+ },
+ "Bob Esponja": {
+  "videos": 59,
+  "seconds": 77880,
+  "est_bytes": 11225212717,
+  "source": "tokyvideo",
+  "seasons": {
+   "1": 20,
+   "2": 19,
+   "3": 20
+  }
+ },
+ "La Leyenda de Korra": {
+  "videos": 48,
+  "seconds": 63360,
+  "est_bytes": 5315211632,
+  "source": "tokyvideo",
+  "seasons": {
+   "1": 10,
+   "2": 13,
+   "3": 13,
+   "4": 12
+  }
+ },
+ "Pokémon": {
+  "videos": 115,
+  "seconds": 151800,
+  "est_bytes": 12672728791,
+  "source": "tokyvideo",
+  "seasons": {
+   "1": 59,
+   "2": 28,
+   "3": 28
+  }
+ },
+ "Spidey y sus Sorprendentes Amigos": {
+  "videos": 85,
+  "seconds": 112200,
+  "est_bytes": 32758918060,
+  "source": "tokyvideo",
+  "seasons": {
+   "1": 25,
+   "2": 29,
+   "3": 30,
+   "4": 1
+  }
+ },
+ "Street Sharks": {
+  "videos": 40,
+  "seconds": 52800,
+  "est_bytes": 10000000000,
+  "source": "YouTube"
+ },
+ "Rolie Polie Olie": {
+  "videos": 8,
+  "seconds": 38520,
+  "est_bytes": 5600000000,
+  "source": "YouTube"
+ },
+ "Gargoyles": {
+  "videos": 78,
+  "seconds": 102960,
+  "est_bytes": 4169423257,
+  "source": "archive.org"
+ },
+ "Mighty Ducks": {
+  "videos": 26,
+  "seconds": 34320,
+  "est_bytes": 6500000000,
+  "source": "tokyvideo"
+ },
+ "123 Andrés - Letras": {
+  "videos": 4,
+  "seconds": 5127,
+  "est_bytes": 853553872,
+  "source": "YouTube"
+ },
+ "123 Andrés - Canciones": {
+  "videos": 6,
+  "seconds": 7805,
+  "est_bytes": 1299393013,
+  "source": "YouTube"
+ },
+ "_commercials": {
+  "videos": 78,
+  "seconds": 2277,
+  "est_bytes": 387090000,
+  "source": "YouTube"
+ },
+ "Danny Phantom": {
+  "videos": 49,
+  "seconds": 69477,
+  "est_bytes": 7568172206,
+  "source": "lacartoons (PARKED - VidHide origin dead, see _records/)"
+ },
+ "Los Padrinos Mágicos": {
+  "videos": 126,
+  "seconds": 172620,
+  "est_bytes": 15750000000,
+  "source": "lacartoons"
+ },
+ "¿Qué hay de nuevo, Scooby-Doo?": {
+  "videos": 42,
+  "seconds": 51408,
+  "est_bytes": 4139778048,
+  "source": "lacartoons"
+ },
+ "Coraje El Perro Cobarde": {
+  "videos": 51,
+  "seconds": 67320,
+  "est_bytes": 10107224064,
+  "source": "lacartoons"
+ },
+ "Patoaventuras": {
+  "videos": 73,
+  "seconds": 94900,
+  "est_bytes": 9500000000,
+  "source": "sololatino (Antigravity pipeline)"
+ }
+}
