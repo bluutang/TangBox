@@ -192,7 +192,9 @@ def page_tiles(
     per_page = cols * rows
     page = max(0, min(pages - 1, cursor // per_page))
     first = page * per_page
-    strip = _DOT_STRIP if pages > 1 else 0
+    # Only reserve the bottom strip when the dots actually go there. Down the
+    # centre gutter they cost the grid NOTHING, so the tiles keep that 34px.
+    strip = _DOT_STRIP if (pages > 1 and not dots_are_vertical(cols)) else 0
     # The detail row sits below the grid, so the tiles have to give up its
     # height - otherwise the bottom row would be drawn straight through it.
     if detail:
@@ -610,8 +612,12 @@ def guide_ass(
                 )
 
     if detail:
-        parts.extend(_detail_row(cursor, ages, shows, green, ui, pages))
-    parts.extend(_page_dots(pages, page, green))
+        parts.extend(
+            _detail_row(
+                cursor, ages, shows, green, ui, pages, dots_are_vertical(cols)
+            )
+        )
+    parts.extend(_page_dots(pages, page, green, cols))
     return "\n".join(parts)
 
 
@@ -622,6 +628,7 @@ def _detail_row(
     color: str,
     ui: UiConfig,
     pages: int,
+    vertical_dots: bool = False,
 ) -> List[str]:
     """One centred line under the grid: who the focused channel is for, and
     which shows are on it.
@@ -641,24 +648,57 @@ def _detail_row(
     if not bits:
         return []
     text = "   \u00b7   ".join(bits)
-    # Above the dots when there are dots, otherwise on the bottom margin.
-    y = CANVAS_H - _MARGIN_Y - (_DOT_STRIP if pages > 1 else 0) - _DETAIL_STRIP / 2
+    # Above the dots only when the dots are along the BOTTOM. Down the centre
+    # gutter they are nowhere near this row, so it sits on the bottom margin.
+    reserved = _DOT_STRIP if (pages > 1 and not vertical_dots) else 0
+    y = CANVAS_H - _MARGIN_Y - reserved - _DETAIL_STRIP / 2
     return [
         rf"{{\an5\pos({round(CANVAS_W / 2)},{round(y)})"
         rf"{_style(ui, size=26)}}}{_escape(text)}"
     ]
 
 
-def _page_dots(pages: int, current: int, color: str) -> List[str]:
-    """One dot per page along the bottom, the current page's dot bright.
+def dots_are_vertical(cols: int) -> bool:
+    """Can the dots run DOWN the gutter between the tile columns?
+
+    Only when the column count is even, because then the middle of the canvas
+    is a gap and not a tile. With the 2x2 page this box uses that gap is the
+    centre of the screen; with an odd number of columns the dots would be drawn
+    straight through the middle tile, so they stay along the bottom.
+    """
+    return cols % 2 == 0
+
+
+def _page_dots(pages: int, current: int, color: str, cols: int) -> List[str]:
+    """One dot per page, the current page's dot bright.
+
+    DOWN THE MIDDLE when the columns allow it (2026-09-04). They used to run
+    along the bottom, which crammed them under the grid AND said the wrong
+    thing: `down()` carries onto the next page keeping your column, so paging
+    is a VERTICAL movement, and a horizontal row of dots implied it was
+    sideways. Running them down the centre gutter matches the motion and gives
+    the tiles back the 34px strip the bottom row was costing them.
 
     Nothing at all on a single-page lineup: there is nowhere else to go, so a
     lone dot would be clutter that says nothing.
     """
     if pages <= 1:
         return []
-    cy = CANVAS_H - _MARGIN_Y - _DOT_STRIP / 2
     span = _DOT_SPACING * (pages - 1)
+    if dots_are_vertical(cols):
+        cx = CANVAS_W / 2
+        y0 = CANVAS_H / 2 - span / 2
+        return [
+            _dot(
+                cx=cx,
+                cy=y0 + index * _DOT_SPACING,
+                r=dot_style(index, current)[0],
+                fill=color,
+                alpha=dot_style(index, current)[1],
+            )
+            for index in range(pages)
+        ]
+    cy = CANVAS_H - _MARGIN_Y - _DOT_STRIP / 2
     x0 = CANVAS_W / 2 - span / 2
     return [
         _dot(
