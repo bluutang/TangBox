@@ -79,12 +79,34 @@ The 181-video playlist superseded the compilations entirely.
 
 ## Five shows PARKED — all behind one gateway
 Sharkdog, StoryBots, La Isla de las Figuras, Jugando con Winnie Pooh,
-El show de Snoopy. All route through `xupalace.org` -> `embed69.org`; nothing
-in the toolkit reaches it. Snoopy differs: its gateway returns **HTTP 444**
-(deliberate blocking) even with browser headers, where the others give a plain
-unsupported-URL error. **One embed69 resolver would unblock several at once** —
-that is the highest-leverage piece of work available, and Snoopy is a 36-episode
-source for a show that was pruned as a single-episode stub.
+El show de Snoopy. All route through `xupalace.org` -> `embed69.org`.
+
+🔴 **CORRECTED — do NOT build an "embed69 resolver".** An earlier note in this
+wrap called that the highest-leverage work. It was wrong on both counts, and
+the page source proves it. embed69 has **no obfuscation whatsoever**: the real
+link sits in plain HTML as
+`onclick="playServerVast('https://streamwish.to/e/...')"`. A regex would read
+it — and it hands back the SAME StreamWish URL already sitting in the show
+TSVs, which yt-dlp already rejects. The gateway was never the obstacle.
+
+The actual wall is the HOST layer — StreamWish, VOE, Doodstream, FileLions.
+StreamWish serves a 452-byte "Page is loading" shell that pulls a **71 KB
+string-array-obfuscated** `main.js` (obfuscator.io style: `fetch`, `atob`,
+`token` and every endpoint appear ZERO times as readable text; strings look
+like `'Ag/cSmkmrq'`). That is a much harder target than the packed-JS used by
+VidHide/cubeembed, which had a known unpacking method. Hand-decoding is not
+worth it.
+
+**If these shows are ever wanted: drive the page with Playwright** (already in
+the toolchain), let their own script run, and capture the video request off the
+network. That sidesteps the obfuscation entirely instead of fighting it, and
+generalises to all four hosts. Optional — five shows against a 4,019-episode
+library.
+
+Snoopy differs at the gateway: `xupalace.org` returns **HTTP 444** (deliberate
+blocking) even with browser headers, where the others give a plain
+unsupported-URL error. It is a 36-episode source for a show pruned earlier as
+a single-episode stub, so it is the one most worth recovering.
 
 ## Bugs and lessons (recurring)
 - **VPN FIRST.** A Rotterdam datacenter exit made every Lucas/Numberblocks URL
