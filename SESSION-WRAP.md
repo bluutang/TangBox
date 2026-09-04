@@ -3,9 +3,10 @@
 ## What happened
 Three shows filed (Lucas, Numberblocks, Octonautas) into a NEW channel,
 Patoaventuras closed out at 48, five shows blocked and parked, the USB drive
-finally installed so the box actually plays, and three real bugs found — one in
-`bundle-clips.py`, one in `app.py`'s resume, and one that was not a bug at all
-but 22 badly-matched video files making the remote lag.
+finally installed so the box actually plays, and four real bugs found — an
+ffprobe storm that blocked the main loop for 68 seconds (the remote lag), one
+in `bundle-clips.py`, one in `app.py`'s resume, and 22 badly-matched video
+files.
 
 ## Library: 23 channels, 69 shows, 4,018 episodes, 1,509 hours.
 Mac 662 GB; drive 656 GB used / 266 GB free.
@@ -110,15 +111,63 @@ blocking) even with browser headers, where the others give a plain
 unsupported-URL error. It is a 36-episode source for a show pruned earlier as
 a single-episode stub, so it is the one most worth recovering.
 
-## 🔴 "The remote is lagging" was 22 BADLY-MATCHED VIDEO FILES
-Brian reported the remote registering presses slowly. It measured clean at every
-level — 0.0% I/O wait, idle CPU, 54.9°C, no throttling, no CEC loop, `select()`
-returning instantly, Flirc enumerated fine. Moving the Flirc to a USB 3 port
-would have done nothing (an HID keyboard uses 12 Mbps by standard, not because
-the port limits it).
+## 🔴 THE REMOTE LAG WAS A 68-SECOND ffprobe STORM (FIXED `57f2650`, `951251d`)
+**This is the real cause. The 22-file section below is a genuine but SEPARATE
+defect — it did not fix the lag.**
 
-**It was content.** The Pi 5 has NO hardware H.264 decoder — everything is
-software-decoded. `Dragon Ball Z S01E01` was 1920x1080 @ 4.64 Mbps sitting among
+Every channel is `broadcast`. Building a channel's schedule probes EVERY episode
+with `ffprobe`, synchronously, **on the main loop**, the first time anyone tunes
+there. Measured on the Pi with the library on USB:
+
+```
+117 ms per probe x 493 episodes (Anime)  =  68.5 s of BLOCKED MAIN LOOP
+Nick Clasico 75 s · Nick Moderno 55 s · Disney Jr 48 s · Cartoon 40 s
+```
+
+Input is read on a SEPARATE THREAD and queued, so presses were never lost —
+they piled up and fired all at once when the storm ended. Brian: *"I pressed a
+number of sequential buttons and nothing happened for a little bit, then all
+the actions cascaded onscreen."* **That sentence is what cracked it.** Queue-
+then-cascade = blocked loop. A failing remote LOSES presses; it does not bank
+and replay them in order.
+
+🔴 **Why it appeared only now: empty channels return early and never build a
+schedule.** The bug was always there and was invisible until the USB drive gave
+the channels content. Anyone reading the git history will not see this.
+
+### The fix
+`probe.py` now caches durations to `~/.cache/tangbox/durations.json` (SD card —
+the library drive is read-only on purpose), keyed by path and validated against
+**size + mtime**, so re-encoded files self-invalidate. Written atomically.
+
+```
+channels     68.5 s -> 0.01 s      commercials  15.0 s -> 0.006 s
+cache: 4,164 entries, 587 KB (4,018 episodes + 146 adverts), fully warmed
+```
+
+Two flush paths, because there are two kinds of caller:
+- `channel.py::_ensure_broadcast` flushes explicitly after its loop.
+- The LAZY callers — `interstitial.py` drawing a break clip, `app.py:1220`
+  timing the current episode — probe one file at a time and had NO flush, so
+  all 146 adverts were re-probed every boot (~102 ms each, a hitch mid-break).
+  `probe_duration()` now self-flushes every 20 new entries, so any caller
+  persists without knowing the cache exists.
+
+### Diagnostic lessons — this took far too long
+- **Ask what the failure LOOKS like before measuring.** CPU, I/O wait, thermals,
+  CEC, memory, codecs and the IR path were all measured clean — because they
+  were sampled BETWEEN storms. One sentence describing the symptom beat six
+  clean measurements.
+- **A kernel-level input capture cleared the remote** (`/dev/input/event1`, 23
+  presses, none lost, no bunching). Worth keeping: it is how you prove the IR
+  path is innocent.
+- Backgrounding over SSH kept silently failing (exit 255, stale logs). Write the
+  script locally, `scp` it, run it in the FOREGROUND.
+
+## 🔴 22 BADLY-MATCHED VIDEO FILES (real, but NOT the lag)
+Found while hunting the lag. It did NOT fix the lag (see above) but is a real
+defect worth having fixed. The Pi 5 has NO hardware H.264 decoder — everything
+is software-decoded. `Dragon Ball Z S01E01` was 1920x1080 @ 4.64 Mbps sitting among
 290 files at 848x480 @ 0.57 Mbps: **4.3x the decode cost**, measured
 (8.6x realtime vs 37.1x). That was enough to starve input handling.
 
