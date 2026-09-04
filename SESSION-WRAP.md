@@ -116,12 +116,19 @@ source for a show that was pruned as a single-episode stub.
 - 🔴 **Sheet rows owed** for all four shows — `workspace-mcp` failed to connect
   the entire session (CONNECT_TIMEOUT), so this is blocked, not skipped.
 - Octonautas 360p re-pull (above), once YouTube lets us back in.
-- `resume-last-channel` feature: DESIGNED, NOT BUILT. Brian chose "fall back
-  after a few hours". Hook is `shutdown()` in `app.py:339` (fires once, in
-  `run()`'s finally) writing channel+timestamp; read it in
-  `_select_start_channel()` (app.py:1288) with a ~3 h threshold. SD-card wear
-  is a non-issue at one write per power-off. No state-file convention exists
-  in the repo yet.
+- `resume-last-channel` feature: **DROPPED, do not build it.** The box ALREADY
+  resumes across standby, which is how it is actually used. `_toggle_standby()`
+  calls `_remember_position()` on the way in and `tune_current()` on the way
+  out, and the process never dies — so ✱ returns you to the same channel, the
+  same episode and the same timestamp (with `tune_in: resume`), skipping the
+  position if it was mid-advert. Nothing needed to be written for that.
+  The only real gap is a PULLED PLUG: `shutdown()` (app.py:339) fires from
+  `run()`'s finally, so it covers a clean halt but never a killed process —
+  which is precisely the case the feature was for. Covering that would mean
+  writing on every channel change (still harmless: ~290 MB/year at an absurd
+  200 changes a day, and the Pi's overlay FS is off so writes do land). Brian
+  judged it not worth it, since the box lives on the TV and is halted properly.
+  Revisit ONLY if it starts losing power unexpectedly.
 - Patoaventuras is DONE at 48 — Brian's call, the other 25 are not coming.
 
 ## How to resume
