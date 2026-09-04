@@ -273,7 +273,18 @@ channels:
     # pt02 play back to back. Sequential order here also keeps the series in
     # episode order, which a serialised show wants.
     episode_order: sequential
-    tune_in: resume
+    # `random`, NOT `resume` - changed 2026-09-04 on Brian's call after watching
+    # it. `resume` dropped him back into the middle of a Dragon Ball Z episode at
+    # the exact second he had left, which is not what he wants from standby: he
+    # wants the CHANNEL back, then an episode from its start.
+    #
+    # It is not `broadcast` either, because broadcast builds its own shuffled
+    # running order and IGNORES `episode_order: sequential` above - which a
+    # serialised show cannot have. `random` falls through to the shuffle bag
+    # (channel.tune_in -> _next_shuffled), and with sequential order that hands
+    # back the NEXT episode in sequence, played from the beginning. Both things
+    # at once, which is why this channel does not simply use the global default.
+    tune_in: random
     # ⚠ The oldest thing on the box. If it should not be reachable by a
     # 4-year-old at all, comment this channel out rather than relying on `age:`,
     # which is a label and not a lock.
