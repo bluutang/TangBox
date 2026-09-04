@@ -30,18 +30,39 @@ Netflix -> 20, Anime Kids -> 21, Anime -> 22, Cantones -> 23, Journey -> 24.
 Pushed (`5ecec67`), validated with `load_config`, live on the Pi — startup log
 confirms 23 channels.
 
-## 🔴 `bundle-clips.py` HAS A BUG — do not trust its "ok"
-Its mixed-encode path feeds clips of DIFFERENT RESOLUTIONS to ffmpeg's concat
-filter, which cannot handle that. Two Octonautas blocks came out TIME-STRETCHED
-— one to **144 minutes from an intended 20** — and the tool reported both as
-`ok`, because it only verifies a block is not too SHORT. There is no guard
-against a block coming out too LONG.
+## `bundle-clips.py` — CORRECTED, and now has an end-to-end check
+🔴 **An earlier version of this wrap said the tool "only verifies a block is
+not too SHORT". THAT WAS WRONG.** The check is `abs(got - secs) > 5`, which
+catches too-long exactly as well as too-short. The claim came from misreading
+the MESSAGES ("short by...", "STILL SHORT") for the logic.
 
-Caught only by comparing minutes-in to minutes-out (835.9 vs 977.6). **Always
-run that check.** Fixed here by normalising every clip to one resolution first
-(`scale=854:480:force_original_aspect_ratio=decrease,pad=...,setsar=1`) plus
-`-fps_mode cfr` (`-vsync` is GONE from this ffmpeg — it fails loudly, but a
-script can swallow it). The tool itself is still unfixed.
+So the 144-minute Octonautas block has a different explanation, and it is the
+one that fits: an ORPHANED ffmpeg from an earlier killed run was still writing
+the same filenames. The bundler verified each block correctly at the moment it
+checked, and a stray process overwrote them afterwards. No in-process check can
+catch that.
+
+What mixed RESOLUTIONS actually do (the real defect, still true): ffmpeg's
+concat FILTER cannot handle differing dimensions and time-STRETCHES rather than
+truncating. Fixed by normalising every clip to one resolution first
+(`scale=W:H:force_original_aspect_ratio=decrease,pad=...,setsar=1`) plus
+`-fps_mode cfr` (`-vsync` is GONE from this ffmpeg).
+
+FIXED 2026-09-04 (Mac only — `_tools/` is NOT in git, and was deliberately left
+off the USB drive):
+- Messages now say "LONG by" / "short by" correctly, and a failed block reads
+  WRONG LENGTH rather than STILL SHORT.
+- **A total check at the end**: sums the staged clips against the finished
+  blocks re-probed from disk, prints `minutes in -> out`, and on a mismatch
+  over 10s prints "DO NOT FILE THESE. Check for a stray ffmpeg" and exits 1.
+  That is the check that actually caught the problem, so it now lives in the
+  tool rather than in somebody's head.
+- Verified both branches: a clean run reports 85.1 -> 85.1 MATCH; a block
+  swapped for a longer one reports 85.1 -> 87.9 MISMATCH +2.8 min and exits 1.
+
+⚠️ ALWAYS `ps -eo command | grep ffmpeg` before relaunching anything that
+writes files. Killing a parent leaves its ffmpeg children alive, and they do
+not match a `pkill -f` on the parent's name.
 
 ## Dedupe by AUDIO, never by title or duration
 All three shows arrived full of re-uploads under different Spanish titles.
