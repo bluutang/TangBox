@@ -183,7 +183,15 @@ channels:
     path: /media/tangbox/DisneyAccion
     age: "7+"
     exclude: ["_*", "*/_*"]
-    # THIN - Spider-Man, Jake Long.
+    # Gargoyles (78), Jake Long (51), Street Sharks (40), Mighty Ducks (26).
+    # The old comment here said "THIN - Spider-Man, Jake Long", which stopped
+    # being true some time ago.
+    #
+    # Sequential added 2026-09-04, Brian's call, and it is the one channel where
+    # it is set for a SINGLE show's benefit: Gargoyles has real arcs, the other
+    # three are episodic and simply come along. The cost is only that each of
+    # them now opens at its own episode 1 rather than anywhere in its run.
+    episode_order: sequential
 
   # --- Cartoon Network ---------------------------------------------------------
   # SPLIT 2026-09-03. Every other network on this box is age-split; Cartoon
