@@ -247,6 +247,81 @@ it on the actual television:
 order.** The `sequential` line is KEPT but marked inert in the config, because
 it is what the channel wants if it ever comes off broadcast.
 
+## Guide fixes: the tile lied, and the dots pointed the wrong way
+
+### 🔴 The guide showed one show and tuned to another (FIXED `2a76474`)
+Brian: *"guide tile shows sailor moon, but i click and land on dbz"*. Measured
+before the fix: **ALL 23 channels disagreed** between what the guide drew and
+what tuning played.
+
+`peek_next()` refused to build a broadcast schedule and fell through to the
+SHUFFLE BAG, while `tune_in()` built one and played what was airing on the
+SCHEDULE. Two different answers for every channel not yet tuned to.
+
+The refusal was deliberate and, when written, right — its docstring says
+building a schedule was *"far too slow to do while somebody is holding a
+remote"*, which was the 68-second ffprobe storm. **Caching durations removed
+that constraint, which is what made this fixable rather than a choice between
+two bad options.** After: 0 of 23 disagree.
+
+⚠️ This got WORSE tonight through no fault of its own: moving every channel to
+`broadcast` made every channel subject to it. Under `random` or `resume` the
+two paths agreed. Three symptoms — the lag, the cascade, the lying guide — all
+traced back to one missing cache.
+
+### Page dots now run DOWN the centre gutter (`9442fae`)
+They were crammed along the bottom AND said the wrong thing: `down()` carries
+onto the next page keeping your column, so paging is a VERTICAL movement and a
+horizontal row of dots implied sideways. (Worth knowing: the guide already
+scrolled vertically — only the indicator was misleading.)
+
+Vertical only when the column count is EVEN, because then the canvas centre is
+a gutter and not a tile; an odd count keeps the bottom row. With the 2x2 page
+the gutter runs x=567-713, so 18px dots have 146px of room.
+
+The bottom strip is no longer reserved when the dots are vertical, so the grid
+gets it back: **tiles 399x299 -> 421x316**.
+
+## `episode_order: sequential` now works under broadcast (`80d44ee`, `90983c4`)
+Brian: serialised shows should play in order while the channel still rotates
+randomly between its shows. `ShowOrder` already means exactly that — but
+broadcast IGNORED it and built one flat shuffle, so **Nick Acción and Anime had
+been asking for sequential order and silently not getting it.**
+
+`BroadcastSchedule` now takes an optional `show_key`, and `_sequential_order()`
+groups episodes by show, keeps each show in order, and picks the next show
+**WEIGHTED BY EPISODES REMAINING**.
+
+🔴 **The weighting is the whole trick, do not "simplify" it.** ShowOrder hands
+each show out once per turn regardless of length — fine for a live generator,
+wrong for a finite loop. Drawing naively, Sailor Moon (202) would wrap and
+repeat while DBZ (291) was two thirds through, so the cycle would both REPEAT
+and OMIT episodes. Weighting makes both run out together. Pleasant side effect:
+a long series against a short one interleaves proportionally rather than
+alternating, which is what a real station did.
+
+| Ch | Channel | Shows |
+|---|---|---|
+| 10 | Nick Acción | Avatar 61 · Korra 48 |
+| 21 | Anime Kids | Pokémon 115 · Digimon Adventure 104 |
+| 22 | Anime | Dragon Ball Z 291 · Sailor Moon 202 |
+| 24 | Journey to the West | 42 (single show, nothing to interleave) |
+
+Each verified: every episode exactly once per cycle, every show in sequence,
+shows interleaved randomly.
+
+Still available if wanted: **Gargoyles** (ch 14, real arcs, but shares a channel
+with three episodic shows), Kim Possible, Rocket Power. NOT the preschool
+channels — no continuity there, and sequential would make each show always open
+on episode 1 rather than anywhere in its run.
+
+## The cache does NOT pin the box to one episode
+Asked and answered: it stores DURATIONS only — a static fact per file. What
+plays is `schedule.at(now)`, a function of the clock, built from a FIXED epoch
+long before the box existed. Demonstrated on Anime: now, +25 min, +60 min,
++3 h and +24 h each gave a different episode. Turn the box off for an hour and
+the channel has moved on an hour, as a real station would.
+
 ## Bugs and lessons (recurring)
 - **VPN FIRST.** A Rotterdam datacenter exit made every Lucas/Numberblocks URL
   read "This video is not available". I wrongly told Brian the videos had been
