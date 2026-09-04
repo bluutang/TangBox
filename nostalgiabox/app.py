@@ -1279,7 +1279,17 @@ class TVApp:
     def _remember_position(self) -> None:
         # An advert is not an episode: remembering its path would make "resume"
         # come back to the middle of a cereal commercial.
-        if self.config.tune_in != "resume" or self._playing_path is None or self.in_break:
+        # The CHANNEL's mode, not the global one. This read `self.config.tune_in`
+        # until 2026-09-04, which is the global default - `broadcast` here - so it
+        # returned early every single time and no position was ever recorded. The
+        # two channels that ask for `tune_in: resume` (Anime, Journey to the West)
+        # therefore always restarted the episode, because Channel.tune_in() looks
+        # for a saved position that nothing had ever saved.
+        if (
+            self.lineup.current.tune_in_mode != "resume"
+            or self._playing_path is None
+            or self.in_break
+        ):
             return
         pos = self.player.get_time_pos()
         if pos is not None:
