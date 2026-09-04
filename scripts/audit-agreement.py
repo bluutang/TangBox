@@ -8,12 +8,23 @@ answers rather than reading code, which is the only method that caught it.
 
 Read-only: nothing is written, no episode is consumed. Safe with the box live.
 """
+import os
+import sys
 import time
 from collections import Counter
-from nostalgiabox.config import load_config
-from nostalgiabox.channel import build_lineup, show_name_for
+from pathlib import Path
 
-cfg = load_config("config.yaml")
+# Python puts the SCRIPT's directory on sys.path, not the working directory, so
+# living in scripts/ means `nostalgiabox` is not importable without this. Same
+# trap cost a debugging round the night this was written.
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+
+from nostalgiabox.config import load_config  # noqa: E402
+from nostalgiabox.channel import build_lineup, show_name_for  # noqa: E402
+
+# Run from anywhere: the live config sits at the repo root, not beside us.
+cfg = load_config(str(ROOT / "config.yaml"))
 lineup = list(build_lineup(cfg))
 fails = []
 
