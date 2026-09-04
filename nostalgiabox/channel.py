@@ -318,18 +318,30 @@ class Channel:
         The channel guide asks every channel this, so a tile can show the
         programme you would actually GET rather than guessing.
 
-        It must disturb nothing. No episode is drawn from the bag, no resume
-        position is spent, and **no broadcast schedule is built** - building one
-        probes every file with ffprobe, which is far too slow to do while
-        somebody is holding a remote. A broadcast channel that has not aired yet
-        falls back to the shuffle, which is what it would open with anyway.
+        It must disturb nothing: no episode is drawn from the bag and no resume
+        position is spent.
+
+        🔴 IT NOW BUILDS THE BROADCAST SCHEDULE, and must. It used to refuse -
+        "far too slow to do while somebody is holding a remote", which was true
+        when that meant an ffprobe per episode - and fell back to the shuffle
+        bag instead. But `tune_in()` DOES build the schedule, so the two
+        disagreed: the guide drew the shuffle's next episode while tuning gave
+        you whatever was airing on the schedule. Brian saw a Sailor Moon tile,
+        pressed it, and landed on Dragon Ball Z.
+
+        Durations are cached now (see probe.py), so building a schedule costs
+        ~0.01s instead of ~68s and the compromise that forced the guide to lie
+        is gone. The guide can afford to tell the truth.
         """
         if self.is_empty:
             return None
         if self.tune_in_mode == "resume" and self._resume_path is not None:
             return self._resume_path
-        if self.tune_in_mode == "broadcast" and self._broadcast is not None:
-            return self._broadcast.at(time.time()).path
+        if self.tune_in_mode == "broadcast":
+            now = time.time()
+            schedule = self._ensure_broadcast(epoch=now)
+            if schedule is not None:
+                return schedule.at(now).path
         assert self._bag is not None
         return self._bag.peek()
 
