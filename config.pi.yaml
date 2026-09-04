@@ -227,7 +227,21 @@ channels:
   # --- Netflix ---------------------------------------------------------------
   # MERGED 2026-09-03. Netflix Cuentos never grew past one show; folded into
   # the Kids channel rather than leave a near-empty one on the dial.
+  # SPLIT AGAIN 2026-09-03, but by AGE and only because there was new weight to
+  # split with. Lucas and Numberblocks both stream on Netflix and both skew
+  # younger than what the main channel carries, so they open a Jr channel
+  # rather than dilute it. Younger sits first, as it does for PBS and Apple.
   - number: 19
+    name: "Netflix Jr"
+    path: /media/tangbox/NetflixJr
+    age: "2-6"
+    exclude: ["_*", "*/_*"]
+    # La arana Lucas (Cartoonito), Numberblocks. Both arrived as YouTube
+    # uploads full of re-uploads under different Spanish titles - deduped by
+    # audio fingerprint, not by name, because the names disagree and the
+    # durations do too.
+
+  - number: 20
     name: "Netflix"
     path: /media/tangbox/Netflix
     age: "3-8"
@@ -239,13 +253,13 @@ channels:
   # Anime Kids now sits BEFORE Anime (moved 2026-09-03, at Brian's request).
   # Digimon and Pokemon are anime, but they skew far younger than Sailor Moon
   # and Dragon Ball Z - age splits the pair rather than network.
-  - number: 20
+  - number: 21
     name: "Anime Kids"
     path: /media/tangbox/AnimeKids
     age: "6+"
     exclude: ["_*", "*/_*"]
 
-  - number: 21
+  - number: 22
     name: "Anime"
     path: /media/tangbox/Anime
     age: "10+"
@@ -268,13 +282,13 @@ channels:
   # Cantonés and Journey to the West: neither is animation, and neither has a
   # network, which is why both sit at the end rather than inside a network
   # block above.
-  - number: 22
+  - number: 23
     name: "Cantonés"
     path: /media/tangbox/Cantones
     age: "0-6"
     exclude: ["_*", "*/_*"]
 
-  - number: 23
+  - number: 24
     name: "Journey to the West"
     path: /media/tangbox/JourneyWest
     age: "6+"
