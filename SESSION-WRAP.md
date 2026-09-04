@@ -2,11 +2,13 @@
 
 ## What happened
 Three shows filed (Lucas, Numberblocks, Octonautas) into a NEW channel,
-Patoaventuras closed out at 48, five shows blocked and parked, and two real
-bugs found — one in `bundle-clips.py` that would have filed broken episodes
-silently.
+Patoaventuras closed out at 48, five shows blocked and parked, the USB drive
+finally installed so the box actually plays, and three real bugs found — one in
+`bundle-clips.py`, one in `app.py`'s resume, and one that was not a bug at all
+but 22 badly-matched video files making the remote lag.
 
-## Library: 23 channels, 69 shows, 4,019 episodes, 1,509 hours. 9.1 GB free.
+## Library: 23 channels, 69 shows, 4,018 episodes, 1,509 hours.
+Mac 662 GB; drive 656 GB used / 266 GB free.
 
 ## Filed this session
 | Show | Eps | Min | Channel |
@@ -100,13 +102,101 @@ worth it.
 **If these shows are ever wanted: drive the page with Playwright** (already in
 the toolchain), let their own script run, and capture the video request off the
 network. That sidesteps the obfuscation entirely instead of fighting it, and
-generalises to all four hosts. Optional — five shows against a 4,019-episode
+generalises to all four hosts. Optional — five shows against a 4,018-episode
 library.
 
 Snoopy differs at the gateway: `xupalace.org` returns **HTTP 444** (deliberate
 blocking) even with browser headers, where the others give a plain
 unsupported-URL error. It is a 36-episode source for a show pruned earlier as
 a single-episode stub, so it is the one most worth recovering.
+
+## 🔴 "The remote is lagging" was 22 BADLY-MATCHED VIDEO FILES
+Brian reported the remote registering presses slowly. It measured clean at every
+level — 0.0% I/O wait, idle CPU, 54.9°C, no throttling, no CEC loop, `select()`
+returning instantly, Flirc enumerated fine. Moving the Flirc to a USB 3 port
+would have done nothing (an HID keyboard uses 12 Mbps by standard, not because
+the port limits it).
+
+**It was content.** The Pi 5 has NO hardware H.264 decoder — everything is
+software-decoded. `Dragon Ball Z S01E01` was 1920x1080 @ 4.64 Mbps sitting among
+290 files at 848x480 @ 0.57 Mbps: **4.3x the decode cost**, measured
+(8.6x realtime vs 37.1x). That was enough to starve input handling.
+
+What made it feel like hardware: `ShowOrder` starts every show at its FIRST
+episode, so the one odd file was reliably the first thing played. Land on the
+channel, remote goes slow, every time.
+
+**The pattern repeated 10 times.** A first episode gets grabbed alone as a
+sample at whatever quality was going; the series is bulk-downloaded later at
+something lower. A library-wide scan (`scratchpad/outliers.py`, worth moving to
+`_tools/`) found 645 outliers — 157 heavier than their siblings, 488 lighter.
+
+**22 files normalised** to their own show's modal resolution and median bitrate:
+DBZ, then Jake Long (9.0x!), Lilo y Stitch, Tres Caballeros, Patoaventuras,
+Mighty Ducks and Pokémon first episodes, then the remaining 15 heavy files in
+Pokémon and Mighty Ducks. Every one verified for duration drift AND decode
+before swapping, on the Mac and the drive. Verified after: fixed episodes now
+decode at or better than their siblings.
+
+- Originals kept as `_orig_*.mp4.keep` — **22 files, 6.3 GB**, Mac only,
+  excluded from playback by the `_*` rule. They are the only higher-res copies
+  and several sources are dead. Not deleted without Brian saying so.
+- ⚠️ **Patoaventuras S01E01 was one of them** — the file kept EARLIER the same
+  session under "diff before replacing, keep the better copy". That rule
+  optimises for quality and creates decode outliers. Both instincts are right;
+  they point opposite ways. On a 480p library behind a CRT shader, consistency
+  won.
+- LESSON FOR FUTURE DOWNLOADS: match the sample episode to whatever the bulk
+  download produces, or re-pull the sample after. This is what created all 22.
+- Three files still read as "heavy" (486x360, 470x360, 478x360 against a
+  480x360 norm). Ignore them — 1% dimension variation, two are SMALLER.
+
+## Writing to the drive: remount, do it, remount back
+```
+sudo mount -o remount,rw /media/tangbox
+... replace files ...
+sync && sudo mount -o remount,ro /media/tangbox
+```
+Check nothing is playing the target file first:
+`for p in $(pgrep -f "tangbox|mpv"); do ls -l /proc/$p/fd | grep -o "/media/tangbox/.*"; done`
+Remounting does NOT disturb open reads; replacing a file being played would.
+
+⚠️ **The Pi's `/tmp` is a 2 GB tmpfs (RAM).** Staging 17 files there filled it
+and four `scp`s failed with "write remote: Failure". `scp` STRAIGHT to the
+destination under `/media/tangbox/...` while it is rw — the mount is uid=1000,
+so brian owns it.
+
+## 🔴 RESUME WAS BROKEN — `app.py` checked the GLOBAL setting (FIXED `22dcf47`)
+```python
+if self.config.tune_in != "resume" ...:   # WRONG: global, which is 'broadcast'
+    return                                 # so it returned EVERY time
+```
+`_remember_position()` tested `self.config.tune_in` — the global default — not
+the channel's own mode. It therefore returned early on every call and no
+position was ever saved. `Channel.tune_in()` then looked for a saved position
+that nothing had ever written, so a `resume` channel silently restarted its
+episode instead. Now reads `self.lineup.current.tune_in_mode`.
+
+Nasty because it LOOKS like a config error: the channel setting was right, the
+code reading it was right, only the code WRITING the position was wrong, and
+nothing logs an error. Found only because Brian reported the symptom.
+
+The fix is correct but now DORMANT — no channel uses `resume` any more.
+
+## The Anime channel went through three modes in one evening
+`resume` → `random` → `broadcast` (final, `4476d45`), each decided by watching
+it on the actual television:
+- `resume` dropped him mid-episode at the second he left. Not what standby
+  should do.
+- `random` gave the next episode in sequence from its start — it falls through
+  to `_next_shuffled()`, so `episode_order: sequential` still applied.
+- `broadcast` (Brian: "for simplicity, let's treat the anime channel like the
+  rest") — no override at all now.
+
+⚠️ **Accepted cost: broadcast builds its own shuffled running order and IGNORES
+`episode_order: sequential`, so DBZ and Sailor Moon no longer play in episode
+order.** The `sequential` line is KEPT but marked inert in the config, because
+it is what the channel wants if it ever comes off broadcast.
 
 ## Bugs and lessons (recurring)
 - **VPN FIRST.** A Rotterdam datacenter exit made every Lucas/Numberblocks URL
@@ -152,18 +242,28 @@ a single-episode stub, so it is the one most worth recovering.
   - Formatting and reading the volume FAILED from the Bash tool
     (`restricted by Sandbox ... -69464`); Disk Utility had to do it. Expect
     that for any removable-volume operation from this harness.
-  - 4,018 not 4,019: `PBSKids/Jorge el Curioso/_unsplit/NA-XBSF8xSNt2g.mp4` is
-    an unsplit raw source, correctly excluded by `exclude: ["_*", "*/_*"]`.
-    A raw `find` over-counts it; the box is right.
+  - 4,018 not 4,019: `PBSKids/Jorge el Curioso/_unsplit/NA-XBSF8xSNt2g.mp4` was
+    an unsplit raw source, correctly excluded by `exclude: ["_*", "*/_*"]` —
+    a raw `find` over-counted it; the box was right. DELETED from the Mac
+    2026-09-04 (213 MB). Still on the DRIVE, harmless and ignored; it will go
+    at the next sync.
 - 🔴 **Sheet rows owed** for all four shows — `workspace-mcp` failed to connect
-  the entire session (CONNECT_TIMEOUT), so this is blocked, not skipped.
+  the entire session (CONNECT_TIMEOUT), so this is blocked, not skipped. Try
+  restarting that server. **The rows are already built and waiting** — paste
+  them or push them the moment it connects:
+  `_tools/_records/sheet_lineup.tsv` (4 rows) and
+  `_tools/_records/sheet_episodes.tsv` (210 rows, one per file). Tab-separated,
+  so they paste straight into Sheets. `Named` is 0 for all four per the
+  no-titles rule; `Verified` / `Actually contains` left EMPTY deliberately —
+  those are hand-written and must never be invented.
 - Octonautas 360p re-pull (above), once YouTube lets us back in.
 - `resume-last-channel` feature: **DROPPED, do not build it.** The box ALREADY
-  resumes across standby, which is how it is actually used. `_toggle_standby()`
-  calls `_remember_position()` on the way in and `tune_current()` on the way
-  out, and the process never dies — so ✱ returns you to the same channel, the
-  same episode and the same timestamp (with `tune_in: resume`), skipping the
-  position if it was mid-advert. Nothing needed to be written for that.
+  restores the CHANNEL across standby, which is how it is actually used:
+  `_toggle_standby()` calls `tune_current()` on the way out and the process
+  never dies. (An earlier version of this note also claimed it restored the
+  same episode and timestamp. It did not — `_remember_position()` was broken,
+  see the resume bug below. And Brian does not want that anyway: "I just want
+  standby to resume the channel, not the show at the signed-off timemark".)
   The only real gap is a PULLED PLUG: `shutdown()` (app.py:339) fires from
   `run()`'s finally, so it covers a clean halt but never a killed process —
   which is precisely the case the feature was for. Covering that would mean
