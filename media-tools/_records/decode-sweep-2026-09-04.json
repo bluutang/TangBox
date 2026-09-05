@@ -1,0 +1,165 @@
+{
+ "TRUNCATED": [
+  {
+   "file": "Anime/Dragon Ball Z/Season 05/Dragon Ball Z - S05E79.mp4",
+   "error": "[h264 @ 0x783020e00] Invalid NAL unit size (3681 > 2215).\n[h264 @ 0x783020e00] missing picture in access unit with size 2219\n[in#0/mov,mp4,m4a,3gp,3g2,mj2 @ 0x782c1c000] stream 0, offset 0x53805ba: partial file\n[h264 @ 0x783022680] Invalid NAL unit size (3681 > 2215).\n[h264 @ 0x783022680] Error spli"
+  },
+  {
+   "file": "AnimeKids/Digimon Adventure/Season 01/Digimon Adventure - S01E51 - El Terrible Piedmon.mp4",
+   "error": "[aac @ 0x8ef160700] channel element 0.1 is not allocated\n[aist#0:1/aac @ 0x8ef00c480] [dec:aac @ 0x8ef0103c0] Error submitting packet to decoder: Invalid data found when processing input"
+  },
+  {
+   "file": "AppleCuentos/El ni\u00f1o lobo y la f\u00e1brica del todo/Season 01/El ni\u00f1o lobo y la f\u00e1brica del todo - S01E07.mp4",
+   "error": "[aac @ 0x99f178a80] Number of bands (55) exceeds limit (37).\n[aist#0:1/aac @ 0x99f008480] [dec:aac @ 0x99f00c3c0] Error submitting packet to decoder: Invalid data found when processing input\n[h264 @ 0x99f178000] cabac decode of qscale diff failed at 15 5\n[h264 @ 0x99f178000] error while decoding MB "
+  },
+  {
+   "file": "AppleSnoopy/Snoopy el astronauta Buscando vida en el espacio/Season 02/Snoopy el astronauta Buscando vida en el espacio - S02E06.mp4",
+   "error": "[aac @ 0x892cf0700] Input buffer exhausted before END element found\n[aist#0:1/aac @ 0x892c14480] [dec:aac @ 0x892c1c500] Error submitting packet to decoder: Invalid data found when processing input\n[h264 @ 0x892803b80] error while decoding MB 32 38, bytestream -6\n[h264 @ 0x892803800] error while dec"
+  },
+  {
+   "file": "Disney/Kim Possible/Season 01/Kim Possible - S01E11.mp4",
+   "error": "[aac @ 0xc8f514a80] TNS filter order 20 is greater than maximum 12.\n[aist#0:1/aac @ 0xc8ec14600] [dec:aac @ 0xc8ec1c3c0] Error submitting packet to decoder: Invalid data found when processing input\n[h264 @ 0xc8f406d80] error while decoding MB 40 24, bytestream -9\n[h264 @ 0xc8f406d80] error while dec"
+  },
+  {
+   "file": "DisneyAccion/Gargoyles/Season 01/Gargoyles - S01E40.mp4",
+   "error": "[in#0/mov,mp4,m4a,3gp,3g2,mj2 @ 0x832808000] stream 0, offset 0x2b4c517: partial file\n[h264 @ 0x83341b480] Invalid NAL unit size (2235 > 904).\n[h264 @ 0x83341b480] Error splitting the input into NAL units.\n[vist#0:0/h264 @ 0x833404600] [dec:h264 @ 0x8334083c0] Decoding error: Invalid data found when"
+  },
+  {
+   "file": "Netflix/My Melody Kuromi/Season 01/My Melody Kuromi - S01E10.mp4",
+   "error": "[aac @ 0x9c7180700] Input buffer exhausted before END element found\n[aist#0:1/aac @ 0x9c700c480] [dec:aac @ 0x9c70103c0] Error submitting packet to decoder: Invalid data found when processing input\n[h264 @ 0x9c701df80] cabac decode of qscale diff failed at 23 34\n[h264 @ 0x9c701df80] error while deco"
+  },
+  {
+   "file": "Netflix/My Melody Kuromi/Season 01/My Melody Kuromi - S01E12.mp4",
+   "error": "[aac @ 0x7bacf4700] Number of bands (47) exceeds limit (45).\n[aist#0:1/aac @ 0x7bac14480] [dec:aac @ 0x7bac1c3c0] Error submitting packet to decoder: Invalid data found when processing input\n[h264 @ 0x7bac6fb80] error while decoding MB 44 56, bytestream -5\n[aac @ 0x7bacf4700] Input buffer exhausted "
+  },
+  {
+   "file": "NickAccion/Avatar La leyenda de Aang/Season 01/Avatar La leyenda de Aang - S01E08.mp4",
+   "error": "[aac @ 0xac320c700] Input buffer exhausted before END element found\n[aist#0:1/aac @ 0xac300c600] [dec:aac @ 0xac30103c0] Error submitting packet to decoder: Invalid data found when processing input\n[h264 @ 0xac301df80] error while decoding MB 58 18, bytestream -5"
+  },
+  {
+   "file": "NickAccion/Avatar La leyenda de Aang/Season 01/Avatar La leyenda de Aang - S01E09.mp4",
+   "error": "[aac @ 0x9470fca80] Input buffer exhausted before END element found\n[aist#0:1/aac @ 0x946c14600] [dec:aac @ 0x946c1c500] Error submitting packet to decoder: Invalid data found when processing input"
+  },
+  {
+   "file": "NickClasico/Doug/Season 05/Doug - S05E22.mp4",
+   "error": "[h264 @ 0xba7403b80] Reference 3 >= 2\n[h264 @ 0xba7403b80] error while decoding MB 32 4, bytestream -1\n[aac @ 0xba71b4e00] Number of bands (67) exceeds limit (37).\n[aist#0:1/aac @ 0xba700c480] [dec:aac @ 0xba7010640] Error submitting packet to decoder: Invalid data found when processing input\n[aac @"
+  },
+  {
+   "file": "NickClasico/\u00a1Oye Arnold/Season 04/\u00a1Oye Arnold - S04E01.mp4",
+   "error": "[aac @ 0xbb5574700] Number of bands (45) exceeds limit (42).\n[aist#0:1/aac @ 0xbb500c600] [dec:aac @ 0xbb54003c0] Error submitting packet to decoder: Invalid data found when processing input\n[h264 @ 0xbb5412d80] error while decoding MB 35 9, bytestream -8"
+  },
+  {
+   "file": "PBSPequenos/Teletubbies/Season 01/Teletubbies - S01E18.mp4",
+   "error": "[h264 @ 0xc6ac4fb80] error while decoding MB 70 12, bytestream -6\n[aac @ 0xc6ad18700] Input buffer exhausted before END element found\n[aist#0:1/aac @ 0xc6ac14480] [dec:aac @ 0xc6ac1c3c0] Error submitting packet to decoder: Invalid data found when processing input\n[h264 @ 0xc6ac4f800] error while dec"
+  },
+  {
+   "file": "PBSPequenos/Teletubbies/Season 01/Teletubbies - S01E19.mp4",
+   "error": "[aac @ 0xa35188700] Input buffer exhausted before END element found\n[aist#0:1/aac @ 0xa3500c480] [dec:aac @ 0xa350103c0] Error submitting packet to decoder: Invalid data found when processing input\n[h264 @ 0xa35021c00] error while decoding MB 28 17, bytestream -14\n[aac @ 0xa35188700] Number of bands"
+  },
+  {
+   "file": "PBSPequenos/Teletubbies/Season 01/Teletubbies - S01E21.mp4",
+   "error": "[aac @ 0xb9d164700] Pulse data corrupt or invalid.\n[aist#0:1/aac @ 0xb9d00c480] [dec:aac @ 0xb9d0103c0] Error submitting packet to decoder: Invalid data found when processing input\n[h264 @ 0xb9d01f480] error while decoding MB 39 37, bytestream -6\n[h264 @ 0xb9d01f100] cabac decode of qscale diff fail"
+  }
+ ],
+ "VIDEO": [
+  {
+   "file": "AppleCuentos/Sapo y Sepo/Season 01/Sapo y Sepo - S01E01.mp4",
+   "error": "[h264 @ 0x96b023480] error while decoding MB 51 46, bytestream -17"
+  },
+  {
+   "file": "DisneyJr/Bluey/Season 02/Bluey - S02E49.mp4",
+   "error": "[h264 @ 0xbb9020e00] Invalid NAL unit size (0 > 50).\n[h264 @ 0xbb9020e00] missing picture in access unit with size 54\n[h264 @ 0xbb9020e00] missing picture in access unit with size 365\n[h264 @ 0xbb9023b80] Invalid NAL unit size (0 > 50).\n[h264 @ 0xbb9023b80] Error splitting the input into NAL units.\n"
+  },
+  {
+   "file": "DisneyJr/Bluey/Season 03/Bluey - S03E31.mp4",
+   "error": "[h264 @ 0xa8f014e00] Invalid NAL unit size (0 > 50).\n[h264 @ 0xa8f014e00] missing picture in access unit with size 54\n[h264 @ 0xa8f014e00] missing picture in access unit with size 365\n[h264 @ 0xa8f017b80] Invalid NAL unit size (0 > 50).\n[h264 @ 0xa8f017b80] Error splitting the input into NAL units.\n"
+  },
+  {
+   "file": "NickModerno/Las Aventuras de Jimmy Neutron El Ni\u00f1o Genio/Season 01/Las Aventuras de Jimmy Neutron El Ni\u00f1o Genio - S01E04.mp4",
+   "error": "[h264 @ 0x7af01d180] Invalid NAL unit size (481041721 > 482).\n[h264 @ 0x7af01d180] missing picture in access unit with size 486\n[h264 @ 0x7af01d180] Invalid NAL unit size (-643877218 > 478).\n[h264 @ 0x7af01d180] missing picture in access unit with size 482\n[h264 @ 0x7af01d180] Invalid NAL unit size "
+  },
+  {
+   "file": "NickModerno/Las Aventuras de Jimmy Neutron El Ni\u00f1o Genio/Season 01/Las Aventuras de Jimmy Neutron El Ni\u00f1o Genio - S01E16.mp4",
+   "error": "[h264 @ 0xa99011180] Invalid NAL unit size (719101050 > 2150).\n[h264 @ 0xa99011180] missing picture in access unit with size 2154\n[h264 @ 0xa99011180] Invalid NAL unit size (2022510347 > 3171).\n[h264 @ 0xa99011180] missing picture in access unit with size 3175\n[h264 @ 0xa99011180] Invalid NAL unit s"
+  }
+ ],
+ "AUDIO": [],
+ "MUXER NOISE": [
+  {
+   "file": "CartoonAccion/Las Aventuras de Jackie Chan/Season 02/Las Aventuras de Jackie Chan - S02E36.mp4",
+   "error": "[null @ 0xa53017700] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 4810 >= 4810\n[null @ 0xa53017700] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 4813 >= 4813\n[null @ 0xa53017700] Application provided invalid, non monoton"
+  },
+  {
+   "file": "CartoonAccion/Las Aventuras de Jackie Chan/Season 04/Las Aventuras de Jackie Chan - S04E06.mp4",
+   "error": "[null @ 0x95500f700] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 12451 >= 12451\n[null @ 0x95500f700] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 12454 >= 12454\n[null @ 0x95500f700] Application provided invalid, non mon"
+  },
+  {
+   "file": "CartoonAccion/Las Aventuras de Jackie Chan/Season 04/Las Aventuras de Jackie Chan - S04E12.mp4",
+   "error": "[null @ 0x829403700] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 30079 >= 30079\n[null @ 0x829403700] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 30082 >= 30082\n[null @ 0x829403700] Application provided invalid, non mon"
+  },
+  {
+   "file": "CartoonAccion/Las Aventuras de Jackie Chan/Season 05/Las Aventuras de Jackie Chan - S05E06.mp4",
+   "error": "[null @ 0xc3ec1f700] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 27553 >= 27553\n[null @ 0xc3ec1f700] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 27556 >= 27556\n[null @ 0xc3ec1f700] Application provided invalid, non mon"
+  },
+  {
+   "file": "CartoonAccion/Xiaolin Showdown/Season 02/Xiaolin Showdown - S02E04.mp4",
+   "error": "[null @ 0x765500000] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 2523 >= 2523\n[null @ 0x765500000] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 2765 >= 2765\n[null @ 0x765500000] Application provided invalid, non monoton"
+  },
+  {
+   "file": "CartoonComedia/Tom y Jerry/Season 01/Tom y Jerry - S01E05.mp4",
+   "error": "[null @ 0x701403700] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 10188 >= 10187\n    Last message repeated 1797 times\n[null @ 0x701403700] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 10188 >= 10188\n    Last message repe"
+  },
+  {
+   "file": "DisneyJr/Bluey/Season 02/Bluey - S02E05.mp4",
+   "error": "[null @ 0x950c1f700] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 10397 >= 10397\n[null @ 0x950c1f700] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 10401 >= 10401\n[null @ 0x950c1f700] Application provided invalid, non mon"
+  },
+  {
+   "file": "DisneyJr/Bluey/Season 02/Bluey - S02E48.mp4",
+   "error": "[null @ 0xa7b00f700] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 10397 >= 10397\n[null @ 0xa7b00f700] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 10401 >= 10401\n[null @ 0xa7b00f700] Application provided invalid, non mon"
+  },
+  {
+   "file": "DisneyJr/Bluey/Season 03/Bluey - S03E49.mp4",
+   "error": "[null @ 0xc14c27700] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 41821 >= 41821\n[null @ 0xc14c27700] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 41825 >= 41825\n[null @ 0xc14c27700] Application provided invalid, non mon"
+  },
+  {
+   "file": "Netflix/Los guardaesp\u00edritus del bosque/Season 01/Los guardaesp\u00edritus del bosque - S01E01.mp4",
+   "error": "[null @ 0x752c27700] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 2 >= 2\n[null @ 0x752c27700] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 5 >= 5\n[null @ 0x752c27700] Application provided invalid, non monotonically incre"
+  },
+  {
+   "file": "Netflix/Los guardaesp\u00edritus del bosque/Season 01/Los guardaesp\u00edritus del bosque - S01E03.mp4",
+   "error": "[null @ 0xac700f700] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 2 >= 2\n[null @ 0xac700f700] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 5 >= 5\n[null @ 0xac700f700] Application provided invalid, non monotonically incre"
+  },
+  {
+   "file": "Netflix/Los guardaesp\u00edritus del bosque/Season 01/Los guardaesp\u00edritus del bosque - S01E04.mp4",
+   "error": "[null @ 0xb6ec1f700] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 2 >= 2\n[null @ 0xb6ec1f700] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 5 >= 5\n[null @ 0xb6ec1f700] Application provided invalid, non monotonically incre"
+  },
+  {
+   "file": "Netflix/Los guardaesp\u00edritus del bosque/Season 01/Los guardaesp\u00edritus del bosque - S01E05.mp4",
+   "error": "[null @ 0xb0100f700] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 2 >= 2\n[null @ 0xb0100f700] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 5 >= 5\n[null @ 0xb0100f700] Application provided invalid, non monotonically incre"
+  },
+  {
+   "file": "Netflix/Los guardaesp\u00edritus del bosque/Season 01/Los guardaesp\u00edritus del bosque - S01E06.mp4",
+   "error": "[null @ 0x957017700] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 2 >= 2\n[null @ 0x957017700] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 5 >= 5\n[null @ 0x957017700] Application provided invalid, non monotonically incre"
+  },
+  {
+   "file": "Netflix/Los guardaesp\u00edritus del bosque/Season 01/Los guardaesp\u00edritus del bosque - S01E07.mp4",
+   "error": "[null @ 0xc07017700] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 2 >= 2\n[null @ 0xc07017700] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 5 >= 5\n[null @ 0xc07017700] Application provided invalid, non monotonically incre"
+  },
+  {
+   "file": "Netflix/Los guardaesp\u00edritus del bosque/Season 01/Los guardaesp\u00edritus del bosque - S01E08.mp4",
+   "error": "[null @ 0xadac27700] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 2 >= 2\n[null @ 0xadac27700] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 5 >= 5\n[null @ 0xadac27700] Application provided invalid, non monotonically incre"
+  },
+  {
+   "file": "Netflix/Los guardaesp\u00edritus del bosque/Season 01/Los guardaesp\u00edritus del bosque - S01E10.mp4",
+   "error": "[null @ 0x753017700] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 2 >= 2\n[null @ 0x753017700] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 5 >= 5\n[null @ 0x753017700] Application provided invalid, non monotonically incre"
+  },
+  {
+   "file": "NickAccion/Avatar La leyenda de Aang/Season 01/Avatar La leyenda de Aang - S01E04.mp4",
+   "error": "[null @ 0x75900f700] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 2 >= 2\n[null @ 0x75900f700] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 6 >= 6\n[null @ 0x75900f700] Application provided invalid, non monotonically incre"
+  },
+  {
+   "file": "NickAccion/Avatar La leyenda de Aang/Season 01/Avatar La leyenda de Aang - S01E13.mp4",
+   "error": "[null @ 0x9f4c27700] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 2 >= 2\n[null @ 0x9f4c27700] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 6 >= 6\n[null @ 0x9f4c27700] Application provided invalid, non monotonically incre"
+  }
+ ]
+}

@@ -402,6 +402,63 @@ ln -s /Users/briantang/BluuClaude/tang-box/media-tools \
       /Users/briantang/Downloads/Converted/_tools
 ```
 
+## Full-library decode sweep — 4,018 files, 4 real defects (1 fixed)
+Ran `media-tools/decode-sweep.py` over every playable episode: 314 minutes,
+8 workers on the Mac. **39 flagged raw; only 4 had missing footage.**
+
+🔴 **CLASSIFYING BY ERROR TEXT FAILED TWICE. Only one test works:**
+```
+does the file decode to its STATED duration?
+```
+- First I counted `[null @ ...]` lines as corruption. They are the null MUXER
+  complaining about timestamps it was handed — **my own harness**, not the
+  file. 19 of 39 were this. All 8 flagged Los guardaespíritus episodes are
+  perfectly fine.
+- Then I read `Invalid data found when processing input` as truncation. 13 of
+  those 15 play in full.
+- I reported "2 real defects" having length-tested only 15 of 39. Testing the
+  other 24 found **two more**, the worst in the library.
+
+| Episode | Missing | Outcome |
+|---|---|---|
+| Jimmy Neutron S01E04 | 10.1 min of 23.4 (43%) | no source recorded |
+| Jimmy Neutron S01E16 | 5.9 min | no source recorded |
+| Dragon Ball Z S05E79 | 3.5 min | ✅ **FIXED** |
+| Gargoyles S01E40 | 3.1 min | source truncated AT ORIGIN |
+
+The other 35 decode to full length — no content missing. (Not the same as "no
+visible glitch": nothing was watched.)
+
+### DBZ S05E79 fixed, the other three cannot be
+- The RECORDED source (`DBZ-Cloverway-Episodes`) holds eps 001 + 146-224 — no
+  278, HTTP 404. Found an alternative by searching archive.org:
+  `dragon-ball-z-etc-tv` ("[LACRA's] ... [291-291]"), 292 files, episode 278
+  complete at 140 MB. Swapped on Mac AND drive; damaged copy kept as
+  `_orig_truncated_S05E79.mp4.keep`.
+  ⚠️ It is 640x480 where the old was 848x480 — a complete episode at slightly
+  lower resolution beat one that stops before the ending, on a channel that now
+  plays in sequence.
+- **Gargoyles S01E40: re-downloading is pointless.** The fetched file is
+  BYTE-IDENTICAL (md5 5fc6b746acd5, 45,400,036 bytes) to the one on disk. The
+  archived source is itself truncated. `capgarg78` is the only Gargoyles item
+  on archive.org.
+- **Jimmy Neutron: no provenance at all** — no `_archive.txt`, no
+  `_source-titles.json`, no `shows.json` entry. Archive.org has nothing usable.
+
+🔴 **LESSON: the show with NO source records has the WORST damage.** Provenance
+costs nothing at download time and is unrecoverable afterwards. Make
+`_archive.txt` / `_source-titles.json` standard for every show.
+Also: a record NAMING a source is not evidence the file is still there, or was
+ever complete. I promised two recoveries on the strength of records; one item
+404'd and the other was truncated at origin.
+
+### Tooling preserved (`media-tools/`)
+`decode-sweep.py` (parallel full decode), `sweep-status.sh` (progress any time),
+`outliers.py`, `dedupe.py`, and the results at
+`_records/decode-sweep-2026-09-04.json`.
+⚠️ decode-sweep.py still records muxer noise as errors — classify results with
+the decode-length test, never by error string.
+
 ## Bugs and lessons (recurring)
 - **VPN FIRST.** A Rotterdam datacenter exit made every Lucas/Numberblocks URL
   read "This video is not available". I wrongly told Brian the videos had been
@@ -476,6 +533,12 @@ ln -s /Users/briantang/BluuClaude/tang-box/media-tools \
   judged it not worth it, since the box lives on the TV and is halted properly.
   Revisit ONLY if it starts losing power unexpectedly.
 - Patoaventuras is DONE at 48 — Brian's call, the other 25 are not coming.
+- 🔴 **Doug (Nick Clásico, 72 eps) is in ENGLISH** — spotted 2026-09-04, wants
+  replacing with a Spanish version. It has a `_source-titles.json`, so its
+  provenance exists.
+- 3 truncated episodes unfixable without new sources: Jimmy Neutron S01E04
+  (43% missing — arguably delete it; Nick Moderno has 234 others), Jimmy
+  Neutron S01E16, Gargoyles S01E40.
 
 ## How to resume
 Start a fresh session and say:
