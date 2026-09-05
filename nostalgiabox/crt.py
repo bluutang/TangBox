@@ -119,8 +119,14 @@ _HEAVY_CRT = CrtConfig(
     scanlines=True, scanline_intensity=0.45,
 )
 
-#: Which rung `config.yaml` occupies. The box starts here.
-CONFIG_RUNG = 2
+#: Which rung the box STARTS on. Renamed from CONFIG_RUNG 2026-09-04: it was
+#: only ever the starting index (app.py sets `_crt_index` from it), and once
+#: that stopped being the configured rung the old name actively lied.
+#:
+#: 3 = HEAVY CRT, made the default on Brian's call after living with the box.
+#: The configured look (GLASS & GRAIN, rung 2) is still one press DOWN on the
+#: INPUT button, so nothing is stranded.
+START_RUNG = 3
 
 
 def crt_ladder(configured: CrtConfig) -> tuple[CrtPreset, ...]:
@@ -188,7 +194,7 @@ __all__ = [
     "CrtPreset",
     "crt_ladder",
     "write_ladder_shaders",
-    "CONFIG_RUNG",
+    "START_RUNG",
     "render_shader",
     "write_shader",
     "default_shader_path",

@@ -36,7 +36,7 @@ from .artwork import tile_image_for
 from .bedtime import deadline_for, due_mark, initial_marks
 from .config import Config
 from .crt import (
-    CONFIG_RUNG,
+    START_RUNG,
     crt_ladder,
     default_shader_path,
     write_ladder_shaders,
@@ -122,11 +122,12 @@ class TVApp:
         self._rng = random.Random(config.shuffle_seed)
 
         # The CRT intensity ladder, stepped by the remote's INPUT button. The
-        # box starts on whatever config.yaml says and NEVER writes back to it:
-        # a child cannot permanently change how the television looks, and the
-        # file stays the source of truth across a restart.
+        # box starts on START_RUNG - HEAVY CRT since 2026-09-04, no longer the
+        # configured rung - and NEVER writes back: a child cannot permanently
+        # change how the television looks, and every restart returns to the
+        # same rung regardless of what was pressed.
         self._crt_ladder = crt_ladder(config.crt)
-        self._crt_index = CONFIG_RUNG
+        self._crt_index = START_RUNG
         self._crt_shader_dir = crt_shader_dir or default_shader_path().parent
         self._crt_paths: Optional[tuple[Optional[Path], ...]] = None
 
