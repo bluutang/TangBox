@@ -459,6 +459,48 @@ ever complete. I promised two recoveries on the strength of records; one item
 ⚠️ decode-sweep.py still records muxer noise as errors — classify results with
 the decode-length test, never by error string.
 
+## 🔴 THE BOX IS REVEALED AND IN USE — read this before restarting anything
+Revealed to the family 2026-09-04. **A `systemctl restart` wakes the television**
+(the sign-on runs and CEC turns the set on). Ask before restarting in the
+evening; Brian had to stop one mid-session for exactly this reason.
+
+**Standby without restarting: `SIGUSR1` is a POWER PRESS** (app.py:1333).
+```
+sudo kill -USR1 $(systemctl show -p MainPID --value tangbox.service)
+```
+⚠️ It TOGGLES. Sending it while already in standby WAKES the box and turns the
+TV on. Determining the state remotely is unreliable — "no mpv process" and "no
+open media file" look identical for standby and for some playing states. When
+it matters, ask Brian to press ✱ rather than guess. That judgement was made
+once already and was right: the box was in standby and a signal would have
+spoiled the reveal.
+
+## The remote lag RECURRED after the reveal — cause unknown
+Spot-checked the duration cache: **it is not the cause and has not regressed.**
+```
+cache 4,164 entries · 0 episodes uncached · slowest schedule build 0.01s
+load 0.02 · CPU 100% idle · I/O wait 0.0% · 53.8°C · not throttled
+CEC: 1 adapter attempt in 10 min, 0 in 45s
+```
+Could not reproduce: the box was in standby and idle, so there was nothing to
+observe. The ffprobe storm is definitively fixed; this is something else.
+
+**To catch it next time, capture at the KERNEL while it is actually lagging:**
+```
+scp media-tools/keywatch.py brian@192.168.1.41:~   # if not already there
+ssh brian@192.168.1.41 'python3 ~/keywatch.py'     # FOREGROUND, 180s
+```
+It timestamps every press as the kernel sees it, off the Flirc at
+`/dev/input/event1`. Presses arriving promptly and evenly ⇒ IR is fine, the
+delay is downstream in software. Presses late, bunched or missing ⇒ the IR path
+(batteries, line of sight, Flirc firmware inter-key delay).
+
+🔴 **The single most useful diagnostic all session was Brian's own description:**
+*"I pressed a number of sequential buttons and nothing happened for a little
+bit, then all the actions cascaded onscreen."* Queue-then-cascade = blocked main
+loop. ASK WHAT THE FAILURE LOOKS LIKE before measuring — six clean measurements
+pointed nowhere because they sampled between the storms.
+
 ## Bugs and lessons (recurring)
 - **VPN FIRST.** A Rotterdam datacenter exit made every Lucas/Numberblocks URL
   read "This video is not available". I wrongly told Brian the videos had been
@@ -534,8 +576,12 @@ the decode-length test, never by error string.
   Revisit ONLY if it starts losing power unexpectedly.
 - Patoaventuras is DONE at 48 — Brian's call, the other 25 are not coming.
 - 🔴 **Doug (Nick Clásico, 72 eps) is in ENGLISH** — spotted 2026-09-04, wants
-  replacing with a Spanish version. It has a `_source-titles.json`, so its
-  provenance exists.
+  replacing with a Spanish version. Its `_source-titles.json` records only
+  source FILENAMES (`Doug S01E01 [480p].mkv`), NO URLs — and every episode
+  title in it is English, so that source was an English release and re-fetching
+  it would give English again. A Spanish Doug must be found from scratch.
+  (Curiously the FILM entry is `Doug - Su primera película`, so the movie came
+  from a Spanish source while the 72 episodes did not.)
 - 2 truncated episodes remain, unfixable without new sources: Jimmy Neutron
   S01E16 (5.9 min missing) and Gargoyles S01E40 (3.1 min, truncated AT ORIGIN).
   Both only lose an ending. Jimmy Neutron S01E04 was DELETED on Brian's call -
