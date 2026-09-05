@@ -1,5 +1,42 @@
 # Session Wrap — 2026-09-03/04
 
+## ▶ START HERE NEXT SESSION: test the remote
+The lag came back AFTER the reveal and is UNDIAGNOSED. The duration-cache fix
+is NOT the cause — spot-checked 2026-09-04: 4,164 entries, 0 episodes uncached,
+schedule builds 0.01s, machine idle (load 0.02, 100% CPU idle, 0% I/O wait,
+53.8°C, not throttled). It could not be reproduced because the box was in
+standby with nothing running.
+
+**Capture it WHILE IT IS LAGGING, at the kernel:**
+```sh
+ssh brian@192.168.1.41 'python3 ~/TangBox/media-tools/keywatch.py'
+```
+Runs 180s in the FOREGROUND (backgrounding over SSH failed repeatedly — write
+locally, scp, run in foreground). Brian presses buttons through a sluggish
+stretch; it timestamps each press as the kernel sees it off the Flirc at
+`/dev/input/event1`.
+
+| What the capture shows | What it means |
+|---|---|
+| presses prompt and evenly spaced | IR is fine — the delay is downstream in software |
+| presses late, bunched, or missing | the IR path: batteries, line of sight, Flirc inter-key delay |
+
+A previous capture got 23 presses, none lost, no bunching — which cleared the
+remote at that time. The software cause found then (a 68s ffprobe storm) is
+fixed, so this is something new.
+
+🔴 **ASK WHAT THE FAILURE LOOKS LIKE FIRST.** Six clean measurements pointed
+nowhere last time because they sampled between the storms. What actually solved
+it was Brian's sentence: *"I pressed a number of sequential buttons and nothing
+happened for a little bit, then all the actions cascaded onscreen."*
+Queue-then-cascade = blocked main loop. A lossy remote LOSES presses; it does
+not bank them and replay them in order.
+
+⚠️ **The box is revealed and in daily use. A `systemctl restart` WAKES THE
+TELEVISION.** Ask before restarting. For standby without restarting, SIGUSR1 is
+a power press — but it TOGGLES, and remote state detection is unreliable, so
+ask Brian to press ✱ rather than guess.
+
 ## What happened
 Three shows filed (Lucas, Numberblocks, Octonautas) into a NEW channel,
 Patoaventuras closed out at 48, five shows blocked and parked, the USB drive
@@ -622,3 +659,7 @@ them automatically (it is keyed by path).
 ## How to resume
 Start a fresh session and say:
 > "read SESSION-WRAP.md and continue."
+
+First job is the remote test at the top of this file. After that, the open list
+below — the Scooby-Doo rename (needs a restart anyway), Doug in Spanish, the
+Octonautas 360p re-pull, and the sheet rows if `workspace-mcp` will connect.
