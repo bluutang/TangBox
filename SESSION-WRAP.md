@@ -501,6 +501,38 @@ bit, then all the actions cascaded onscreen."* Queue-then-cascade = blocked main
 loop. ASK WHAT THE FAILURE LOOKS LIKE before measuring — six clean measurements
 pointed nowhere because they sampled between the storms.
 
+## Mac and drive ARE in sync — push over the network, never unplug
+Verified by normalised manifest (NFC both sides, sizes compared):
+```
+Mac 4,017 · drive 4,017 · files differing in size: 0
+```
+Every correction pushed over SSH: 22 re-encodes, the DBZ replacement, the
+deletion. The drive does not need to come to the Mac for this kind of work.
+
+⚠️ Compare with UNICODE NORMALISATION. macOS writes accents decomposed (NFD),
+Linux expects composed (NFC), so a naive filename diff shows every `ñ` and `é`
+as a difference.
+
+### 🔴 TODO next restart: `¿Qué hay de nuevo, Scooby-Doo?` has a bad character
+**exFAT forbids `?` in filenames**, so macOS silently substituted a private-use
+character when copying:
+```
+Mac:   '¿Qué hay de nuevo, Scooby-Doo?'
+drive: '¿Qué hay de nuevo, Scooby-Doo\uf025'
+```
+All 42 episodes play fine — the box resolves paths from the filesystem — but
+U+F025 has no glyph, so the guide shows an empty box after the show name. It is
+the ONLY show in the library with an exFAT-illegal character.
+
+**NOT fixed 2026-09-04 deliberately:** renaming under the running process would
+make those 42 files unopenable (the lineup holds absolute paths from startup),
+and fixing that needs a restart, which wakes the television. A stray glyph beat
+breaking a channel on reveal night.
+
+Next session, when a restart is fine: remount rw, rename the folder AND its 42
+files to drop the character, remount ro, restart. The duration cache re-probes
+them automatically (it is keyed by path).
+
 ## Bugs and lessons (recurring)
 - **VPN FIRST.** A Rotterdam datacenter exit made every Lucas/Numberblocks URL
   read "This video is not available". I wrongly told Brian the videos had been
