@@ -1,6 +1,27 @@
 # Session Wrap — 2026-09-03/04
 
-## ▶ START HERE NEXT SESSION: test the remote
+## ▶ FIRST: a RESTART IS OWED — Nick Clásico has 45 dead paths
+Doug seasons 1-3 (45 English episodes) were deleted from BOTH the Mac and the
+drive late on 2026-09-04, but **the running process still holds their paths**:
+its Nick Clásico schedule was built at startup. Until the service restarts,
+roughly 1 tune-in in 9 on that channel lands on a file that no longer exists.
+
+Brian deliberately did NOT restart that night. Do it at the START of the next
+session, when the television coming on is fine:
+```sh
+ssh brian@192.168.1.41 'sudo systemctl restart tangbox.service'
+```
+⚠️ **A restart WAKES THE TELEVISION.** Confirm with Brian first.
+
+It also picks up two things already staged and waiting:
+- **HEAVY CRT as the default look** (`START_RUNG = 3`, committed `f8c6304`,
+  pulled onto the Pi but never restarted into).
+- The corrected Nick Clásico episode count.
+
+While a restart is happening anyway, the Scooby-Doo rename below wants one too
+— do both in the same window.
+
+## ▶ THEN: test the remote
 The lag came back AFTER the reveal and is UNDIAGNOSED. The duration-cache fix
 is NOT the cause — spot-checked 2026-09-04: 4,164 entries, 0 episodes uncached,
 schedule builds 0.01s, machine idle (load 0.02, 100% CPU idle, 0% I/O wait,
@@ -45,7 +66,7 @@ ffprobe storm that blocked the main loop for 68 seconds (the remote lag), one
 in `bundle-clips.py`, one in `app.py`'s resume, and 22 badly-matched video
 files.
 
-## Library: 23 channels, 69 shows, 4,017 episodes, ~1,509 hours.
+## Library: 23 channels, 69 shows, 3,972 episodes.
 Mac 662 GB; drive 656 GB used / 266 GB free.
 
 ## Filed this session
@@ -644,13 +665,21 @@ them automatically (it is keyed by path).
   judged it not worth it, since the box lives on the TV and is halted properly.
   Revisit ONLY if it starts losing power unexpectedly.
 - Patoaventuras is DONE at 48 — Brian's call, the other 25 are not coming.
-- 🔴 **Doug (Nick Clásico, 72 eps) is in ENGLISH** — spotted 2026-09-04, wants
-  replacing with a Spanish version. Its `_source-titles.json` records only
-  source FILENAMES (`Doug S01E01 [480p].mkv`), NO URLs — and every episode
-  title in it is English, so that source was an English release and re-fetching
-  it would give English again. A Spanish Doug must be found from scratch.
-  (Curiously the FILM entry is `Doug - Su primera película`, so the movie came
-  from a Spanish source while the 72 episodes did not.)
+- 🔴 **Doug: seasons 1-3 DELETED 2026-09-04** (45 English episodes, gone from
+  the Mac AND the drive). **Season 5 was KEPT — it is genuinely Spanish**,
+  corroborated by the audio tag `spa` on S05E02, not just by ear. Doug is now
+  26 episodes + the film; Nick Clásico fell from 408 to 363.
+  The hunt is now narrower: seasons 1-3 IN SPANISH, not a whole replacement.
+  And season 5 existing in Spanish means whoever released it may have the rest.
+  🔴 NO SOURCE LINKS EXIST: `_source-titles.json` holds only FILENAMES
+  (`Doug SxxExx [480p].mkv`), no URLs. Archive.org searched 2026-09-04 —
+  `doug-cartoon-all-seasons` is 171 episodes, all ENGLISH, 0 files marked
+  Spanish; everything else is promos and adverts. **Do not repeat that search.**
+  YouTube is UNTESTED for Doug (it was rate-limiting all day) and is the first
+  place to look — it is how Lucas, Numberblocks and Octonautas all arrived.
+  Curiously the FILM is `Doug - Su primera película`, so the movie came from a
+  Spanish source while the English episodes did not.
+- (superseded) Doug was in ENGLISH
 - 2 truncated episodes remain, unfixable without new sources: Jimmy Neutron
   S01E16 (5.9 min missing) and Gargoyles S01E40 (3.1 min, truncated AT ORIGIN).
   Both only lose an ending. Jimmy Neutron S01E04 was DELETED on Brian's call -
