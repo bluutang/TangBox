@@ -8,7 +8,7 @@ ffprobe storm that blocked the main loop for 68 seconds (the remote lag), one
 in `bundle-clips.py`, one in `app.py`'s resume, and 22 badly-matched video
 files.
 
-## Library: 23 channels, 69 shows, 4,018 episodes, 1,509 hours.
+## Library: 23 channels, 69 shows, 4,017 episodes, ~1,509 hours.
 Mac 662 GB; drive 656 GB used / 266 GB free.
 
 ## Filed this session
@@ -421,7 +421,7 @@ does the file decode to its STATED duration?
 
 | Episode | Missing | Outcome |
 |---|---|---|
-| Jimmy Neutron S01E04 | 10.1 min of 23.4 (43%) | no source recorded |
+| Jimmy Neutron S01E04 | 10.1 min of 23.4 (43%) | 🗑️ **DELETED** 2026-09-04 |
 | Jimmy Neutron S01E16 | 5.9 min | no source recorded |
 | Dragon Ball Z S05E79 | 3.5 min | ✅ **FIXED** |
 | Gargoyles S01E40 | 3.1 min | source truncated AT ORIGIN |
@@ -536,9 +536,10 @@ the decode-length test, never by error string.
 - 🔴 **Doug (Nick Clásico, 72 eps) is in ENGLISH** — spotted 2026-09-04, wants
   replacing with a Spanish version. It has a `_source-titles.json`, so its
   provenance exists.
-- 3 truncated episodes unfixable without new sources: Jimmy Neutron S01E04
-  (43% missing — arguably delete it; Nick Moderno has 234 others), Jimmy
-  Neutron S01E16, Gargoyles S01E40.
+- 2 truncated episodes remain, unfixable without new sources: Jimmy Neutron
+  S01E16 (5.9 min missing) and Gargoyles S01E40 (3.1 min, truncated AT ORIGIN).
+  Both only lose an ending. Jimmy Neutron S01E04 was DELETED on Brian's call -
+  43% missing made it not an episode; Nick Moderno kept its other 234.
 
 ## How to resume
 Start a fresh session and say:
