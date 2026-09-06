@@ -202,9 +202,10 @@ channels:
     path: /media/tangbox/CartoonComedia
     age: "6-9"
     exclude: ["_*", "*/_*"]
-    # Tom y Jerry, Dexter, Ed Edd y Eddy, Scooby-Doo, and (folded back in
-    # 2026-09-03, Brian's call) Coraje - which runs scarier than the rest of
-    # this channel, so treat the age label as a soft floor where Coraje plays.
+    # Tom y Jerry, Dexter, Ed Edd y Eddy, Scooby-Doo. Coraje was folded in
+    # 2026-09-03 (Brian's call) but PULLED 2026-09-05 - the rip turned out not
+    # to be Spanish. If it returns, treat its age label as a soft floor: it
+    # runs scarier than the rest of this channel.
 
   - number: 16
     name: "Cartoon Acción"
