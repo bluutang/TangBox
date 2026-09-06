@@ -247,5 +247,11 @@
   "seconds": 132598,
   "est_bytes": 14805959045,
   "source": "sololatino (Antigravity pipeline) — 1987 original series"
+ },
+ "Pocoyo": {
+  "videos": 62,
+  "seconds": 83824,
+  "est_bytes": 3052596938,
+  "source": "YouTube compilations, split at chapters (youtube_compilation.py)"
  }
 }

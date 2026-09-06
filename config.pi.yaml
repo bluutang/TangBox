@@ -245,10 +245,12 @@ channels:
     path: /media/tangbox/NetflixJr
     age: "2-6"
     exclude: ["_*", "*/_*"]
-    # La arana Lucas (Cartoonito), Numberblocks. Both arrived as YouTube
-    # uploads full of re-uploads under different Spanish titles - deduped by
-    # audio fingerprint, not by name, because the names disagree and the
-    # durations do too.
+    # La arana Lucas (Cartoonito), Numberblocks, Octonautas, Pocoyo (62).
+    # Lucas and Numberblocks arrived as YouTube uploads full of re-uploads
+    # under different Spanish titles - deduped by audio fingerprint, not by
+    # name, because the names disagree and the durations do too. Pocoyo came
+    # from 2-hour compilations cut at their chapter marks; its title cards
+    # are in English even though the audio is Latino Spanish.
 
   - number: 20
     name: "Netflix"
