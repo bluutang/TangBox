@@ -176,7 +176,7 @@ channels:
     path: /media/tangbox/DisneyAventura
     age: "6-9"
     exclude: ["_*", "*/_*"]
-    # THIN - Patoaventuras, Lilo y Stitch, Tres Caballeros; pilots only.
+    # Patoaventuras (97, 1987 original), Lilo y Stitch, Tres Caballeros.
 
   - number: 14
     name: "Disney Acción"
