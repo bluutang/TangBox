@@ -245,7 +245,8 @@ channels:
     path: /media/tangbox/NetflixJr
     age: "2-6"
     exclude: ["_*", "*/_*"]
-    # La arana Lucas (Cartoonito), Numberblocks, Octonautas, Pocoyo (62).
+    # La arana Lucas (Cartoonito), Numberblocks, Octonautas, Pocoyo (62),
+    # Puffin Rock (26).
     # Lucas and Numberblocks arrived as YouTube uploads full of re-uploads
     # under different Spanish titles - deduped by audio fingerprint, not by
     # name, because the names disagree and the durations do too. Pocoyo came

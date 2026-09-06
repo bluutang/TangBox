@@ -253,5 +253,11 @@
   "seconds": 83824,
   "est_bytes": 3052596938,
   "source": "YouTube compilations, split at chapters (youtube_compilation.py)"
+ },
+ "Puffin Rock": {
+  "videos": 26,
+  "seconds": 31250,
+  "est_bytes": 2054497662,
+  "source": "bilibili.tv (Latino), 480p H.264"
  }
 }
