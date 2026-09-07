@@ -164,6 +164,30 @@ collapsed to the same name, before anything moved.
 ## The spreadsheet
 
 The wanted-shows list is a Google Sheet, not a file in this repo, and it is the
-source of truth for what the library should contain. Updating it is part of any
-conversion job, not a separate request. Writing to it needs the `workspace-mcp`
-server — the Drive connector cannot write cells.
+source of truth for **what the library should contain** — the shopping list.
+Updating it is part of any conversion job, not a separate request. Writing to it
+needs the `workspace-mcp` server — the Drive connector cannot write cells.
+
+🔴 **The Mac is the source of truth for what the library ACTUALLY contains.**
+`~/Downloads/Converted` is where Brian curates the channel folders by hand: he
+adds, prunes and swaps versions there directly. The sheet tracks that work and
+routinely lags behind it, sometimes by dozens of shows. When disk and sheet
+disagree about what exists, **the Mac wins and the sheet gets corrected** — never
+the other way round.
+
+The sheet's *notes* lag hardest, because they are written once and rarely
+revisited. A note can confidently describe episodes that Brian deleted weeks
+later. Read a stale note as history, not as an instruction to restore anything.
+
+**What this does NOT license.** The Mac wins on *existence*, not on intent. A
+show being absent there is not on its own a reason to delete the drive's copy —
+ask Brian what the absence means before removing anything, and say plainly which
+way you are proposing to sync. Deletions on an external drive skip the Trash and
+are unrecoverable.
+
+**Measured 2026-09-07**, reconciling the drive against the Mac after a long gap:
+24 episode counts on the sheet were wrong (Dragon Ball Z said 1, disk had 291;
+Bluey 1 vs 150), 8 shows sat as `Wanted` with files already on disk, 5 rows
+claimed a "pilot only" episode that existed nowhere, and **26 shows on the box
+had no row at all** — 1,227 episodes. None of that was visible from the sheet
+alone. Reconcile from disk, per show, before trusting any figure on it.
