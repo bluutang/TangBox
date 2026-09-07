@@ -1,4 +1,5 @@
 # Session Wrap — 2026-09-03/04
+> Written by: Claude Code (Opus 5) · Scope: tang-box · superseded by the workspace wrap of 2026-09-07
 
 ## ▶ FIRST: a RESTART IS OWED — Nick Clásico has 45 dead paths
 Doug seasons 1-3 (45 English episodes) were deleted from BOTH the Mac and the
