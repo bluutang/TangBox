@@ -1,86 +1,113 @@
-# Session Wrap — 2026-09-07
+# Session Wrap — 2026-09-07 (evening)
 > Written by: Claude Code (Opus 5) · Scope: tang-box
 
-## ▶ READ THIS FIRST — the box is DARK and the drive is out
+## ▶ READ THIS FIRST — the box is BACK ON THE AIR
 
-The television is off and TangBox is not playing anything. This is deliberate,
-not a fault, but it should not stay this way long.
+The drive is in the Pi, the library is complete, TangBox is running and Brian put
+it on **standby**. Nothing is owed. There is no blocker.
 
-* `tangbox.service` was **stopped** on 2026-09-07 so the USB drive could be
-  removed safely (standby alone is not enough — it leaves the drive mounted, and
-  exFAT has no journal, so pulling it mid-write can corrupt the filesystem).
-* `/media/tangbox` was cleanly unmounted first.
-* **The drive is physically plugged into the Mac right now**, mounted as
-  `/Volumes/TANGBOX` — 920 GB exFAT, 698 GB used, 290 GB free.
+* USB drive reattached to the Pi and mounted at `/media/tangbox` (read-only).
+* `tangbox.service` is **active** — 23 channels, 4,031 episodes, no errors.
+* Mac and drive are now **byte-for-byte in agreement**: 70 shows, 4,031 episodes.
 
-To bring the box back after the drive is returned:
+🔑 **Hot-plugging the drive does NOT mount it.** `/etc/fstab` has the entry
+(`UUID=6A9A-7E45 → /media/tangbox`, `ro,nofail`) but fstab only runs at boot, and
+the Pi had been up 13 days. After plugging the drive into a running Pi:
 
 ```sh
-ssh brian@192.168.1.41 'sudo systemctl start tangbox.service'
+ssh brian@192.168.1.41 'sudo mount /media/tangbox && sudo systemctl start tangbox.service'
 ```
 
-⚠️ That wakes the television. Do it when that is welcome.
+Check the UUID matches before mounting: `sudo blkid /dev/sda2`.
 
-## 🔴 BLOCKER — macOS will not let the agent read the drive
+## 🔴 The correction that matters most
 
-`ls /Volumes/TANGBOX` returns **"Operation not permitted"**. The drive is
-healthy; macOS gates removable media per-application and the terminal has not
-been granted access.
+**The Mac is the source of truth for what the library ACTUALLY contains.** Brian
+curates the channel folders in `~/Downloads/Converted` by hand — adding, pruning
+and swapping versions. The Google Sheet is the *shopping list* (what it should
+contain) and it lags, sometimes badly.
 
-The terminal here is **Ghostty** (`/Applications/Ghostty.app`).
+This is now written up in `docs/lessons.md` (commit `d3edf9b`, pushed) along with
+its limit: absence on the Mac is not on its own grounds to delete from the drive.
+**Ask Brian what an absence means before removing anything** — external-drive
+deletions skip the Trash.
 
-**System Settings → Privacy & Security → Files and Folders → Ghostty → enable
-"Removable Volumes"**. If Ghostty is not listed, add it under **Full Disk
-Access** instead. Then **fully quit Ghostty (⌘Q) and reopen** — the permission
-is read at launch.
+An earlier version of this session got that backwards, proposed deletions from a
+disk-only inference, and had to be corrected. Read the lesson before syncing.
 
-Confirm with `ls /Volumes/TANGBOX | head`. Show or channel folders means it
-worked.
+## What changed on the drive
 
-## The job: align the drive with this Mac
+| Show | Change |
+|---|---|
+| Pocoyo | **+62 eps** (new, 2.9 GB) |
+| Puffin Rock | **+26 eps** (new, 1.9 GB) |
+| Patoaventuras | 48 → **97 eps** — the 1987 original REPLACED the 2017 reboot rip entirely |
+| Coraje El Perro Cobarde | **removed**, 48 eps — English audio (see `docs/lessons.md`) |
+| Dora la Exploradora | 61 → **35** — the 26 removed were the **3D reboot**; the classic 2D is what is wanted |
+| Los Padrinos Mágicos | 120 → **116** — 4 oversized S06 files dropped |
+| Jorge el Curioso | `_unsplit/` working folder removed (224 MB) |
 
-~19 GB has never reached the box. All 70 shows now have `tile.jpg`, so the
-library is otherwise ready.
+Every removal is logged in **`_removed-2026-09-07.json` at the drive root**, with
+sizes and, for Dora, the YouTube IDs.
 
-| Show | Channel | Episodes |
-|---|---|---|
-| Patoaventuras (1987 original) | DisneyAventura | 97 |
-| Pocoyo | NetflixJr | 62 |
-| Puffin Rock | NetflixJr | 26 |
+Patoaventuras was a true replacement: no shared filename was byte-identical and
+the originals are consistently larger at the same episode number, so the two rips
+were never mixed.
 
-Order of work once the permission is granted:
+## The Google Sheet is now reconciled
 
-1. **Survey both sides first.** Compare `/Volumes/TANGBOX` against
-   `~/Downloads/Converted` show by show. The sync may not be one-directional —
-   there may be shows on the drive that are not on this Mac. Do not assume.
-2. **Run `media-tools/check-exfat.py`** before copying. exFAT rejects characters
-   macOS allows, and a bad name fails the copy partway through 19 GB.
-3. **Copy the three shows** with their `tile.jpg` files.
-4. **Verify by file count and total size**, not by the copy command exiting.
-5. Eject cleanly, reattach to the Pi, restart the service.
+It was far more out of date than anyone knew. Fixed this session:
 
-Nothing on the drive should be deleted without showing Brian first.
+* **24 episode counts corrected** — Dragon Ball Z said 1, disk had 291; Bluey 1 vs 150; KND 1 vs 71; Spidey 1 vs 85
+* **8 rows flipped Wanted → HAVE** that already had files, incl. Los Padrinos (116) and Jackie Chan (73 — its note still claimed the show was undownloadable)
+* **5 rows set back to Wanted** — Snoopy Show, Maya y los tres, Tibucán, Spider-Man, Escandalosos. Their "pilot only" file exists on neither drive nor Mac; nobody recorded when it went
+* **26 shows ADDED that had no row at all** — 1,227 episodes, incl. Arthur 65, Clifford 79, Octonautas 85, Digimon 104, Uncle Calvin 102
 
-## Also worth knowing
-* The Pi had been up **13 days** with the service running. An earlier wrap noted
-  a restart was owed for stale Doug paths in Nick Clásico — this stop/start
-  clears that, since the schedule rebuilds at startup.
-* The running box reads `/home/brian/TangBox/config.yaml`, which is **gitignored
-  and machine-local**. `config.pi.yaml` in this repo is a template the box never
-  opens — pointing channels at the drive is a manual SSH edit.
-* **The Google Sheet is behind**: Patoaventuras 97, Pocoyo 62, Puffin Rock 26 are
-  new or changed; Coraje's row comes out; Los Padrinos is 116 not 120. Writing to
-  it needs `workspace-mcp`, which would not connect on 2026-09-05/07.
-* Read `docs/lessons.md` before any media work — codec pinning, truncation
-  screening, and verifying spoken language rather than trusting tags.
+Writing to the sheet needs `workspace-mcp`, which connected fine this session.
+
+## The button-cascade fix is intact
+
+Brian saw presses cascade again mid-session. **Not a regression.** The duration
+cache (`~/.cache/tangbox/durations.json`, commit `57f2650`) validates on size and
+mtime, and this session handed the box 185 files it had never seen — Patoaventuras
+97 (all new, even same-named files), Pocoyo 62, Puffin Rock 26. First tune-in to
+Disney Aventura cost ~11 s and Netflix Jr ~10 s, while concurrent SSH `find` runs
+competed for the same USB bus.
+
+Now fully warm and tidied:
+
+```
+cache entries : 4177   (4031 episodes + 146 commercials; all point at real files)
+WOULD RE-PROBE: 0
+```
+
+128 dead entries from today's deletions were pruned (backup at
+`durations.json.bak`). ⚠️ The running process still holds the pre-prune copy in
+memory; if it probes anything new before its next restart it will write those
+dead entries back. Harmless, and it becomes permanent at the next restart.
 
 ## Smaller open items
-* 4 Pocoyo uploads unfetched (YouTube rate-limited us); worth ~2 episodes. The
-  resume command is in the workspace wrap.
+
+* **Sheet: the 26 new rows have no Seasons or Total episodes**, so their progress
+  bars are blank. Deliberate — never write a count from memory (the Rugrats
+  lesson). They need a real lookup.
+* **Sheet row 76 duplicates row 52** (both "Pistas de Blue y tú"; row 52 holds the
+  real 43 episodes). Left in place because deleting a row shifts the ARRAYFORMULA
+  range in column R.
+* **`_removed-2026-09-07.json` on the drive still frames the Dora removal as an
+  error.** It was not — Brian removed the 3D reboot deliberately. One-line fix
+  next time the drive is on the Mac, so it stops contradicting the sheet.
+* **Remote responsiveness is unverified by Brian** since the cache warmed. If it
+  still stutters, the cause is NOT probing — investigate properly, do not guess.
+* 4 Pocoyo uploads unfetched (YouTube rate-limited); worth ~2 episodes.
 * Guardaespíritus S02E28 is missing from its source, not a failed download.
-* Trash Truck could not be fetched — its only sources sit behind Cloudflare
-  anti-bot. It needs resolved stream URLs, as Puffin Rock's data had.
+* Trash Truck still unfetchable — its only sources sit behind Cloudflare anti-bot
+  and need resolved stream URLs, as Puffin Rock's did.
 
 ## How to resume
+
 Start a fresh session and say:
 > "read tang-box/SESSION-WRAP.md and continue."
+
+Nothing is urgent. The likeliest next job is looking up seasons/total episodes for
+the 26 newly added shows so the sheet's progress bars work again.
