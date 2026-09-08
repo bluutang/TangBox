@@ -80,6 +80,57 @@ whisper-cli -m ~/Downloads/_whisper/ggml-base.bin -dl -f /tmp/x.wav
 
 Run this on new material **before** filing it, not after.
 
+## Media: files carrying MORE THAN ONE audio track
+
+**A dual-language file can be Spanish and still play English.** Sonic X arrived
+from lacartoons.com on 2026-09-07 with two AAC tracks per file, `spa` first and
+`eng` second — and **both were flagged `default`**. `player.py` sets no `--aid`
+and no `--alang`, so nothing in this project actually chooses; the outcome rests
+on mpv's tie-breaking between two tracks that both claim to be the default.
+
+Do not leave that to chance. **Strip the unwanted track when filing**, which is
+lossless and needs no re-encode:
+
+```sh
+ffmpeg -i IN.mp4 -map 0:v:0 -map 0:a:0 -c copy -movflags +faststart \
+  -metadata:s:v:0 language=und -metadata:s:a:0 language=spa OUT.mp4
+```
+
+Check the layout before assuming a file is single-track — every other show in the
+library is, which is exactly why this is easy to miss:
+
+```sh
+ffprobe -v error -select_streams a \
+  -show_entries stream=index:stream_disposition=default:stream_tags=language \
+  -of compact FILE
+```
+
+Verify which track is which by **listening**, not by reading the tag: the same
+whisper check above, with `-map 0:a:0` / `-map 0:a:1` on the extract. On Sonic X
+the tags happened to be honest, but Coraje above is the reason that is confirmed
+rather than assumed.
+
+### The container-duration trap that follows from it
+
+**Dropping a track can legitimately shorten the container duration, and that is
+not damage.** A file's `format=duration` is its longest stream. On Sonic X the
+English track ran up to 8 seconds past the video, so it — not the picture — was
+setting that number. Removing it made the container 6-8 s "shorter" on 23 files
+and a verify step that compared `format=duration` failed every one of them, all
+of them perfectly good.
+
+**Compare per-stream durations instead**, source against output:
+
+```sh
+ffprobe -v error -select_streams v:0 -show_entries stream=duration -of csv=p=0 FILE
+ffprobe -v error -select_streams a:0 -show_entries stream=duration -of csv=p=0 FILE
+```
+
+Both matched to the microsecond on all 73 files. Two habits made the bad check
+harmless rather than costly, and both are worth keeping: a failed verification
+**deleted nothing**, and each source was removed only after its replacement
+survived a full software decode (`ffmpeg -v error -i OUT -f null -`).
+
 ## Media: cutting and joining
 
 **Chapter marks are typed by hand and often sit seconds early**, which leaves the
