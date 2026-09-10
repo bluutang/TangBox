@@ -1,113 +1,91 @@
-# Session Wrap — 2026-09-07 (evening)
-> Written by: Claude Code (Opus 5) · Scope: tang-box
+# Session Wrap — 2026-09-10
+> Written by: Claude Code (Sonnet 5) · Scope: tang-box
 
-## ▶ READ THIS FIRST — the box is BACK ON THE AIR
+## ▶ READ THIS FIRST — nothing urgent, but don't touch the repo files yet
 
-The drive is in the Pi, the library is complete, TangBox is running and Brian put
-it on **standby**. Nothing is owed. There is no blocker.
+The box is still on the air, on standby, exactly as the 2026-09-07 session left it
+(23 channels, 4,031 episodes, Mac and drive in agreement). Nothing changed there
+this session. **This session only did one thing: filled in the missing
+season/episode counts on the Google Sheet.** See below.
 
-* USB drive reattached to the Pi and mounted at `/media/tangbox` (read-only).
-* `tangbox.service` is **active** — 23 channels, 4,031 episodes, no errors.
-* Mac and drive are now **byte-for-byte in agreement**: 70 shows, 4,031 episodes.
+## 🔴 Antigravity is mid-task — leave these alone until it's done
 
-🔑 **Hot-plugging the drive does NOT mount it.** `/etc/fstab` has the entry
-(`UUID=6A9A-7E45 → /media/tangbox`, `ro,nofail`) but fstab only runs at boot, and
-the Pi had been up 13 days. After plugging the drive into a running Pi:
+Found at the start of this session, still true: there are three **uncommitted**
+files sitting in the repo (`config.pi.yaml`, `media-tools/organize-channels.py`,
+`media-tools/shows.json`) that wire up two new channels — **Netflix Pequeños**
+(Puffin Rock, Sea of Love) and **Blocks Universe** (Numberblocks, Colourblocks).
+They look finished and match what's on the Mac.
 
-```sh
-ssh brian@192.168.1.41 'sudo mount /media/tangbox && sudo systemctl start tangbox.service'
-```
+At the same time, a **live Antigravity process** (`watch_and_downscale_downloads.py`,
+its own background watcher) was actively converting Tumble Leaf episodes into a
+brand new `PrimeKids/Tumble Leaf` folder on the Mac — not yet wired to any channel
+in `config.pi.yaml`. Brian's call when asked: **wait for everything** — don't
+commit the finished parts, don't touch PrimeKids, don't guess at how the new
+channel should be numbered or grouped. That's Antigravity's task to finish and
+commit.
 
-Check the UUID matches before mounting: `sudo blkid /dev/sda2`.
+**Before doing anything with these three files or the PrimeKids folder**, check
+whether Antigravity has finished and committed. If the uncommitted diff is gone
+(or `git log` shows a new commit touching these files), the coast is clear. If
+it's still sitting there uncommitted, leave it and ask Brian rather than guessing.
 
-## 🔴 The correction that matters most
+## What this session did: the sheet reconciliation is finished
 
-**The Mac is the source of truth for what the library ACTUALLY contains.** Brian
-curates the channel folders in `~/Downloads/Converted` by hand — adding, pruning
-and swapping versions. The Google Sheet is the *shopping list* (what it should
-contain) and it lags, sometimes badly.
+The 2026-09-07 session added 26 rows to the `Lineup` tab by reconciling the drive
+against the sheet, but left Seasons/Total episodes blank on all of them ("never
+write a count from memory"). This session looked all of them up — web search,
+cross-checked against the actual filenames/source notes on disk where the show
+name was ambiguous — and wrote the results into `Lineup!L77:N102`.
 
-This is now written up in `docs/lessons.md` (commit `d3edf9b`, pushed) along with
-its limit: absence on the Mac is not on its own grounds to delete from the drive.
-**Ask Brian what an absence means before removing anything** — external-drive
-deletions skip the Trash.
+Worth knowing if you touch this tab next:
 
-An earlier version of this session got that backwards, proposed deletions from a
-disk-only inference, and had to be corrected. Read the lesson before syncing.
+* **Already complete (100%)**: ¿Qué hay de nuevo Scooby-Doo? (42/42), Mighty Ducks
+  (26/26), Street Sharks (40/40), Pokémon Concierge (8/8), Journey to the West
+  (42/42 — see below).
+* **Two names were misleading** — checked against the actual files before trusting
+  a web search:
+  * "Tom y Jerry" is 161 classic 1940s-60s MGM theatrical shorts bundled into 48
+    blocks (`_source-titles.json` in the show folder confirms it), not a TV
+    series. Left Seasons/Total blank with a note, same treatment as Pistas de
+    Blue y tú.
+  * "Journey to the West" is *Journey to the West II* (TVB, 1998, Cantonese
+    live-action) — confirmed from `_archive.txt` in the show folder
+    (`1998-journey.to.the.west-s2/...`) — not the 1999 animated Xiyouji everyone
+    would guess first.
+* **Five are YouTube channels, not shows**: Cosmic Kids Yoga, Ms. Nenna, Aprende
+  Peque con Isa, Disney Jr Play Break, Uncle Calvin. No season/episode structure
+  exists to look up, so these stay blank with a note rather than an invented
+  number.
+* **One flagged, not resolved**: Clifford has 79 files on disk but the real
+  2000-2003 PBS series only ran 65 episodes. Wrote 65 as the reference total and
+  flagged the mismatch in the note (column N) rather than guessing what the extra
+  14 files are — worth a look if anyone wants to chase it.
+* **Numberblocks is still airing** — wrote 188 (Wikipedia's count as of this
+  session, 2026-09-10), noted as a snapshot, not a final number.
 
-## What changed on the drive
+Sonic X (row 103) already had its numbers from the previous session and wasn't
+touched.
 
-| Show | Change |
-|---|---|
-| Pocoyo | **+62 eps** (new, 2.9 GB) |
-| Puffin Rock | **+26 eps** (new, 1.9 GB) |
-| Patoaventuras | 48 → **97 eps** — the 1987 original REPLACED the 2017 reboot rip entirely |
-| Coraje El Perro Cobarde | **removed**, 48 eps — English audio (see `docs/lessons.md`) |
-| Dora la Exploradora | 61 → **35** — the 26 removed were the **3D reboot**; the classic 2D is what is wanted |
-| Los Padrinos Mágicos | 120 → **116** — 4 oversized S06 files dropped |
-| Jorge el Curioso | `_unsplit/` working folder removed (224 MB) |
+**Not fixed, left as Brian noted when declining**: the little per-row note in
+column H on all 26 rows still reads "Seasons/total NOT looked up" - inaccurate
+now that L/M are filled in. Cosmetic only; Brian said not urgent.
 
-Every removal is logged in **`_removed-2026-09-07.json` at the drive root**, with
-sizes and, for Dora, the YouTube IDs.
+## A dead end worth knowing about
 
-Patoaventuras was a true replacement: no shared filename was byte-identical and
-the originals are consistently larger at the same episode number, so the two rips
-were never mixed.
-
-## The Google Sheet is now reconciled
-
-It was far more out of date than anyone knew. Fixed this session:
-
-* **24 episode counts corrected** — Dragon Ball Z said 1, disk had 291; Bluey 1 vs 150; KND 1 vs 71; Spidey 1 vs 85
-* **8 rows flipped Wanted → HAVE** that already had files, incl. Los Padrinos (116) and Jackie Chan (73 — its note still claimed the show was undownloadable)
-* **5 rows set back to Wanted** — Snoopy Show, Maya y los tres, Tibucán, Spider-Man, Escandalosos. Their "pilot only" file exists on neither drive nor Mac; nobody recorded when it went
-* **26 shows ADDED that had no row at all** — 1,227 episodes, incl. Arthur 65, Clifford 79, Octonautas 85, Digimon 104, Uncle Calvin 102
-
-Writing to the sheet needs `workspace-mcp`, which connected fine this session.
-
-## The button-cascade fix is intact
-
-Brian saw presses cascade again mid-session. **Not a regression.** The duration
-cache (`~/.cache/tangbox/durations.json`, commit `57f2650`) validates on size and
-mtime, and this session handed the box 185 files it had never seen — Patoaventuras
-97 (all new, even same-named files), Pocoyo 62, Puffin Rock 26. First tune-in to
-Disney Aventura cost ~11 s and Netflix Jr ~10 s, while concurrent SSH `find` runs
-competed for the same USB bus.
-
-Now fully warm and tidied:
-
-```
-cache entries : 4177   (4031 episodes + 146 commercials; all point at real files)
-WOULD RE-PROBE: 0
-```
-
-128 dead entries from today's deletions were pruned (backup at
-`durations.json.bak`). ⚠️ The running process still holds the pre-prune copy in
-memory; if it probes anything new before its next restart it will write those
-dead entries back. Harmless, and it becomes permanent at the next restart.
-
-## Smaller open items
-
-* **Sheet: the 26 new rows have no Seasons or Total episodes**, so their progress
-  bars are blank. Deliberate — never write a count from memory (the Rugrats
-  lesson). They need a real lookup.
-* **Sheet row 76 duplicates row 52** (both "Pistas de Blue y tú"; row 52 holds the
-  real 43 episodes). Left in place because deleting a row shifts the ARRAYFORMULA
-  range in column R.
-* **`_removed-2026-09-07.json` on the drive still frames the Dora removal as an
-  error.** It was not — Brian removed the 3D reboot deliberately. One-line fix
-  next time the drive is on the Mac, so it stops contradicting the sheet.
-* **Remote responsiveness is unverified by Brian** since the cache warmed. If it
-  still stutters, the cause is NOT probing — investigate properly, do not guess.
-* 4 Pocoyo uploads unfetched (YouTube rate-limited); worth ~2 episodes.
-* Guardaespíritus S02E28 is missing from its source, not a failed download.
-* Trash Truck still unfetchable — its only sources sit behind Cloudflare anti-bot
-  and need resolved stream URLs, as Puffin Rock's did.
+Early this session, a background research agent reported "completed" after 2
+seconds and 0 tool calls - it had done nothing and just echoed a status line back.
+Resuming it hit `You've hit your weekly limit`, a rate limit that had nothing to
+do with the task. The work got done by running the searches directly in the main
+session instead. If a background agent ever reports success suspiciously fast
+with no tool calls, don't trust the report - check what it actually did.
 
 ## How to resume
 
 Start a fresh session and say:
 > "read tang-box/SESSION-WRAP.md and continue."
 
-Nothing is urgent. The likeliest next job is looking up seasons/total episodes for
-the 26 newly added shows so the sheet's progress bars work again.
+First check whether Antigravity's PrimeKids/channel-reorg work has landed (see
+above) before touching `config.pi.yaml`, `organize-channels.py`, or `shows.json`.
+If it has, the likely next job is copying whatever Antigravity finished onto the
+USB drive and updating the sheet to match, the same reconciliation pattern as
+2026-09-07. If it hasn't, there's nothing else pending - the box needs nothing.
