@@ -242,3 +242,40 @@ Bluey 1 vs 150), 8 shows sat as `Wanted` with files already on disk, 5 rows
 claimed a "pilot only" episode that existed nowhere, and **26 shows on the box
 had no row at all** — 1,227 episodes. None of that was visible from the sheet
 alone. Reconcile from disk, per show, before trusting any figure on it.
+
+## Cutting a compilation folder at manually-observed splitpoints
+
+When Brian watches the `_staging` files himself and hands back timestamps (one
+line per file, in folder order, "as is" for anything already episode-length),
+that replaces `detect-breaks.py` entirely for that batch — his eyes beat the
+black+silence heuristic, which can report `joins 0` on a file that clearly has
+two episodes back to back. Kill any running auto-detect job before starting the
+manual cut; don't run both.
+
+🔴 **Never re-sort the file list with `sorted()` before pairing it to timestamps
+given "in current order."** Python's `sorted()` collates by raw Unicode code
+point — digits, then uppercase, then `_`, then lowercase — which is a different
+order than the shell's locale-aware `ls`/Finder collation. On Colourblocks
+(2026-09-11) this silently paired file 3's splits to file 1's, and file 1 (a
+1:07:37 video) got cut with 22:30/45:00 marks meant for a 40-minute file,
+erroring out (`-to` before `-ss`) only by luck on the very first item. **Capture
+the order once with `ls -1 *.mp4 | cat -n` and hardcode that literal list** in
+the script; verify it against `glob()` only as a *set* (order-blind), never by
+re-deriving order from Python.
+
+**That same set-comparison needs NFC normalization.** APFS stores filenames in
+NFD (decomposed accents/emoji), so a filename typed into a script — even copied
+verbatim from a terminal — can be byte-different from the one `glob()` returns
+despite looking and printing identically. Compare via
+`unicodedata.normalize("NFC", name)` on both sides, or an exact-match assertion
+fails on files that are actually present.
+
+**Make the cutting script resumable by episode count, not by file position.**
+A 30-hour re-encode job (hardware `h264_videotoolbox`) got killed by macOS for
+memory pressure partway through — it was competing with another agent's
+concurrent ffmpeg job on the same Mac. Nothing was lost because the script
+counted existing `S01E##.mp4` files already filed, derived which source item
+that count lands on, and asserted the count falls exactly on an item boundary
+(all-or-nothing per item) before resuming — rather than assuming a file index
+or re-running from the top. Clear any partial pieces left in the cut/temp
+folder first; the resume logic trusts the season folder, not the temp one.
