@@ -1,78 +1,54 @@
-# Session Wrap — 2026-09-11 (night)
+# Session Wrap — 2026-09-11 (late night)
 > Written by: Claude Code (Sonnet 5) · Scope: tang-box
 
 ## ▶ READ THIS FIRST
 
-**The USB drive is fully synced and verified — this is the good news to lead
-with.** Everything the previous wrap (`4a307de`) flagged as pending is now
-done. The drive was plugged into this Mac, compared directly against
-`Converted/` (not reconstructed from records this time), and brought to an
-exact match: **4,490 episodes across 74 shows, identical on both sides, every
-show in its correct channel folder.** The drive is back in Brian's hands to
-put back in the box.
+Nothing urgent. The drive is synced and back with Brian (see the previous
+wrap for that work — still accurate). This tail end of the session was SSH
+access to the Pi: set up, tested, and documented.
 
 ## What this session did
 
-**1. Verified drive-vs-Mac with a real script, not guesswork.** Wrote
-`compare_drive.py` (scratchpad, not committed - one-off tool) to walk both
-trees by show name and diff channel path + episode count. First pass looked
-alarming - every show showed the drive at exactly 2x the Mac's count - which
-turned out to be a script bug, not a real problem: the exFAT drive carries a
-hidden `._<name>.mp4` AppleDouble shadow file next to every real one, and
-Python's `rglob("*.mp4")` matches those too (unlike a shell glob, which skips
-dotfiles by default). Excluding `._`-prefixed names fixed it, and the real
-result was reassuring: **every show untouched by this session already
-matched exactly** - only this session's own changes had actually drifted.
+**SSH access to the Pi (`tangbox.local`) is live from `Tangcito`.** Turned
+out nothing needed generating — this Mac's existing key was already trusted
+on the Pi — so it was just adding a `Host tangbox` shortcut to
+`~/.ssh/config`. Confirmed working (`ssh tangbox`), and used immediately to
+resolve the open Cosby-commercial question from the previous wrap: searched
+`~/tangbox-commercials` (146 files) and the whole Pi home directory,
+confirmed clean — no trace of it there now.
 
-**2. Synced the drive**, in two parts:
-- **Moved 9 shows already on the drive** into their new channel folders
-  (same content, same episode counts both sides - Bear in the Big Blue
-  House, the 6 Apple shows, Puffin Rock, Numberblocks). Fast, same-volume
-  renames, no data copied.
-- **Copied ~51 GB of genuinely new/missing content** via `rsync -a`:
-  Colourblocks (174 eps, 22 GB), Tumble Leaf (52 eps, 10 GB), Numberblocks's
-  missing 145 episodes (12.5 GB, `--ignore-existing` so the 47 already-there
-  files were left alone), Sonic X (73 eps, 5.6 GB), Sea of Love (15 eps,
-  1 GB).
-- Also renamed one drive folder to match the Mac exactly: "¿Qué hay de nuevo,
-  Scooby-Doo**?**" → "¿Qué hay de nuevo, Scooby-Doo" (dropped the trailing
-  `?` - same 42 episodes both sides, this was pure naming drift, not a real
-  gap).
-- Ran `check-exfat.py` against the source before any of this - came back
-  clean, 4,877 files / 274 folders, no unsafe names.
+**Runnable setup steps for any other Mac are in `docs/lessons.md`** (under
+"The Pi"), written the same way `docs/macbook-catch-up.md` is: instructions
+aimed at whichever agent is running there, not at Brian to type by hand.
+`Blue-Tangium` does not have this alias yet - the next agent that runs there
+and needs it should find and follow that block directly rather than asking
+Brian to run commands.
 
-🔴 Worth knowing if this ever needs redoing: macOS's `rsync` here is old BSD
-rsync (2.6.9), not a modern one - `--info=progress2` doesn't exist and
-aborts the whole run immediately (caught before anything was written,
-re-ran with `--stats` instead). If scripting a drive sync again, check the
-installed rsync's flags first rather than assuming GNU-rsync-style options.
+**Clarified a real limit of the memory system, at Brian's prompting.** He
+asked this session to "run [the MacBook catch-up] next time you're on the
+macbook." Worth restating here because it will come up again: a Claude Code
+session's memory is local to the machine it runs on
+(`~/.claude/projects/...`), so a note saved on `Tangcito` is invisible to a
+session running on `Blue-Tangium` - there is no cross-machine memory sync.
+The thing that actually carries the instruction across machines is the repo
+itself: `docs/macbook-catch-up.md` plus the 🔴 blocker already in the
+workspace-root `SESSION-WRAP.md`, which any agent reads at the start of a
+session per `AGENT-PROTOCOL.md`. Nothing further needed here - it was
+already wired correctly before this session touched it.
 
-## A dead end this session couldn't resolve
+## Still open (unchanged from before, not this session's job)
 
-Brian asked to confirm a "Cosby commercial" was removed from the Pi's SD
-card. **This session has no way to check that and never found any record of
-it:**
-- Commercials live at `~/tangbox-commercials` on the Pi's SD card,
-  deliberately kept off the USB drive AND off this Mac (see the big comment
-  block in `config.pi.yaml` around `commercials:` - "ON THE SD CARD,
-  DELIBERATELY"). No local mirror exists on this Mac to check.
-- No SSH access to the Pi from this session.
-- Searched everything reachable from here - the Mac's own `_commercials/`
-  folder, this repo's full git history, every doc in the workspace - zero
-  hits for "cosby" anywhere.
-
-Whoever picks this up next: either Brian checks `~/tangbox-commercials` on
-the Pi directly over SSH, or SSH access needs setting up for an agent to
-check it. Worth asking Brian what he actually remembers about this clip
-(when it was added, why it was flagged) since there's no paper trail at all
-right now.
+- **The MacBook rename + three-agent parity** (`docs/macbook-catch-up.md`)
+  is still not done, per the workspace-root wrap. Whoever is next on
+  `Blue-Tangium` should run it.
+- Nothing new pending on TangBox itself - the drive/library sync from
+  earlier this session is the current, verified state.
 
 ## How to resume
 
 Start a fresh session and say:
 > "read tang-box/SESSION-WRAP.md and continue."
 
-The drive/library side of things is fully caught up and verified - nothing
-pending there. The only open thread is the Cosby-commercial question above,
-and it needs either Brian's own SSH check or a decision about giving an
-agent SSH access to the Pi.
+If you're on a Mac other than `Tangcito` and need `ssh tangbox`, the exact
+steps are in `docs/lessons.md` under "The Pi" - run them yourself rather
+than asking Brian to type commands.
