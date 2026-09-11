@@ -18,10 +18,10 @@
   "source": "YouTube"
  },
  "Jorge el Curioso": {
-  "videos": 34,
-  "seconds": 98822,
-  "est_bytes": 14411541666,
-  "source": "YouTube"
+  "videos": 70,
+  "seconds": 94841,
+  "est_bytes": 11609759246,
+  "source": "TangBox Downscaled Broadcast"
  },
  "Pistas de Blue y tú": {
   "videos": 82,
@@ -259,5 +259,71 @@
   "seconds": 31250,
   "est_bytes": 2054497662,
   "source": "bilibili.tv (Latino), 480p H.264"
+ },
+ "Sonic X": {
+  "videos": 73,
+  "seconds": 105120,
+  "est_bytes": 7526000000,
+  "source": "sololatino (Antigravity pipeline) — dual audio spa/eng"
+ },
+ "Sea of Love": {
+  "videos": 15,
+  "seconds": 6925,
+  "est_bytes": 1072540674,
+  "source": "TangBox Downscaled Broadcast"
+ },
+ "Colourblocks": {
+  "videos": 89,
+  "seconds": 132677,
+  "est_bytes": 9873796021,
+  "source": "YouTube"
+ },
+ "Numberblocks": {
+  "videos": 192,
+  "seconds": 265145,
+  "est_bytes": 16265265411,
+  "source": "YouTube"
+ },
+ "Tumble Leaf": {
+  "videos": 52,
+  "seconds": 71337,
+  "est_bytes": 11007701062,
+  "source": "Streaming (Antigravity Agentic Auto-Recorder)"
+ },
+ "De campamento con Snoopy": {
+  "videos": 26,
+  "seconds": 36872,
+  "est_bytes": 4225291872,
+  "source": "TangBox Downscaled Broadcast"
+ },
+ "Snoopy el astronauta Buscando vida en el espacio": {
+  "videos": 24,
+  "seconds": 12028,
+  "est_bytes": 1454582611,
+  "source": "TangBox Downscaled Broadcast"
+ },
+ "Sapo y Sepo": {
+  "videos": 17,
+  "seconds": 23701,
+  "est_bytes": 3650327449,
+  "source": "TangBox Downscaled Broadcast"
+ },
+ "Pato y Ganso": {
+  "videos": 8,
+  "seconds": 11268,
+  "est_bytes": 1739557565,
+  "source": "TangBox Downscaled Broadcast"
+ },
+ "El niño lobo y la fábrica del todo": {
+  "videos": 10,
+  "seconds": 15297,
+  "est_bytes": 1955933751,
+  "source": "TangBox Downscaled Broadcast"
+ },
+ "Teletubbies": {
+  "videos": 26,
+  "seconds": 20045,
+  "est_bytes": 3956327528,
+  "source": "TangBox Downscaled Broadcast"
  }
 }

@@ -243,17 +243,26 @@ channels:
   - number: 19
     name: "Netflix Jr"
     path: /media/tangbox/NetflixJr
-    age: "2-6"
+    age: "2-5"
     exclude: ["_*", "*/_*"]
-    # La arana Lucas (Cartoonito), Numberblocks, Octonautas, Pocoyo (62),
-    # Puffin Rock (26).
-    # Lucas and Numberblocks arrived as YouTube uploads full of re-uploads
-    # under different Spanish titles - deduped by audio fingerprint, not by
-    # name, because the names disagree and the durations do too. Pocoyo came
-    # from 2-hour compilations cut at their chapter marks; its title cards
-    # are in English even though the audio is Latino Spanish.
+    # La araña Lucas (Cartoonito), Pocoyo (62), Octonautas.
 
   - number: 20
+    name: "Netflix Pequeños"
+    path: /media/tangbox/NetflixPequenos
+    age: "2-6"
+    exclude: ["_*", "*/_*"]
+    # Puffin Rock (26), Sea of Love (15), Trash Truck. Gentle storytelling cartoons.
+
+  - number: 21
+    name: "Blocks Universe"
+    path: /media/tangbox/BlocksUniverse
+    age: "2-6"
+    exclude: ["_*", "*/_*"]
+    breaks: false
+    # Numberblocks (48), Alphablocks, Colourblocks (Learning Blocks universe).
+
+  - number: 22
     name: "Netflix"
     path: /media/tangbox/Netflix
     age: "3-8"
@@ -265,46 +274,18 @@ channels:
   # Anime Kids now sits BEFORE Anime (moved 2026-09-03, at Brian's request).
   # Digimon and Pokemon are anime, but they skew far younger than Sailor Moon
   # and Dragon Ball Z - age splits the pair rather than network.
-  - number: 21
+  - number: 23
     name: "Anime Kids"
     path: /media/tangbox/AnimeKids
     age: "6+"
     exclude: ["_*", "*/_*"]
-    # Added 2026-09-04, Brian's call, after Anime and Nick Acción. Digimon
-    # Adventure (104) is one continuous story - arguably more serialised than
-    # Dragon Ball Z next door. Pokémon (115) shares the channel and does not
-    # care, but this is a CHANNEL setting so both get it; in order simply means
-    # Pokémon starts at Kanto, which costs nothing.
-    #
-    # The two are close in length, so _sequential_order() interleaves them
-    # roughly evenly rather than proportionally.
     episode_order: sequential
 
-  - number: 22
+  - number: 24
     name: "Anime"
     path: /media/tangbox/Anime
     age: "10+"
     exclude: ["_*", "*/_*"]
-    # Sailor Moon (200 eps), Dragon Ball Z, and the three Sailor Moon FILMS in
-    # their own folder alongside the series - the way television ran a TV movie.
-    #
-    # The films are split in half so the box can go to a break inside them.
-    # That works because of the stickiness in playlist.ShowOrder: while a show
-    # is part-way through a "<name> - ptNN" run it is held onto, so pt01 and
-    # pt02 play back to back.
-    #
-    # ⚠️ `episode_order: sequential` is INERT while this channel runs on the
-    # global `broadcast`, which builds its own shuffled running order and
-    # ignores it (see the tune_in notes above). It is kept because it is what
-    # this channel wants the moment it stops being a broadcast channel, and
-    # because losing the setting would lose the intent with it.
-    episode_order: sequential
-    # NO tune_in OVERRIDE - takes the global `broadcast`, 2026-09-04, Brian's
-    # call: "for simplicity, let's treat the anime channel like the rest".
-    #
-    # This channel had been through `resume` (dropped him mid-episode at the
-    # second he left, which is not what standby should do) and then `random`
-    # (next episode in sequence, from its start). Broadcast is neither: the
     # channel runs to a clock whether or not anybody is watching, so tuning in
     # lands partway through whatever "would" be airing - and DBZ and Sailor
     # Moon no longer play in episode order. That is the accepted cost of
@@ -317,13 +298,13 @@ channels:
   # Cantonés and Journey to the West: neither is animation, and neither has a
   # network, which is why both sit at the end rather than inside a network
   # block above.
-  - number: 23
+  - number: 25
     name: "Cantonés"
     path: /media/tangbox/Cantones
     age: "0-6"
     exclude: ["_*", "*/_*"]
 
-  - number: 24
+  - number: 26
     name: "Journey to the West"
     path: /media/tangbox/JourneyWest
     age: "6+"
@@ -340,6 +321,16 @@ channels:
     # (0-3, 3-5, 6+, parent-child), so splitting this into separate channels
     # later is a matter of moving files, not re-downloading. Worth revisiting
     # once there is a sense of which bands actually get watched.
+
+  # --- Amazon Prime Video ---------------------------------------------------
+  - number: 27
+    name: "Prime Kids"
+    path: /media/tangbox/PrimeKids
+    age: "2-6"
+    exclude: ["_*", "*/_*"]
+    breaks: false
+    # Tumble Leaf (52 eps) - stop-motion adventure series.
+
 
 # --- How a channel behaves when you tune in -----------------------------------
 #   random    - a fresh random episode starts, a few seconds in  [chosen]
