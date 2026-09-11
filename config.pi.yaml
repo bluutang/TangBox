@@ -260,7 +260,10 @@ channels:
     age: "2-6"
     exclude: ["_*", "*/_*"]
     breaks: false
-    # Numberblocks (48), Alphablocks, Colourblocks (Learning Blocks universe).
+    # Numberblocks (192), Alphablocks, Colourblocks (174) - Learning Blocks
+    # universe. Numberblocks was undercounted at 48 until 2026-09-11: 145
+    # episodes had been added since the 2026-09-07 reconciliation without the
+    # comment or the Lineup sheet catching up.
 
   - number: 22
     name: "Netflix"
