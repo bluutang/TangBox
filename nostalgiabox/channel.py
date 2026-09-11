@@ -29,7 +29,7 @@ _SEASON_PATTERNS = (
 )
 
 from .config import ChannelConfig, Config
-from .playlist import ShowOrder, ShuffleBag
+from .playlist import ShowOrder, ShuffleBag, show_replay_weight
 from .probe import DEFAULT_EPISODE_SECONDS, flush_cache, probe_duration
 
 log = logging.getLogger(__name__)
@@ -276,12 +276,32 @@ class Channel:
         *,
         tune_in: str = "random",
         episode_order: str = "shuffle",
+        weighted_replay: bool = False,
         start_offset_min: float = 0.0,
         start_offset_max: Optional[float] = None,
         rng: Optional[random.Random] = None,
     ) -> None:
         self.config = config
         self.episodes: List[Path] = list(episodes)
+        if weighted_replay and self.episodes:
+            # Repeat each show's OWN episode list by its weight BEFORE any of
+            # random/resume/broadcast mode ever sees `self.episodes` - all
+            # three ultimately draw from this one list (ShuffleBag and
+            # ShowOrder directly; BroadcastSchedule builds its finite running
+            # order from it), so expanding it here is the one place this has
+            # to happen for the effect to reach every mode, not just some of
+            # them. A show with fewer episodes ends up with its list repeated
+            # more times, so it comes up again sooner in whichever mode is
+            # actually running.
+            grouped: Dict[str, List[Path]] = {}
+            for ep in self.episodes:
+                name = show_name_for(ep, config.path) or ep.parent.name
+                grouped.setdefault(name, []).append(ep)
+            expanded: List[Path] = []
+            for name in sorted(grouped):
+                eps = grouped[name]
+                expanded.extend(eps * max(1, show_replay_weight(len(eps))))
+            self.episodes = expanded
         self.tune_in_mode = tune_in
         self.episode_order = episode_order
         # Start each episode a random number of seconds in (within this range) so
@@ -543,6 +563,11 @@ def build_lineup(config: Config, *, rng: Optional[random.Random] = None) -> Chan
                 # resumes. Falls back to the global setting.
                 tune_in=ch_cfg.tune_in or config.tune_in,
                 episode_order=ch_cfg.episode_order or config.episode_order,
+                weighted_replay=(
+                    config.weighted_replay
+                    if ch_cfg.weighted_replay is None
+                    else ch_cfg.weighted_replay
+                ),
                 start_offset_min=config.start_offset_min,
                 start_offset_max=config.start_offset_max,
                 rng=ch_rng,

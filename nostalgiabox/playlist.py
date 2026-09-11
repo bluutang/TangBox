@@ -119,6 +119,30 @@ def _continues(current: object, following: object) -> bool:
     return bool(a and b and a[0] == b[0] and b[1] == a[1] + 1)
 
 
+def show_replay_weight(episode_count: int) -> int:
+    """How many times a show's own episode list is repeated in its channel's pool.
+
+    A show with 8 episodes finishes its whole run in 8 plays and then goes
+    quiet for the rest of a channel's cycle while a 150-episode show is still
+    working through its first pass. Repeating the small show's list in the
+    pool it plays from lets it come up again sooner, without touching how
+    often anything else plays - see ``Channel``'s ``weighted_replay`` option,
+    which applies this to a channel's episode list before any of `random`,
+    `resume` or `broadcast` mode ever sees it, so the effect is the same
+    whichever one is active.
+
+    Gentle tiers, Brian's call 2026-09-11: under 20 episodes repeats 3x;
+    20-59 repeats 2x (a repeat count has to be a whole number, so the "1.5x"
+    this was pitched as rounds up here rather than alternating fractionally);
+    60+ is unchanged.
+    """
+    if episode_count < 20:
+        return 3
+    if episode_count < 60:
+        return 2
+    return 1
+
+
 class ShowOrder(Generic[T]):
     """Shuffles SHOWS; plays each show's episodes in order.
 

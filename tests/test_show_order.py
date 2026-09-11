@@ -19,7 +19,7 @@ channel has more than one.
 
 from pathlib import Path
 
-from nostalgiabox.playlist import ShowOrder
+from nostalgiabox.playlist import ShowOrder, show_replay_weight
 
 
 def ep(show, n):
@@ -226,3 +226,22 @@ def test_peek_follows_a_sticky_run():
             assert o.peek() == F[1]
             return
     raise AssertionError("part 1 never came up")
+
+
+# --- replay weighting --------------------------------------------------
+
+
+def test_show_replay_weight_tiers():
+    assert show_replay_weight(5) == 3     # under 20
+    assert show_replay_weight(19) == 3
+    assert show_replay_weight(20) == 2    # 20-59
+    assert show_replay_weight(59) == 2
+    assert show_replay_weight(60) == 1    # 60+
+    assert show_replay_weight(300) == 1
+
+
+# ShowOrder itself is unaware of weighting - it just groups whatever items it
+# is handed. `Channel`'s `weighted_replay` option applies show_replay_weight
+# by repeating a show's episodes in the list BEFORE it reaches ShowOrder (or
+# ShuffleBag, or BroadcastSchedule), so the effect is identical whichever
+# tune-in mode is active. See tests/test_channel.py for that behaviour.

@@ -367,6 +367,14 @@ channels:
 # is the price of the schedule, and it was paid knowingly.
 tune_in: broadcast
 
+# Small shows repeat sooner instead of sitting quiet while a big show works
+# through its long first pass - see playlist.show_replay_weight for the
+# exact tiers (under 20 eps repeats 3x, 20-59 repeats 2x, 60+ unchanged).
+# Brian's call 2026-09-11, "gentle tiers". Applies globally; override per
+# channel with weighted_replay: false if one show's own repeats ever get
+# distracting.
+weighted_replay: true
+
 
 start_channel: 4         # what it powers on to. Was 2 (PBS Pequeños); kept
                          # pointing at PBS Pequeños when Aprende/Ejercicio moved

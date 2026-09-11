@@ -171,6 +171,9 @@ class ChannelConfig:
     tune_in: Optional[str] = None
     # Per-channel override of `episode_order`. None means "use the global one".
     episode_order: Optional[str] = None
+    # Per-channel override of `weighted_replay`. None means "use the global
+    # one".
+    weighted_replay: Optional[bool] = None
     # Which subfolder of the commercials folder this channel's bumps live in.
     # None means "generic adverts only", which is right for a channel with no
     # network to imitate - and for Netflix and Apple TV+, which never carried
@@ -205,6 +208,11 @@ class Config:
     #   sequential - a bag of SHOWS; each show plays its episodes in order, so
     #                which show you get is a surprise and which episode is not
     episode_order: str = "shuffle"
+    # Give shows with fewer episodes extra shuffle turns so they repeat
+    # sooner instead of sitting quiet while a big show works through its
+    # first pass (see playlist.show_replay_weight for the exact tiers).
+    # Off by default - a channel or the whole box opts in explicitly.
+    weighted_replay: bool = False
     start_channel: Optional[int] = None
 
     # Presentation / "feel" of the TV.
@@ -386,6 +394,11 @@ def _parse_channels(raw: Any, base: Optional[Path], default_shuffle: bool) -> Li
                 episode_order=_parse_episode_order(
                     entry.get("episode_order"), f"channels[{i}].episode_order"
                 ),
+                weighted_replay=(
+                    bool(entry["weighted_replay"])
+                    if entry.get("weighted_replay") is not None
+                    else None
+                ),
                 commercials=(
                     str(entry["commercials"]).strip() or None
                     if entry.get("commercials") is not None
@@ -566,6 +579,7 @@ def config_from_dict(data: Dict[str, Any], *, base_dir: Optional[Path] = None) -
         episode_order=_parse_episode_order(
             data.get("episode_order"), "episode_order"
         ) or "shuffle",
+        weighted_replay=bool(data.get("weighted_replay", False)),
         start_channel=start_channel,
         fullscreen=bool(data.get("fullscreen", True)),
         force_4_3=bool(data.get("force_4_3", False)),

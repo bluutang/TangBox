@@ -337,3 +337,50 @@ def test_peek_next_does_not_build_a_broadcast_schedule(tmp_path):
     channel = _channel(tmp_path, tune_in="broadcast")
     channel.peek_next()
     assert channel._broadcast is None
+
+
+# --- weighted_replay (flat "shuffle" mode) ------------------------------
+
+
+def _multi_show_channel(tmp_path, sizes: dict, **kw):
+    """A channel folder holding one subfolder per show, given {name: episode_count}."""
+    from nostalgiabox.config import ChannelConfig
+
+    root = tmp_path / "chan"
+    root.mkdir()
+    for name, n in sizes.items():
+        make_show(root, name, n)
+    cfg = ChannelConfig(number=3, name="chan", path=root)
+    eps = scan_episodes(root, [".mp4"])
+    return Channel(cfg, eps, rng=random.Random(0), **kw)
+
+
+def test_weighted_replay_off_by_default_leaves_the_pool_1to1(tmp_path):
+    ch = _multi_show_channel(tmp_path, {"big": 30, "small": 5})
+    assert ch._bag.peek_remaining() == len(ch.episodes)
+
+
+def test_weighted_replay_duplicates_small_shows_in_the_flat_pool(tmp_path):
+    # "small" (5 eps, under 20) gets weight 3; "mid" (30 eps, 20-59) gets 2.
+    ch = _multi_show_channel(tmp_path, {"mid": 30, "small": 5}, weighted_replay=True)
+    assert ch._bag.peek_remaining() == 30 * 2 + 5 * 3
+
+
+def test_weighted_replay_reaches_broadcast_mode_too(tmp_path, monkeypatch):
+    """The box's actual tune_in mode - broadcast builds its OWN schedule from
+    self.episodes rather than going through ShuffleBag/ShowOrder, so this is
+    the case that matters for what Brian actually sees on the television."""
+    import nostalgiabox.channel as channel_mod
+
+    monkeypatch.setattr(channel_mod, "probe_duration", lambda p: 60.0)
+    (tmp_path / "a").mkdir()
+    (tmp_path / "b").mkdir()
+    plain = _multi_show_channel(tmp_path / "a", {"mid": 30, "small": 5}, tune_in="broadcast")
+    weighted = _multi_show_channel(
+        tmp_path / "b", {"mid": 30, "small": 5}, tune_in="broadcast", weighted_replay=True
+    )
+    plain.tune_in(now=0.0)
+    weighted.tune_in(now=0.0)
+    # Plain: 35 episodes once each. Weighted: mid x2 + small x3 = 75.
+    assert len(plain._broadcast._episodes) == 35
+    assert len(weighted._broadcast._episodes) == 75
