@@ -181,6 +181,18 @@ nothing about behaviour — every config change needs a second manual step over 
 the card's free space. Channels reporting 0 episodes on the Pi is the expected
 state, not a fault — do not offer to copy episodes onto the card.
 
+**SSH works: `ssh tangbox`.** Set up 2026-09-11 — turned out to need nothing
+new, the Mac's existing key (`~/.ssh/id_ed25519`) was already trusted on the
+Pi, so this was just adding a `Host tangbox` shortcut
+(`HostName tangbox.local`, `User brian`) to `~/.ssh/config`. That file is
+machine-local and not in git, so **this alias needs recreating on any other
+Mac** the same way — try `ssh brian@tangbox.local` first; if that connects
+without a password prompt, the key is already trusted and only the shortcut
+is missing. `tangbox.local` is the Pi's mDNS name; if it stops resolving,
+find its IP another way (router admin page, or a physical check) rather than
+guessing. Commercials live at `~/tangbox-commercials` on the Pi *(see below)*
+and are one thing worth checking here that no Mac-side file can answer.
+
 ## Machines
 
 `scutil --get ComputerName` → `Tangcito` (Mac mini) or `Blue-Tangium` (MacBook).
