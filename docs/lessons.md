@@ -181,17 +181,46 @@ nothing about behaviour — every config change needs a second manual step over 
 the card's free space. Channels reporting 0 episodes on the Pi is the expected
 state, not a fault — do not offer to copy episodes onto the card.
 
-**SSH works: `ssh tangbox`.** Set up 2026-09-11 — turned out to need nothing
-new, the Mac's existing key (`~/.ssh/id_ed25519`) was already trusted on the
-Pi, so this was just adding a `Host tangbox` shortcut
-(`HostName tangbox.local`, `User brian`) to `~/.ssh/config`. That file is
-machine-local and not in git, so **this alias needs recreating on any other
-Mac** the same way — try `ssh brian@tangbox.local` first; if that connects
-without a password prompt, the key is already trusted and only the shortcut
-is missing. `tangbox.local` is the Pi's mDNS name; if it stops resolving,
-find its IP another way (router admin page, or a physical check) rather than
-guessing. Commercials live at `~/tangbox-commercials` on the Pi *(see below)*
-and are one thing worth checking here that no Mac-side file can answer.
+**SSH works: `ssh tangbox`.** Set up 2026-09-11 on `Tangcito` — turned out to
+need nothing new, that Mac's existing key (`~/.ssh/id_ed25519`) was already
+trusted on the Pi, so it was just adding a `Host tangbox` shortcut to
+`~/.ssh/config`. Commercials live at `~/tangbox-commercials` on the Pi and
+are one thing worth checking here that no Mac-side file can ever answer, no
+matter how thoroughly you search this repo.
+
+🔴 **`~/.ssh/config` is machine-local and not in git — this alias does not
+exist yet on `Blue-Tangium` (or any future Mac).** Any agent on a machine
+where `ssh tangbox` fails: run this yourself, do not just tell Brian to.
+
+```bash
+scutil --get ComputerName        # confirm which Mac you're actually on
+
+# 1. Does this Mac's key already work?
+ssh -o BatchMode=yes -o ConnectTimeout=5 brian@tangbox.local "echo ok"
+# "ok" with no password prompt -> key is already trusted, skip to step 3.
+# A password prompt or failure -> do step 2 first, and TELL BRIAN what
+# you're about to do before running it (it needs his say-so on the Pi
+# once): ssh-copy-id brian@tangbox.local
+
+# 2. Only if step 1 needed a password:
+ssh-copy-id brian@tangbox.local
+
+# 3. Add the shortcut (safe to run even if the Host block already exists —
+# check first with `grep -A3 "Host tangbox" ~/.ssh/config`):
+cat >> ~/.ssh/config << 'EOF'
+
+Host tangbox
+  HostName tangbox.local
+  User brian
+  IdentityFile ~/.ssh/id_ed25519
+EOF
+
+# 4. Confirm:
+ssh tangbox "echo connected"
+```
+
+`tangbox.local` is the Pi's mDNS name; if it stops resolving, find its IP
+another way (router admin page, or a physical check) rather than guessing.
 
 ## Machines
 
