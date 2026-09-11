@@ -37,7 +37,8 @@ ROOT = Path("/Users/briantang/Downloads/Converted")
 
 # channel folder (must match `path:` in config.pi.yaml) -> show folders on disk
 CHANNELS: dict[str, list[str]] = {
-    "PBSPequenos":    ["Plaza Sésamo", "Barney el Dinosaurio", "Teletubbies"],
+    "PBSPequenos":    ["Plaza Sésamo", "Barney el Dinosaurio", "Teletubbies",
+                       "Bear in the Big Blue House"],
     "PBSKids":        ["Daniel Tigre", "Jorge el Curioso"],
     "PBSEscolar":     ["Arthur", "Clifford", "El Autobús Mágico"],
     "NickJr":         ["Franklin", "Pistas de Blue y tú", "Dora la Exploradora"],
@@ -47,7 +48,7 @@ CHANNELS: dict[str, list[str]] = {
     "NickAccion":     ["Avatar La leyenda de Aang", "Avatar La Leyenda de Aang",
                        "La Leyenda de Korra"],
     "DisneyJr":       ["Bluey", "Spidey y sus Sorprendentes Amigos",
-                       "Bear in the Big Blue House", "Rolie Polie Olie"],
+                       "Rolie Polie Olie"],
     "Disney":         ["Kim Possible", "Recreo", "Pepper Ann"],
     "DisneyAventura": ["Patoaventuras", "Lilo y Stitch La Serie",
                        "La Leyenda de los Tres Caballeros"],
@@ -60,15 +61,17 @@ CHANNELS: dict[str, list[str]] = {
                        "Gargoyles", "Mighty Ducks"],
     "CartoonNetwork": ["El laboratorio de Dexter", "Ed Edd y Eddy", "Escandalosos",
                        "KND Los chicos del barrio"],
-    "AppleSnoopy":    ["De campamento con Snoopy",
+    # MERGED 2026-09-11 (Brian's call) from two channels, AppleSnoopy and
+    # AppleCuentos, into one AppleKids - see config.pi.yaml for why.
+    "AppleKids":      ["De campamento con Snoopy",
                        "Snoopy el astronauta Buscando vida en el espacio",
-                       "El show de Snoopy"],
-    "AppleCuentos":   ["Lago tranquilo", "Sapo y Sepo",
-                       "El niño lobo y la fábrica del todo", "Pato y Ganso"],
+                       "El show de Snoopy", "Lago tranquilo", "Sapo y Sepo",
+                       "El niño lobo y la fábrica del todo", "Pato y Ganso",
+                       "Shape Island"],
     "NetflixJr":       ["La arana Lucas", "Pocoyo", "Octonautas"],
     "NetflixPequenos": ["Puffin Rock", "Sea of Love", "Trash Truck"],
     "BlocksUniverse":  ["Numberblocks", "Alphablocks", "Colourblocks"],
-    "PrimeKids":       ["Tumble Leaf"],
+    "PrimeKids":       ["Tumble Leaf", "Pete the Cat"],
     "NetflixKids":    ["Misterios Animales", "My Melody Kuromi", "Concierge Pokémon"],
     "NetflixCuentos": ["Los guardaespíritus del bosque", "Tibucán", "Maya y los tres",
                        "Dr Seuss Pez rojo pez azul"],

@@ -107,7 +107,10 @@ channels:
     path: /media/tangbox/PBSPequenos
     age: "1-2"
     exclude: ["_*", "*/_*"]
-    # Plaza Sésamo, Barney, Teletubbies. The youngest channel on the box.
+    # Plaza Sésamo, Barney, Teletubbies, Bear in the Big Blue House. The
+    # youngest channel on the box. Bear MOVED here from Disney Jr 2026-09-11,
+    # Brian's call - a mascot-suit preschool show sits better with the others
+    # of its kind than with its original US network.
 
   - number: 5
     name: "PBS Kids"
@@ -125,8 +128,22 @@ channels:
     # adaptations that aired on PBS, which is a real identity rather than a
     # leftovers bucket.
 
-  # --- Nickelodeon -----------------------------------------------------------
+  # --- Blocks Universe ---------------------------------------------------------
+  # MOVED here 2026-09-11, Brian's call - right after the PBS block, with the
+  # other youngest-skewing channels, rather than out past Netflix.
   - number: 7
+    name: "Blocks Universe"
+    path: /media/tangbox/BlocksUniverse
+    age: "2-6"
+    exclude: ["_*", "*/_*"]
+    breaks: false
+    # Numberblocks (192), Alphablocks, Colourblocks (174) - Learning Blocks
+    # universe. Numberblocks was undercounted at 48 until 2026-09-11: 145
+    # episodes had been added since the 2026-09-07 reconciliation without the
+    # comment or the Lineup sheet catching up.
+
+  # --- Nickelodeon -----------------------------------------------------------
+  - number: 8
     name: "Nick Jr"
     path: /media/tangbox/NickJr
     age: "2-5"
@@ -134,21 +151,22 @@ channels:
     # Franklin, Pistas de Blue y tú. Franklin is Canadian (Nelvana/CBC) but
     # aired on Nick Jr in the US, which is why it is filed here and not PBS.
 
-  - number: 8
+  - number: 9
     name: "Nick Clásico"
     path: /media/tangbox/NickClasico
     age: "5-8"
     exclude: ["_*", "*/_*"]
     # Rugrats, ¡Oye Arnold!, Doug. The biggest channel on the box.
 
-  - number: 9
+  - number: 10
     name: "Nick Moderno"
     path: /media/tangbox/NickModerno
     age: "5-8"
     exclude: ["_*", "*/_*"]
-    # THIN - Bob Esponja and Jimmy Neutron, one episode each today.
+    # Bob Esponja (59), Jimmy Neutron (55), Los Padrinos Mágicos (116). The
+    # old "THIN - one episode each" comment here was stale until 2026-09-11.
 
-  - number: 10
+  - number: 11
     name: "Nick Acción"
     path: /media/tangbox/NickAccion
     age: "7+"
@@ -157,28 +175,32 @@ channels:
     episode_order: sequential
 
   # --- Disney ----------------------------------------------------------------
-  - number: 11
+  - number: 12
     name: "Disney Jr"
     path: /media/tangbox/DisneyJr
     age: "2-5"
     exclude: ["_*", "*/_*"]
-    # THIN - Bluey and Spidey, one episode each today.
+    # Bluey, Winnie the Pooh, Rolie Polie Olie, Spidey y sus Sorprendentes
+    # Amigos. Bear in the Big Blue House MOVED to PBS Pequeños 2026-09-11 -
+    # Brian grouped it with the other mascot-suit preschool shows instead.
+    # The old "THIN - Bluey and Spidey, one episode each" comment here was
+    # stale until the same date; this is not a thin channel any more.
 
-  - number: 12
+  - number: 13
     name: "Disney"
     path: /media/tangbox/Disney
     age: "6-9"
     exclude: ["_*", "*/_*"]
     # Kim Possible, Recreo, Pepper Ann.
 
-  - number: 13
+  - number: 14
     name: "Disney Aventura"
     path: /media/tangbox/DisneyAventura
     age: "6-9"
     exclude: ["_*", "*/_*"]
     # Patoaventuras (97, 1987 original), Lilo y Stitch, Tres Caballeros.
 
-  - number: 14
+  - number: 15
     name: "Disney Acción"
     path: /media/tangbox/DisneyAccion
     age: "7+"
@@ -197,7 +219,7 @@ channels:
   # SPLIT 2026-09-03. Every other network on this box is age-split; Cartoon
   # Network was the one exception, one bucket running from Tom y Jerry to
   # Coraje. Tone, not just age, is what actually separates them.
-  - number: 15
+  - number: 16
     name: "Cartoon Comedia"
     path: /media/tangbox/CartoonComedia
     age: "6-9"
@@ -207,31 +229,41 @@ channels:
     # to be Spanish. If it returns, treat its age label as a soft floor: it
     # runs scarier than the rest of this channel.
 
-  - number: 16
+  - number: 17
     name: "Cartoon Acción"
     path: /media/tangbox/CartoonAccion
     age: "7-10"
     exclude: ["_*", "*/_*"]
     # Jackie Chan, Xiaolin Showdown, Las Chicas Superpoderosas, KND.
 
-  # --- Apple TV+ -------------------------------------------------------------
-  # Apple and Netflix never carried advertising, so neither block names a
-  # commercials folder - they fall back to the generic pool.
-  - number: 17
-    name: "Apple Snoopy"
-    path: /media/tangbox/AppleSnoopy
-    age: "3-6"
-    exclude: ["_*", "*/_*"]
-    # De campamento con Snoopy, Snoopy el astronauta, El show de Snoopy.
-    # A franchise INSIDE one platform, so it does not break the one-network rule.
-
+  # --- Amazon Prime Video ---------------------------------------------------
+  # MOVED here 2026-09-11, Brian's call - right after the Cartoon Network
+  # block rather than out past Netflix/Anime.
   - number: 18
-    name: "Apple Cuentos"
-    path: /media/tangbox/AppleCuentos
+    name: "Prime Kids"
+    path: /media/tangbox/PrimeKids
+    age: "2-6"
+    exclude: ["_*", "*/_*"]
+    breaks: false
+    # Tumble Leaf (52 eps) - stop-motion adventure series. Pete the Cat
+    # planned next.
+
+  # --- Apple TV+ -------------------------------------------------------------
+  # Apple and Netflix never carried advertising, so this block names no
+  # commercials folder - it falls back to the generic pool.
+  # MERGED 2026-09-11, Brian's call, from two channels (Apple Snoopy and
+  # Apple Cuentos) into one. "Apple Kids" was already the sub-channel name
+  # several not-yet-downloaded Apple shows carried on the Lineup sheet - this
+  # just catches the config up to what the sheet already called it.
+  - number: 19
+    name: "Apple Kids"
+    path: /media/tangbox/AppleKids
     age: "3-6"
     exclude: ["_*", "*/_*"]
-    # Lago tranquilo, Sapo y Sepo, El niño lobo, Pato y Ganso. The calmest
-    # channel here - picture-book adaptations, near-silent in places.
+    # De campamento con Snoopy, Snoopy el astronauta, Lago tranquilo, Sapo y
+    # Sepo, El niño lobo, Pato y Ganso. Shape Island planned next. A Snoopy
+    # franchise sitting alongside picture-book adaptations, all one platform,
+    # so it does not break the one-network rule.
 
   # --- Netflix ---------------------------------------------------------------
   # MERGED 2026-09-03. Netflix Cuentos never grew past one show; folded into
@@ -240,30 +272,20 @@ channels:
   # split with. Lucas and Numberblocks both stream on Netflix and both skew
   # younger than what the main channel carries, so they open a Jr channel
   # rather than dilute it. Younger sits first, as it does for PBS and Apple.
-  - number: 19
+  - number: 20
     name: "Netflix Jr"
     path: /media/tangbox/NetflixJr
     age: "2-5"
     exclude: ["_*", "*/_*"]
     # La araña Lucas (Cartoonito), Pocoyo (62), Octonautas.
 
-  - number: 20
+  - number: 21
     name: "Netflix Pequeños"
     path: /media/tangbox/NetflixPequenos
     age: "2-6"
     exclude: ["_*", "*/_*"]
-    # Puffin Rock (26), Sea of Love (15), Trash Truck. Gentle storytelling cartoons.
-
-  - number: 21
-    name: "Blocks Universe"
-    path: /media/tangbox/BlocksUniverse
-    age: "2-6"
-    exclude: ["_*", "*/_*"]
-    breaks: false
-    # Numberblocks (192), Alphablocks, Colourblocks (174) - Learning Blocks
-    # universe. Numberblocks was undercounted at 48 until 2026-09-11: 145
-    # episodes had been added since the 2026-09-07 reconciliation without the
-    # comment or the Lineup sheet catching up.
+    # Puffin Rock (26), Sea of Love (15), Trash Truck planned next. Gentle
+    # storytelling cartoons.
 
   - number: 22
     name: "Netflix"
@@ -324,15 +346,6 @@ channels:
     # (0-3, 3-5, 6+, parent-child), so splitting this into separate channels
     # later is a matter of moving files, not re-downloading. Worth revisiting
     # once there is a sense of which bands actually get watched.
-
-  # --- Amazon Prime Video ---------------------------------------------------
-  - number: 27
-    name: "Prime Kids"
-    path: /media/tangbox/PrimeKids
-    age: "2-6"
-    exclude: ["_*", "*/_*"]
-    breaks: false
-    # Tumble Leaf (52 eps) - stop-motion adventure series.
 
 
 # --- How a channel behaves when you tune in -----------------------------------
