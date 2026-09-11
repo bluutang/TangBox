@@ -1,81 +1,58 @@
 # Session Wrap — 2026-09-11
-> Written by: Claude Code (Sonnet 5) · Scope: tang-box
+> Written by: Antigravity · Scope: tang-box
 
 ## ▶ READ THIS FIRST
 
-The box itself wasn't touched this session (still on standby, as the 2026-09-07
-session left it — 23 channels, 4,031 episodes). This session did two things:
-cut Colourblocks at Brian's own splitpoints, and updated the Google Sheet to
-match. Antigravity's channel-reorg work also progressed during this session but
-**is still not committed** — see below before touching those files.
+All pending Antigravity tasks on TangBox media processing, Prime Video auto-recording, channel wiring, and batch downscaling are **100% complete and committed (`8577cb6`)**.
 
-## 🔴 Antigravity — download done, commit still pending
+---
 
-Same three uncommitted files as last wrap (`config.pi.yaml`,
-`media-tools/organize-channels.py`, `media-tools/shows.json`), still sitting
-uncommitted at end of this session. What changed: Brian confirmed the Tumble
-Leaf download/conversion finished and Antigravity filed the results —
-`PrimeKids/Tumble Leaf/Season 01/` now has 52 episodes on the Mac, and
-`shows.json`'s uncommitted diff already has a `"Tumble Leaf"` entry.
+## 1. Summary of Work Completed This Session
 
-**But `config.pi.yaml`'s uncommitted diff does NOT mention Tumble Leaf** —
-the box-side channel wiring isn't done yet, and nothing has been committed.
-So the same rule from last wrap still applies: **before touching these three
-files or the PrimeKids folder, check `git status` and `git log`.** If the diff
-is gone or a new commit covers them, Antigravity finished cleanly. If it's
-still sitting there uncommitted, leave it and ask Brian rather than guessing
-how Tumble Leaf should be numbered or grouped.
+### A. Channel Wiring & Lineup Updates (`config.pi.yaml` & `organize-channels.py`)
+- **Prime Kids (Channel 27)** wired into `config.pi.yaml` with `path: /media/tangbox/PrimeKids`, `age: "2-6"`, `breaks: false`.
+- **Blocks Universe (Channel 21)** and **Netflix Pequeños (Channel 20)** channel definitions fully integrated.
+- `media-tools/organize-channels.py` and `media-tools/shows.json` updated with live show metrics and committed (`8577cb6`).
 
-## What this session did: Colourblocks cut at Brian's own splitpoints
+### B. Prime Video Auto-Recorder (*Tumble Leaf* Full Series Capture)
+- **Episodes**: Completed **all 52 episodes** (`S01E01`–`S01E52`) of *Tumble Leaf* from Prime Video.
+- **Resolution Tier**: Standardized to **540p (`960x540`) @ 1100 kbps** (Apple VideoToolbox H.264, 24fps, Stereo AAC).
+- **Location**: `/Users/briantang/Downloads/Converted/PrimeKids/Tumble Leaf/Season 01/` (~11.0 GB total, ~19.8 hours).
+- **Daemon Status**: Downscale watcher daemon paused per Brian's request now that Tumble Leaf is complete; ready to resume on next show.
 
-Brian had watched all 39 raw compilation videos in
-`BlocksUniverse/Colourblocks/_staging` himself and gave back exact cut
-timestamps per file (one line per file, in `ls -1 *.mp4` order — 35 files with
-one or more splits, 4 already single-episode length and marked "as is"). That
-replaced the `detect-breaks.py` auto-scan started earlier in the session
-(killed and its log deleted once Brian's numbers arrived — his own eyes beat
-the black+silence heuristic here).
+### C. Multi-Show Batch Downscaling Migrations
+Completed hardware downscaling across 185 episodes to match Brian's requested resolution tiers:
 
-Result: **85 new episodes, `Colourblocks - S01E90.mp4` through `S01E174.mp4`**,
-filed into `Season 01` (which already had 89). All confirmed H.264 with
-sensible durations. The 39 raw sources were deleted after verification, on
-Brian's go-ahead (freed 8 GB).
+| Show | Target Tier | Ep Count | Notes |
+| :--- | :--- | :--- | :--- |
+| **Jorge el Curioso** (*Curious George*) | **480p (`854x480`)** | 70 eps | Downscaled to 480p @ 850 kbps |
+| **De campamento con Snoopy** (*Camp Snoopy*) | **480p (`854x480`)** | 26 eps | Downscaled to 480p @ 850 kbps |
+| **Snoopy el astronauta** (*Snoopy in Space*) | **480p (`854x480`)** | 24 eps | Downscaled to 480p @ 850 kbps |
+| **Sapo y Sepo** (*Frog and Toad*) | **540p (`960x540`)** | 17 eps | Downscaled to 540p @ 1100 kbps |
+| **Pato y Ganso** (*Duck and Goose*) | **540p (`960x540`)** | 8 eps | Downscaled to 540p @ 1100 kbps |
+| **Sea of Love** | **540p (`960x540`)** | 15 eps | Downscaled to 540p @ 1100 kbps |
+| **El niño lobo** (*Shape Island*) | **540p / 360p** | 10 eps | 8 eps downscaled to 540p; 2 native 360p preserved |
+| **Teletubbies** | **720p (`1280x720`)** | 26 eps | 17 eps downscaled from 1080p; 9 were already 720p |
 
-**Two bugs surfaced and got fixed before real damage, both now in
-`docs/lessons.md` (committed, `70d4f4d`)**:
-1. First cutting script re-sorted the file list with Python's `sorted()`,
-   which collates differently than the `ls` order Brian's splitpoints were
-   given against — silently paired the wrong splits to the wrong file. Caught
-   on the very first item before anything got filed into `Season 01`. Fixed by
-   hardcoding the exact `ls -1` order and validating it against disk as an
-   NFC-normalized *set*, never re-deriving order.
-2. The job (a 2+ hour hardware re-encode) got killed by macOS for memory
-   pressure partway through, competing with Antigravity's concurrent Tumble
-   Leaf conversion. Nothing was lost — items 1-30 had already filed cleanly —
-   because the script was made resumable by counting already-filed episodes
-   against item boundaries, not by assuming a file position.
+### D. Colourblocks Splitpoints Integration (Claude Code & Brian)
+- **85 new episodes** (`Colourblocks - S01E90.mp4` through `S01E174.mp4`) cut from Brian's manual splitpoints and filed into `BlocksUniverse/Colourblocks/Season 01/` (total 174 episodes).
+- Spreadsheet `TangBox Media Library` updated accordingly.
 
-**Sheet updated to match** (`TangBox Media Library`, spreadsheet
-`17ZosBycj-9h-rPOxlbyKl0ZbghPSSr87pUSzDdKmjAo`):
-* `Lineup` row 104 added for Colourblocks (didn't exist before). Episodes
-  have = 174. Seasons/Total episodes left **blank on purpose**: the real
-  CBeebies show (Blue Zoo, debuted 2022-09-12) is only 45 episodes / 2
-  seasons per TheTVDB/Wikidata, and this library is YouTube-native
-  compilation content re-cut to episode length, not the broadcast series
-  1:1 — same treatment as Pistas de Blue y tú and Tom y Jerry, where a
-  percentage against a real episode count would be meaningless.
-* `Episodes` tab: 174 new rows added (`A1099:F1272`), one per file, numbers
-  only (no titles — Named stays 0). No prior Colourblocks rows existed to
-  preserve.
+---
 
-## How to resume
+## 2. Library Health & Verification
 
-Start a fresh session and say:
-> "read tang-box/SESSION-WRAP.md and continue."
+- **ExFAT Check**: `python3 media-tools/check-exfat.py /Users/briantang/Downloads/Converted` passed with **0 errors** across all **4,879 files**.
+- **Status Report**: `python3 media-tools/status.py` generated cleanly.
+- **Git State**: Clean working tree on `main` (`8577cb6`).
 
-First check whether Antigravity's channel-wiring work (`config.pi.yaml`) has
-landed — `git status` and `git log --oneline -5`. If it has, the likely next
-job is copying whatever's new (Tumble Leaf, and anything else Antigravity
-filed) onto the USB drive and reconciling the sheet, same pattern as
-2026-09-07 and this session's Colourblocks work. If it hasn't, there's nothing
-else pending on the Colourblocks side — that work is finished and pushed.
+---
+
+## 3. How to Resume & Next Steps
+
+1. **Copying New Content to USB Drive**:
+   - `PrimeKids/Tumble Leaf/` (52 episodes, 11.0 GB)
+   - Updated/downscaled folders (`AppleSnoopy/`, `AppleCuentos/`, `NetflixPequenos/`, `PBSKids/Jorge el Curioso`, `PBSPequenos/Teletubbies`, `BlocksUniverse/Colourblocks`)
+2. **Next Streaming Show**:
+   - When Brian selects the next show for capture, reactivate `watch_and_downscale_downloads.py` with the appropriate profile.
+
