@@ -1,54 +1,82 @@
-# Session Wrap — 2026-09-11 (late night)
+# Session Wrap — 2026-09-12 (late night)
 > Written by: Claude Code (Sonnet 5) · Scope: tang-box
 
-## ▶ READ THIS FIRST
+## What we worked on
 
-Nothing urgent. The drive is synced and back with Brian (see the previous
-wrap for that work — still accurate). This tail end of the session was SSH
-access to the Pi: set up, tested, and documented.
+The box was crash-looping (USB drive dropped and remounted under a new device
+name, so every file read failed). Fixed that, then a routine "is the box
+aligned with the Mac's catalog" check turned up something much bigger: the
+Pi was 27 commits behind and its live `config.yaml` had never been updated
+for last week's channel reorg — two channels pointed at folders that no
+longer existed, and four channels' worth of already-organized content (581
+episodes) had no channel entry at all, so nothing on the box could reach it.
 
-## What this session did
+## Status right now
 
-**SSH access to the Pi (`tangbox.local`) is live from `Tangcito`.** Turned
-out nothing needed generating — this Mac's existing key was already trusted
-on the Pi — so it was just adding a `Host tangbox` shortcut to
-`~/.ssh/config`. Confirmed working (`ssh tangbox`), and used immediately to
-resolve the open Cosby-commercial question from the previous wrap: searched
-`~/tangbox-commercials` (146 files) and the whole Pi home directory,
-confirmed clean — no trace of it there now.
+**Done and verified live:**
+- USB mount fixed, service stable (0 restarts since).
+- Deployed the pending code + a hand-spliced `config.yaml` channels list.
+  Box now runs all **25 channels** (was 23) — Apple Kids, Blocks Universe,
+  Prime Kids, and Netflix Pequeños are reachable for the first time.
+- `weighted_replay` is on, live, for the first time on real hardware.
+- Added `scripts/warm-duration-cache.py` and ran it — every channel's
+  episode durations are pre-cached, so no channel will freeze/cascade
+  buttons on its first tune-in.
+- Brian confirmed buttons feel responsive after the final restart.
+- Committed `00823f2`: the script, plus a `docs/lessons.md` section
+  spelling out the full deploy sequence (stop service → git pull → splice
+  `config.pi.yaml`'s channels block into the live `config.yaml`, never the
+  whole file → warm cache → start service).
 
-**Runnable setup steps for any other Mac are in `docs/lessons.md`** (under
-"The Pi"), written the same way `docs/macbook-catch-up.md` is: instructions
-aimed at whichever agent is running there, not at Brian to type by hand.
-`Blue-Tangium` does not have this alias yet - the next agent that runs there
-and needs it should find and follow that block directly rather than asking
-Brian to run commands.
+**One real mistake this session, now documented:** ran the cache-warming
+script (81s of `ffprobe` calls) against the *live, running* box instead of
+stopping it first. Made every button laggy for that whole window — nothing
+broke, but it's exactly the kind of thing `docs/lessons.md` now warns future
+agents about.
 
-**Clarified a real limit of the memory system, at Brian's prompting.** He
-asked this session to "run [the MacBook catch-up] next time you're on the
-macbook." Worth restating here because it will come up again: a Claude Code
-session's memory is local to the machine it runs on
-(`~/.claude/projects/...`), so a note saved on `Tangcito` is invisible to a
-session running on `Blue-Tangium` - there is no cross-machine memory sync.
-The thing that actually carries the instruction across machines is the repo
-itself: `docs/macbook-catch-up.md` plus the 🔴 blocker already in the
-workspace-root `SESSION-WRAP.md`, which any agent reads at the start of a
-session per `AGENT-PROTOCOL.md`. Nothing further needed here - it was
-already wired correctly before this session touched it.
+## Next 1-3 steps
 
-## Still open (unchanged from before, not this session's job)
+1. **Shape Island / "La isla de las formas"** — Brian is still finishing
+   these 10 episodes. When he says they're ready:
+   - Move `Converted/AppleCuentos/La isla de las formas` → `Converted/AppleKids/`
+     on the Mac (the folder is still sitting under the old pre-merge name).
+   - Add a `tile.jpg` to that show folder — it's the only show in the whole
+     library missing one.
+   - Copy the ~2.2GB to the Pi's `/media/tangbox/AppleKids/`. The drive is
+     mounted **read-only** on the Pi on purpose; Brian chose "remount
+     read-write over SSH, copy, remount read-only" as the method when asked.
+   - `media-tools/organize-channels.py` and `media-tools/shows.json` already
+     have **uncommitted** local edits from before this session adding this
+     show to the `AppleKids` channel mapping — don't redo that work, just
+     verify it still matches once the folder is renamed, then commit.
+   - Run `scripts/warm-duration-cache.py` on the Pi afterward (with the
+     service **stopped** this time) so this new content doesn't cause a
+     freeze on its first tune-in.
 
-- **The MacBook rename + three-agent parity** (`docs/macbook-catch-up.md`)
-  is still not done, per the workspace-root wrap. Whoever is next on
-  `Blue-Tangium` should run it.
-- Nothing new pending on TangBox itself - the drive/library sync from
-  earlier this session is the current, verified state.
+2. Carried over from the previous wrap, not this session's work: the
+   MacBook (`Blue-Tangium`) rename / three-agent parity task in
+   `docs/macbook-catch-up.md` is still open. Whoever is next on that machine
+   should run it.
+
+## Files touched this session
+- `docs/lessons.md` — new section: the full deploy sequence, and the
+  stop-the-service-first lesson.
+- `scripts/warm-duration-cache.py` — new. Pre-warms the episode-duration
+  cache for every configured channel; safe to re-run any time.
+- `/home/brian/TangBox/config.yaml` (on the Pi, not in git) — channels
+  block replaced to match `config.pi.yaml`'s reorg; `weighted_replay: true`
+  added. Backed up automatically to `config.yaml.bak-20260912-231846` on
+  the Pi before editing.
+
+## Decisions made
+- Config deploys to the Pi from now on always splice just the `channels:`
+  block (and any new global settings) out of `config.pi.yaml`, never copy
+  the whole file — everything else in the live config is machine-local.
+- Cache-warming always runs with `tangbox.service` stopped.
+
+## Open questions / blockers
+- Shape Island copy is blocked on Brian finishing the episodes (see above).
 
 ## How to resume
-
-Start a fresh session and say:
+Start a fresh session (don't click "Keep full session"). Then say:
 > "read tang-box/SESSION-WRAP.md and continue."
-
-If you're on a Mac other than `Tangcito` and need `ssh tangbox`, the exact
-steps are in `docs/lessons.md` under "The Pi" - run them yourself rather
-than asking Brian to type commands.
