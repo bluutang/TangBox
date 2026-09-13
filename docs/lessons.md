@@ -177,6 +177,41 @@ nothing about behaviour — every config change needs a second manual step over 
 **Never copy `config.pi.yaml` over `config.yaml`.** Its paths point at
 `/media/tangbox`, and the box would lose all its media.
 
+🔴 **A code commit does not reach the box on its own, and neither does a folder
+reorg.** Found 2026-09-12: the Pi was 27 commits behind (no `weighted_replay`
+code at all) and its live `channels:` list still had two channels — Apple
+Snoopy and Apple Cuentos — pointing at folders that had already been merged
+into `AppleKids` on disk days earlier. Both showed 0 episodes, no crash, no
+warning anyone would notice from the couch. Meanwhile `AppleKids`, `Blocks
+Universe`, `Prime Kids` and `Netflix Pequeños` — 581 already-organized
+episodes — were never added as channels at all, so nothing on the box could
+reach them. **A show landing in the right folder on the drive is necessary
+but not sufficient**; the live channel needs a matching entry in
+`config.yaml`, by hand, every time.
+
+**The deploy sequence, in order:**
+1. `ssh tangbox "sudo systemctl stop tangbox.service"` — stop it first. `git
+   pull` won't disturb a running process, but the cache-warm step below runs
+   hundreds of `ffprobe` calls that compete with the live app for the same USB
+   drive and CPU if it's still up. Found the hard way 2026-09-12: warming the
+   cache against a running box made every button on the remote lag for the
+   ~80 seconds the warm-up took.
+2. `cd /home/brian/TangBox && git pull --ff-only` — brings the code current.
+3. By hand, splice just the `channels:` block (and any new global setting
+   like `weighted_replay:`) from `config.pi.yaml` into the live `config.yaml`
+   — never the whole file (see above). Validate before installing it:
+   `python3 -c "from nostalgiabox.config import load_config; load_config('PATH')"`
+   should parse with no error and report the channel count you expect.
+4. `.venv/bin/python3 scripts/warm-duration-cache.py` — pre-pays the
+   first-tune `ffprobe` cost (see `probe.py`'s module docstring for why that
+   cost exists) for every channel, especially newly-added ones, so nobody
+   hits it live on the TV. Safe to run any time the library changes, even
+   with nothing new — an already-cached, unchanged file costs nothing to
+   re-check.
+5. `sudo systemctl start tangbox.service` — confirm with `journalctl -u
+   tangbox.service -n 20`: channel count should match, no "channel folder
+   does not exist" warnings for anything you meant to keep.
+
 **Media lives on a USB drive, not the SD card.** The catalog is far larger than
 the card's free space. Channels reporting 0 episodes on the Pi is the expected
 state, not a fault — do not offer to copy episodes onto the card.
