@@ -257,6 +257,29 @@ ssh tangbox "echo connected"
 `tangbox.local` is the Pi's mDNS name; if it stops resolving, find its IP
 another way (router admin page, or a physical check) rather than guessing.
 
+🔴 **The remote's POWER button does not shut the Pi down — it never has,
+since 2026-08-22.** `docs/flirc-remote-mapping.md` said otherwise
+("clean shutdown") for three weeks; the true behaviour was one commit away
+the whole time (`git log -p -- config.pi.yaml | grep power_button`). Brian
+set `power_button: shutdown` on 2026-08-20, then reversed it to `standby`
+two days later in `ba0418b` — a halted Pi cuts its own USB power, so the
+Flirc receiver stops listening and only the onboard button (behind the TV)
+can wake it. The comment explaining that reversal never got attached to the
+setting it was reversing, so the doc kept describing the old behaviour and
+an agent repeated it as fact until Brian pressed POWER, watched the picture
+collapse, and was still able to SSH in minutes later.
+
+**Lesson: read the code (`app.py`'s `Action.POWER` handler, `power_button`
+in `config.pi.yaml`) before stating what a remote button does, even when a
+doc already says so.** A stale doc reads exactly like an accurate one.
+
+**To actually power the Pi off** (e.g. before unplugging it to move it):
+POWER and ✱/bedtime both only reach standby now — the Pi keeps running and
+drawing power. Use `ssh tangbox "sudo systemctl poweroff"`, or the onboard
+button / inline switch behind the TV. Confirm it's really down before
+pulling the cable — `ssh tangbox` should fail to resolve once it is;
+if it still answers, it's still on.
+
 ## Machines
 
 `scutil --get ComputerName` → `Tangcito` (Mac mini) or `Blue-Tangium` (MacBook).

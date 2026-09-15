@@ -578,13 +578,16 @@ power_off_on_min_volume: false
 # leaves the Pi running; "shutdown" plays the sign-off collapse, tells the
 # television to switch off, and halts the machine properly.
 #
-# Brian's decision, 2026-08-20: off should mean off. TangBox is a box you
-# switch on for a session, not an always-on appliance.
+# STANDBY since 2026-08-22, reversing the "shutdown" this shipped with two days
+# earlier. That first version meant a halted Pi, and a halted Pi cuts power to
+# its own USB ports - so the Flirc receiver stopped listening and the remote
+# could turn the box OFF but never back ON, only the onboard button could.
+# Standby keeps the remote in charge: same collapse, TV off over CEC, Pi stays
+# up so POWER wakes it again. Costs about 3W at idle.
 #
-# ⚠️ Accepted trade: a halted Pi cuts power to its own USB ports, so the Flirc
-# receiver stops listening. The remote can switch the box OFF but NEVER back
-# on - that needs the Pi's onboard button or the inline switch, both of which
-# live behind the television.
+# To actually halt the Pi - before unplugging it to move it, say - the remote
+# can no longer do that. Use `sudo systemctl poweroff` over SSH, or the Pi's
+# onboard button / inline switch, both of which live behind the television.
 power_button: standby
 
 # Where the bedtime sign-off ENDS. "shutdown" halts the Pi; "standby" plays the

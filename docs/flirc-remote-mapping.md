@@ -89,7 +89,7 @@ the Flirc can never learn, and it is much cheaper to find out now.
 | **`•`** | `.` (full stop) | ⭐ **Random channel** |
 | `INPUT` | `c` | Step the CRT picture effect through its four looks |
 | `✱` star | `b` | Finish up, then sign off — press again to cancel. Goes to **standby** on this box, so POWER wakes it |
-| ⏻ power | `p` | Sign-off collapse, TV off, clean shutdown |
+| ⏻ power | `p` | Same collapse, immediately — toggles **standby**, TV off over CEC. The Pi itself keeps running; press again to wake |
 
 ### Why the `•` key matters most
 
@@ -217,13 +217,30 @@ you skip one.
 
 ## About the power button
 
-`p` gives a **real shutdown**: the picture collapses to a dot, the television is
-told to switch off over CEC, and the Pi halts cleanly.
+🔴 **`p` does NOT shut the Pi down.** This was documented wrong until
+2026-09-14 — corrected after Brian pressed it, watched the picture collapse,
+and found the box still fully reachable over SSH minutes later. The remote's
+POWER button runs the same code path as `✱`/bedtime: it **toggles standby**
+(picture off, TV off over CEC) and leaves the Pi running. Press it again and
+the box wakes right back up.
 
-Known and accepted: a halted Pi cuts power to its own USB ports, so the Flirc
-stops listening. **The remote cannot switch the box back on.** That needs the
-Pi's onboard button or the inline switch, both of which live behind the
-television. TangBox is a box you switch on for a session.
+This is controlled by `power_button` in `config.yaml`, currently set to
+`standby` (see `config.pi.yaml` for the full rationale — a halted Pi cuts its
+own USB power, so a remote-triggered shutdown can only ever be undone by
+someone walking behind the TV, which was judged worse than leaving it
+reachable). Setting it to `shutdown` would make `p` behave as this doc used to
+claim, but that is not the box's current configuration.
+
+**To actually power the Pi off** — before unplugging it to move it, for
+example — standby is not enough; the machine is still drawing power and its
+filesystem is still mounted. Either:
+- SSH in and run `sudo systemctl poweroff`, or
+- Use the Pi's own onboard button or the inline switch on its power cable,
+  both of which live behind the television.
+
+Confirm it actually went down before pulling the cable: `ssh tangbox` should
+fail to resolve/connect once it's truly off (it was still answering minutes
+after a `p` press turned out to be standby, not shutdown).
 
 ## The backup
 
