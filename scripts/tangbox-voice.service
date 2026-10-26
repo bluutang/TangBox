@@ -1,0 +1,19 @@
+[Unit]
+Description=TangBox Voice Assistant Bridge (Google Home / Sinric Pro)
+After=network-online.target tangbox.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=brian
+Group=brian
+WorkingDirectory=/home/brian/TangBox
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/home/brian/.tangbox-voice-venv/bin/python3 /home/brian/TangBox/scripts/tangbox-voice-daemon.py
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
