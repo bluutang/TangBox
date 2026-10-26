@@ -137,10 +137,10 @@ channels:
     age: "2-6"
     exclude: ["_*", "*/_*"]
     breaks: false
-    # Numberblocks (192), Alphablocks, Colourblocks (174) - Learning Blocks
-    # universe. Numberblocks was undercounted at 48 until 2026-09-11: 145
-    # episodes had been added since the 2026-09-07 reconciliation without the
-    # comment or the Lineup sheet catching up.
+    episode_order: shuffle
+    weighted_replay: false
+    # Numberblocks (208), Alphablocks, Colourblocks (174) - Learning Blocks
+    # universe. Pure unweighted shuffle across all episodes.
 
   # --- Nickelodeon -----------------------------------------------------------
   - number: 8
@@ -768,4 +768,4 @@ input:
   # Without this the backend also binds vc4-hdmi-0, vc4-hdmi-1 and pwr_button -
   # the Pi's own power button ends up wired into the remote control system,
   # which nobody intended. Read the real name first:  cat /proc/bus/input/devices
-  # keyboard_name_filter: "flirc"
+  keyboard_name_filter: "flirc"

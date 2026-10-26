@@ -11,7 +11,8 @@ from __future__ import annotations
 
 import logging
 import select
-from typing import Dict, List, Optional, Sequence
+import time
+from typing import Callable, Dict, List, Optional, Sequence
 
 from ..actions import InputEvent
 from .base import InputBackend
@@ -20,8 +21,18 @@ from .keymap import evdev_key_to_event
 log = logging.getLogger(__name__)
 
 # Key-event values reported by evdev: 0=up, 1=down, 2=autorepeat.
+_KEY_UP = 0
 _KEY_DOWN = 1
 _KEY_REPEAT = 2
+
+# Debounce window in seconds for repeated identical key-downs (e.g. IR bounce,
+# rapid remote multi-packet bursts).
+_DUPLICATE_WINDOW = 0.25
+_DIGIT_DUPLICATE_WINDOW = 0.15
+
+# Throttle for autorepeated keys (only volume repeats). Linux evdev defaults to
+# 30 Hz (33ms repeat interval), which causes runaway changes if passed raw.
+_REPEAT_RATE_LIMIT = 0.12
 
 
 class KeyboardBackend(InputBackend):
@@ -37,6 +48,7 @@ class KeyboardBackend(InputBackend):
         grab: bool = False,
         allow_repeat: bool = True,
         overrides: Optional[Dict[str, Optional[InputEvent]]] = None,
+        clock: Callable[[], float] = time.monotonic,
     ) -> None:
         super().__init__()
         self._device_paths = list(device_paths) if device_paths else None
@@ -45,6 +57,10 @@ class KeyboardBackend(InputBackend):
         self._allow_repeat = allow_repeat
         # Per-key action overrides from config (key name -> InputEvent or None).
         self._overrides = dict(overrides or {})
+        self._clock = clock
+        self._last_event: Optional[InputEvent] = None
+        self._last_time: float = 0.0
+        self._last_repeat_time: float = 0.0
         self._devices: List = []
 
     def _lookup(self, key_name: str) -> Optional[InputEvent]:
@@ -61,11 +77,11 @@ class KeyboardBackend(InputBackend):
             return False
         return True
 
-    def _open_devices(self):
+    def _open_devices(self, paths: Optional[Sequence[str]] = None):
         import evdev
         from evdev import ecodes
 
-        paths = self._device_paths or evdev.list_devices()
+        paths = paths or self._device_paths or evdev.list_devices()
         devices = []
         for path in paths:
             try:
@@ -98,10 +114,22 @@ class KeyboardBackend(InputBackend):
             log.warning("no usable input devices found for the keyboard backend")
             return
 
-        from evdev import ecodes
+        from evdev import ecodes, list_devices
 
         fd_to_device = {dev.fd: dev for dev in self._devices}
+        last_scan = time.monotonic()
         while not self.stopping:
+            now = time.monotonic()
+            if now - last_scan >= 3.0:
+                last_scan = now
+                available_paths = set(list_devices())
+                current_paths = {getattr(d, "path", None) for d in fd_to_device.values()}
+                new_paths = available_paths - current_paths
+                if new_paths:
+                    for new_dev in self._open_devices(paths=list(new_paths)):
+                        fd_to_device[new_dev.fd] = new_dev
+                        self._devices.append(new_dev)
+
             try:
                 r, _, _ = select.select(fd_to_device, [], [], 0.5)
             except (OSError, ValueError):
@@ -122,30 +150,52 @@ class KeyboardBackend(InputBackend):
     def _handle_key_event(self, event) -> None:
         from evdev import ecodes
 
-        if event.value == _KEY_DOWN:
+        key_name = _code_to_name(ecodes.KEY, event.code)
+        if key_name is None:
+            return
+        self._handle_key_press(key_name, event.value)
+
+    def _handle_key_press(self, key_name: str, value: int) -> None:
+        if value == _KEY_DOWN:
             pass
-        elif event.value == _KEY_REPEAT and self._allow_repeat:
+        elif value == _KEY_REPEAT and self._allow_repeat:
             pass
         else:
             return  # key-up, or repeats when disabled
 
-        key_name = _code_to_name(ecodes.KEY, event.code)
-        if key_name is None:
-            return
         input_event = self._lookup(key_name)
         if input_event is None:
             return
-        # Only volume/channel keys should auto-repeat when held; ignore repeats
-        # for digits, enter, power, etc. so a held button doesn't misbehave.
+
         from ..actions import Action
 
-        if event.value == _KEY_REPEAT and input_event.action not in (
-            Action.VOLUME_UP,
-            Action.VOLUME_DOWN,
-            Action.CHANNEL_UP,
-            Action.CHANNEL_DOWN,
-        ):
+        now = self._clock()
+
+        if value == _KEY_REPEAT:
+            # Only volume keys should auto-repeat when held.
+            # Channel buttons, power, menu/guide, digits, etc. must NEVER auto-repeat:
+            # holding a channel button must never cascade through channels.
+            if input_event.action not in (Action.VOLUME_UP, Action.VOLUME_DOWN):
+                return
+            if now - self._last_repeat_time < _REPEAT_RATE_LIMIT:
+                return
+            self._last_repeat_time = now
+            self.emit(input_event)
             return
+
+        # value == _KEY_DOWN: debounce identical consecutive presses to tame
+        # contact bounce and duplicate IR frames from remote controls.
+        self._last_repeat_time = now
+        window = (
+            _DIGIT_DUPLICATE_WINDOW
+            if input_event.action == Action.DIGIT
+            else _DUPLICATE_WINDOW
+        )
+        if input_event == self._last_event and (now - self._last_time) < window:
+            return
+
+        self._last_event = input_event
+        self._last_time = now
         self.emit(input_event)
 
     def _close(self) -> None:
