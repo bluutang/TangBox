@@ -237,7 +237,7 @@ class VoiceBridge:
         config = SinricProConfig(
             app_key=self.app_key,
             app_secret=self.app_secret,
-            debug=False,
+            debug=True,
         )
         await self.sinric.begin(config)
         log.info("Sinric Pro voice bridge active for device: %s", self.device_id)
